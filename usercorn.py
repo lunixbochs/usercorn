@@ -316,37 +316,40 @@ class User:
             # stop emulation
             return False
 
+    def hook_syscall(self, mu, user_data):
+        if self.arch == 'x64':
+            regs = [X86_REG_RAX, X86_REG_RDI, X86_REG_RSI, X86_REG_RDX, X86_REG_R10, X86_REG_R8, X86_REG_R9]
+            num, a1, a2, a3, a4, a5, a6 = [self.reg_read(r) for r in regs]
+            ret = 0
+            if num == 0: # SYS_read
+                tmp = os.read(a1, a3)
+                self.mem_write(a2, tmp + '\0')
+                ret = len(tmp)
+            elif num == 1: # SYS_write
+                ret = os.write(a1, self.mem_read(a2, a3))
+            elif num == 2: # SYS_open
+                ret = os.open(self.mem_read_cstr(a1), a2, a3)
+            elif num == 3: # SYS_close
+                os.close(a1)
+            elif num == 8: # SYS_lseek
+                ret = os.lseek(a1, a2, a3)
+            elif num == 9: # SYS_mmap
+                ret = self.mmap(a2, addr_hint=a1)
+            elif num == 11: # SYS_munmap
+                pass
+            elif num == 60: # SYS_exit
+                sys.exit(a1)
+            else:
+                print 'Unsupported syscall:', num
+                sys.exit(1)
+            self.reg_write(X86_REG_RAX, ret)
+        else:
+            print 'Arch not supported.'
+            sys.exit(1)
+
     def hook_intr(self, mu, intno, user_data):
         if intno == 80:
-            if self.arch == 'x64':
-                regs = [X86_REG_RAX, X86_REG_RDI, X86_REG_RSI, X86_REG_RDX, X86_REG_R10, X86_REG_R8, X86_REG_R9]
-                num, a1, a2, a3, a4, a5, a6 = [self.reg_read(r) for r in regs]
-                ret = 0
-                if num == 0: # SYS_read
-                    tmp = os.read(a1, a3)
-                    self.mem_write(a2, tmp + '\0')
-                    ret = len(tmp)
-                elif num == 1: # SYS_write
-                    ret = os.write(a1, self.mem_read(a2, a3))
-                elif num == 2: # SYS_open
-                    ret = os.open(self.mem_read_cstr(a1), a2, a3)
-                elif num == 3: # SYS_close
-                    os.close(a1)
-                elif num == 8: # SYS_lseek
-                    ret = os.lseek(a1, a2, a3)
-                elif num == 9: # SYS_mmap
-                    ret = self.mmap(a2, addr_hint=a1)
-                elif num == 11: # SYS_munmap
-                    pass
-                elif num == 60: # SYS_exit
-                    sys.exit(a1)
-                else:
-                    print 'Unsupported syscall:', num
-                    sys.exit(1)
-                self.reg_write(X86_REG_RAX, ret)
-            else:
-                print 'Arch not supported.'
-                sys.exit(1)
+            return self.hook_syscall(mu, user_data)
 
     def hook_block(self, uc, address, size, user_data):
         name = self.symbolicate(address)
@@ -372,6 +375,7 @@ class User:
         # self.mu.hook_add(UC_HOOK_BLOCK, self.hook_block)
         # self.mu.hook_add(UC_HOOK_CODE, self.hook_code)
         self.mu.hook_add(UC_HOOK_INTR, self.hook_intr)
+        self.mu.hook_add(UC_HOOK_INSN, self.hook_syscall, None, X86_INS_SYSCALL)
         self.mu.hook_add(UC_HOOK_MEM_INVALID, self.hook_mem_invalid)
         # self.mu.hook_add(UC_HOOK_MEM_READ_WRITE, self.hook_mem_access)
 
