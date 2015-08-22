@@ -1,3 +1,0 @@
-method to get the memory mapping back out of unicorn?
-can't do file mmap into guest memory?
-test.movsd.hang hangs on the SSE instruction with movsd (maybe floating point is broken?)

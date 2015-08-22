@@ -6,9 +6,9 @@ usercorn
 You need [Unicorn](http://www.unicorn-engine.org/) installed, including the Python bindings (`cd bindings/python; make install`)
 
     pip install -r requirements.txt
-    python usercorn tests/test.elf
+    python run.py tests/test.elf
     # (note: MachO loading is implemented but the binary crashes at some point in my tests)
-    python usercorn tests/test.macho
+    python run.py tests/test.macho
 
 What.
 ----
@@ -16,9 +16,10 @@ What.
 - User-space system emulator.
 - Backed by [Unicorn](http://www.unicorn-engine.org/).
 - Similar to qemu-user.
-- Unlike qemu-user, __does not require the same Operating System for which the binary was originally built__.
+- Unlike qemu-user, __does not require the same OS for which the binary was built__.
 - Wait, __what?__ What does that mean?
 - Syscalls are coerced into the Python API using persuasive fit techniques. Syscalls s/should/might/ work almost anywhere Python does.
+- Hence, Usercorn should work anywhere Unicorn and Python do.
 
 Caveats
 ----
