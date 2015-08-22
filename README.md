@@ -25,3 +25,7 @@ Caveats
 
 - Your userspace might be incredibly confusing to the target binary.
 - No API for memory mapped files yet.
+
+[See Also](https://xkcd.com/1406/)
+----
+![Universal converter](https://imgs.xkcd.com/comics/universal_converter_box.png)
