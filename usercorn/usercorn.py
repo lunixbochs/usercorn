@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from cStringIO import StringIO
 from capstone import *
 from collections import defaultdict
@@ -87,7 +86,7 @@ class FileMachO(MachO):
     def load(self, fileobj):
         pass
 
-class User:
+class UserCorn:
     def __init__(self, exe):
         # uses StringIO so we don't burn the file descriptor
         with open(exe, 'rb') as f:
@@ -394,9 +393,3 @@ class User:
         print '==== Program output begins here. ===='
         print '====================================='
         self.mu.emu_start(self.entry, 0)
-
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print 'Usage: %s <exe> [args...]' % sys.argv[0]
-        sys.exit(1)
-    sys.exit(User(sys.argv[1]).run(sys.argv[1], *sys.argv[2:]))
