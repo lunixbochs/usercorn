@@ -26,7 +26,7 @@ class Unicorn(Uc):
         # TODO: this tracking could be replaced by a Unicorn api to get memory map
         # FIXME: if you overlap with the end of an existing map it will silently fail
         mapped = self.mapped(addr, size)
-        if mapped:
+        while mapped:
             a, b = mapped
             if addr < a:
                 size = a - addr
@@ -36,6 +36,7 @@ class Unicorn(Uc):
                 size = right - addr
             else:
                 return
+            mapped = self.mapped(addr, size)
         addr, size = align(addr, size, grow=True)
         self.memory.append((addr, size))
         return Uc.mem_map(self, addr, size)
@@ -47,8 +48,7 @@ class Unicorn(Uc):
         addr_hint, size = align(addr_hint, size)
         for addr in xrange(addr_hint, 2 ** 32, UC_MEM_ALIGN):
             if not self.mapped(addr, size):
-                # FIXME: why is this broken without size + 1
-                self.mem_map(addr, size + 1)
+                self.mem_map(addr, size)
                 return addr
         else:
             raise MemoryError('could not allocate %d bytes' % size)

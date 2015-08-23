@@ -33,8 +33,11 @@ class UserCorn:
         return '0x%x' % addr
 
     def map_segments(self):
+        # FIXME: mapping non-overlapping segment can zero previous segments
+        # for now, map everything before writing
         for addr, size, data in self.loader.segments():
             self.uc.mem_map(addr, size)
+        for addr, size, data in self.loader.segments():
             self.uc.mem_write(addr, data)
         # TODO: ask loader for stack size/location
         self.stack = self.uc.mmap(STACK_SIZE, STACK_BASE)
