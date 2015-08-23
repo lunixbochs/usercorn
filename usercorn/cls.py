@@ -28,8 +28,8 @@ class UserCorn:
             # TODO pick the smallest matching symbol?
             # or indicate when you're inside multiple symbols?
             dist = sorted(matches.keys())[0]
-            sym = matches[dist][0]
-            return '%s+0x%02x' % (sym.name, dist)
+            name = matches[dist][0]
+            return '%s+0x%02x' % (name, dist)
         return '0x%x' % addr
 
     def map_segments(self):

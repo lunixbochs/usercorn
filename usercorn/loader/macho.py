@@ -1,4 +1,6 @@
+from collections import defaultdict, OrderedDict
 from macholib.MachO import MachO
+from macholib.SymbolTable import SymbolTable
 from macholib import mach_o
 import struct
 
@@ -17,6 +19,21 @@ class FileMachO(MachO):
     def load(self, fileobj):
         pass
 
+def readSymTab(header, fp, bits):
+    cmd = header.getSymbolTableCommand()
+    fp.seek(cmd.stroff)
+    strtab = fp.read(cmd.strsize)
+    fp.seek(cmd.symoff)
+    if bits == 64:
+        nlist = mach_o.nlist_64
+    else:
+        nlist = mach_o.nlist
+    syms = []
+    for i in xrange(cmd.nsyms):
+        n = nlist.from_fileobj(fp, _endian_=header.endian)
+        syms.append((strtab[n.n_un:strtab.find('\0', n.n_un)], n))
+    return OrderedDict(syms)
+
 class MachOLoader:
     @staticmethod
     def test(fp):
@@ -29,11 +46,11 @@ class MachOLoader:
             if header.endian == '<':
                 self.header = header
                 self.arch = mach_o.CPU_TYPE_NAMES.get(header.header.cputype)
-                bits = arch.find(self.arch).bits
+                self.bits = arch.find(self.arch).bits
                 for lc, cmd, data in header.commands:
                     # entry point
                     if lc.cmd == mach_o.LC_MAIN or lc.cmd == mach_o.LC_UNIXTHREAD:
-                        if bits == 64:
+                        if self.bits == 64:
                             ip = 2 * 4 + 16 * 8
                             self.entry = struct.unpack(header.endian + 'Q', data[ip:ip+8])[0]
                         else:
@@ -42,6 +59,8 @@ class MachOLoader:
                 break
         else:
             raise NotImplementedError('Could not find suitable MachO arch.')
+
+        self.symtab = readSymTab(self.header, fp, self.bits)
 
     def segments(self):
         for lc, cmd, data in self.header.commands:
@@ -52,6 +71,11 @@ class MachOLoader:
                     yield seg.addr, seg.size, sd
 
     def symbolicate(self, addr):
-        pass
+        matches = defaultdict(list)
+        for name, cmd in self.symtab.items():
+            val = cmd.n_value
+            if val <= addr:
+                matches[addr - val].append(name)
+        return matches
 
 __all__ = ['MachOLoader']

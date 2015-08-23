@@ -31,7 +31,7 @@ class ELFLoader:
             val = sym['st_value']
             size = sym['st_size']
             if sym['st_info']['type'] == 'STT_FUNC' and val <= addr and val + size > addr:
-                matches[addr - val].append(sym)
+                matches[addr - val].append(sym.name)
         return matches
 
 __all__ = ['ELFLoader']
