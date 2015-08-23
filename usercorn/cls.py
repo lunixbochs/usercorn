@@ -72,16 +72,16 @@ class UserCorn:
             # stop emulation
             return False
 
-    def hook_block(self, uc, address, size, user_data):
-        name = self.symbolicate(address)
-        print(">>> Basic block at %s, block size = 0x%x <<<" % (name, size))
+    def hook_block(self, uc, addr, size, user_data):
+        name = self.symbolicate(addr)
+        print (">>> Basic block at %s, block size = 0x%x <<<" % (name, size))
         self.uc.print_changed_regs()
+        self.uc.print_dis(addr, size)
 
     def hook_code(self, uc, addr, size, user_data):
         if size > 128:
             print 'Makeshift SIGILL'
             sys.exit(1)
-        print '>',
         self.uc.print_dis(addr, size)
 
     def hook_mem_access(self, uc, access, addr, size, value, user_data):

@@ -86,7 +86,8 @@ class Unicorn(Uc):
             if i % 4 == 0 and i > 0:
                 print
             print ('%3s=0x%08x' % (name, val)),
-        print
+        if regs:
+            print
 
     def print_changed_regs(self):
         regs = self.read_regs()
