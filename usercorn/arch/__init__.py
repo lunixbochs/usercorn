@@ -1,5 +1,6 @@
 import arm
 import arm64
+import cgc
 import mips
 import x64
 import x86
@@ -17,6 +18,7 @@ def map(arch):
 ARCH_IMPORTS = {
     'arm': arm,
     'arm64': arm64,
+    'cgc': cgc,
     'mips': mips,
     'x64': x64,
     'x86': x86,

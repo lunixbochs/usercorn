@@ -1,5 +1,12 @@
+from cgc import CGCLoader
 from elf import ELFLoader
 from macho import MachOLoader
+
+LOADERS = [
+    ELFLoader,
+    MachOLoader,
+    CGCLoader,
+]
 
 def load(exe):
     from cStringIO import StringIO
@@ -7,9 +14,7 @@ def load(exe):
     with open(exe, 'rb') as f:
         fp = StringIO(f.read())
 
-    if ELFLoader.test(fp):
-        return ELFLoader(exe, fp)
-    elif MachOLoader.test(fp):
-        return MachOLoader(exe, fp)
-    else:
-        raise NotImplementedError('Could not find loader for executable.')
+    for loader in LOADERS:
+        if loader.test(fp):
+            return loader(exe, fp)
+    raise NotImplementedError('Could not find loader for executable.')

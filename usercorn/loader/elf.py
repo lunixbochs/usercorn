@@ -4,13 +4,16 @@ from elftools.elf.elffile import ELFFile
 from .common import fp_head
 
 class ELFLoader:
-    @staticmethod
-    def test(fp):
-        return fp_head(fp) == '7f454c46'
+    MAGIC = '7f454c46'
+    ELFFile = ELFFile
+
+    @classmethod
+    def test(cls, fp):
+        return fp_head(fp) == cls.MAGIC
 
     def __init__(self, exe, fp):
         self.fp = fp
-        self.elf = ELFFile(fp)
+        self.elf = self.ELFFile(fp)
         self.symtab = self.elf.get_section_by_name('.symtab')
         self.arch = self.elf.get_machine_arch()
         self.entry = self.elf['e_entry']
