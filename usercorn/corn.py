@@ -59,7 +59,8 @@ class Unicorn(Uc):
         self.mem_write(sp - self.bsz, self.pack_addr(n))
 
     def pop(self):
-        data = self.mem_read(self.reg_read(self.sp), self.bsz)
+        sp = self.reg_read(self.sp)
+        data = self.mem_read(sp, self.bsz)
         self.reg_write(self.sp, sp + self.bsz)
         return self.unpack_addr(data)
 
