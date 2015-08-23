@@ -1,4 +1,5 @@
 from capstone import *
+import binascii
 import textwrap
 
 STACK_SIZE = 8 * 1024 * 1024
@@ -8,8 +9,16 @@ UC_MEM_ALIGN = 8 * 1024
 
 def capstone_disas(mem, addr, arch):
     md = Cs(*arch.capstone_init)
+    disasm = list(md.disasm(str(mem), addr))
+    hwidth = max(len(i.bytes) * 2 for i in disasm)
+    mwidth = max(len(i.mnemonic) for i in disasm)
     return '\n'.join([
-        '0x%x:\t%s\t%s' % (i.address, i.mnemonic, i.op_str)
+        '0x%x: %s %s %s' % (
+            i.address,
+            binascii.hexlify(i.bytes).rjust(hwidth),
+            i.mnemonic.ljust(mwidth),
+            i.op_str,
+        )
         for i in md.disasm(str(mem), addr)
     ])
 
