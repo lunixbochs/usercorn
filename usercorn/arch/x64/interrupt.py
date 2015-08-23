@@ -30,8 +30,7 @@ def syscall(cls):
     cls.reg_write(X86_REG_RAX, ret)
 
 def interrupt(cls, intno):
-    if intno == 80:
+    if intno == 0x80:
         syscall(cls)
     else:
-        pass
-        # raise NotImplementedError('unhandled interrupt %d' % intno)
+        raise NotImplementedError('unhandled interrupt %d' % intno)
