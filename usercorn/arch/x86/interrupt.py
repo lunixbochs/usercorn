@@ -22,7 +22,7 @@ def syscall(cls):
         os.close(a1)
     elif num == 19: # SYS_lseek
         ret = os.lseek(a1, a2, a3)
-    elif num == 90: # SYS_mmap
+    elif num in (90, 192): # SYS_mmap, SYS_mmap2
         ret = cls.mmap(a2, addr_hint=a1)
     elif num == 91: # SYS_munmap
         pass
