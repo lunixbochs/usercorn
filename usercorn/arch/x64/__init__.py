@@ -1,2 +1,8 @@
 from info import *
-from interrupt import syscall, interrupt
+import darwin
+import linux
+
+OS = {
+    'darwin': darwin,
+    'linux': linux,
+}

@@ -1,6 +1,5 @@
 import arm
 import arm64
-import cgc
 import mips
 import x64
 import x86
@@ -15,14 +14,14 @@ def map(arch):
     arch = arch.lower()
     return ARCH_MAP.get(arch, arch)
 
-ARCH_IMPORTS = {
+ARCH = {
     'arm': arm,
     'arm64': arm64,
-    'cgc': cgc,
     'mips': mips,
     'x64': x64,
     'x86': x86,
 }
 
-def find(arch):
-    return ARCH_IMPORTS.get(map(arch))
+def find(arch, os):
+    arch = ARCH.get(map(arch))
+    return arch, arch.OS.get(os)

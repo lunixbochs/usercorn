@@ -16,9 +16,12 @@ class UserCorn:
         self.loader = loader.load(exe)
         self.entry = self.loader.entry
         self.arch_name = arch.map(self.loader.arch)
-        self.arch = arch.find(self.arch_name)
+        self.os_name = self.loader.os
+        self.arch, self.os = arch.find(self.arch_name, self.os_name)
         if not self.arch:
-            raise NotImplementedError('Unsupported Unicorn arch: %s' % self.arch)
+            raise NotImplementedError('Unsupported arch: %s' % self.arch_name)
+        if not self.os:
+            raise NotImplementedError('Unsupported OS: %s' % self.os_name)
         self.bsz = self.arch.bits / 8
         self.uc = Unicorn(self.arch)
 
@@ -84,10 +87,10 @@ class UserCorn:
             print ('R @0x%x 0x%x =' % (addr, size)), self.uc.mem_hex(addr, size)
 
     def hook_syscall(self, mu, user_data):
-        self.arch.syscall(self.uc)
+        self.os.syscall(self.uc)
 
     def hook_intr(self, mu, intno, user_data):
-        self.arch.interrupt(self.uc, intno)
+        self.os.interrupt(self.uc, intno)
 
     def run(self, *argv):
         self.map_segments()

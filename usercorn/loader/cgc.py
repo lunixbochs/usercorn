@@ -13,4 +13,5 @@ class CGCLoader(ELFLoader):
 
     def __init__(self, *args, **kwargs):
         ELFLoader.__init__(self, *args, **kwargs)
-        self.arch = 'cgc'
+        self.arch = 'x86'
+        self.os = 'cgc'

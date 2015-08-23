@@ -16,6 +16,8 @@ class ELFLoader:
         self.elf = self.ELFFile(fp)
         self.symtab = self.elf.get_section_by_name('.symtab')
         self.arch = self.elf.get_machine_arch()
+        # FIXME: figure out the BSD sections and look for them
+        self.os = 'linux'
         self.entry = self.elf['e_entry']
 
     def segments(self):

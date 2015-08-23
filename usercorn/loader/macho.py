@@ -1,10 +1,9 @@
 from collections import defaultdict, OrderedDict
-from macholib.MachO import MachO
-from macholib.SymbolTable import SymbolTable
 from macholib import mach_o
+from macholib.MachO import MachO
+from macholib.mach_o import MH_MAGIC_64, MH_CIGAM_64
 import struct
 
-from .. import arch
 from .common import fp_head
 
 class FileMachO(MachO):
@@ -40,13 +39,18 @@ class MachOLoader:
         return fp_head(fp, 4) in ('cafebabe', 'feedface', 'feedfacf', 'cefaedfe', 'cffaedfe')
 
     def __init__(self, exe, fp):
+        # NeXT?
+        self.os = 'darwin'
         self.fp = fp
         self.macho = FileMachO(exe, fp)
         for header in self.macho.headers:
             if header.endian == '<':
                 self.header = header
                 self.arch = mach_o.CPU_TYPE_NAMES.get(header.header.cputype)
-                self.bits = arch.find(self.arch).bits
+                if self.header.MH_MAGIC in (MH_MAGIC_64, MH_CIGAM_64):
+                    self.bits = 64
+                else:
+                    self.bits = 32
                 for lc, cmd, data in header.commands:
                     # entry point
                     if lc.cmd == mach_o.LC_MAIN or lc.cmd == mach_o.LC_UNIXTHREAD:
