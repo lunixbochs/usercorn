@@ -1,5 +1,6 @@
 from unicorn import *
 from unicorn.x86_const import X86_INS_SYSCALL
+from unicorn.arm_const import *
 import binascii
 import os
 import struct
@@ -38,9 +39,12 @@ class UserCorn:
     def map_segments(self):
         for addr, size, data in self.loader.segments():
             self.uc.mem_map(addr, size)
+            # FIXME: weird, if I don't touch the data before write it segfaults on ARM
+            # Issue #15
+            binascii.hexlify(data)
             self.uc.mem_write(addr, data)
         # TODO: ask loader for stack size/location
-        self.stack = self.uc.mmap(STACK_SIZE, STACK_BASE)
+        self.stack = self.uc.mmap(STACK_SIZE, addr_hint=STACK_BASE)
         self.uc.reg_write(self.arch.sp, self.stack + STACK_SIZE - self.bsz)
 
     def write_argv(self, argv):
@@ -94,6 +98,9 @@ class UserCorn:
 
     def run(self, *argv):
         self.map_segments()
+        if self.uc.reg_read(self.arch.sp) == 0:
+            print 'Warning: sp == 0.'
+
         # self.uc.hook_add(UC_HOOK_BLOCK, self.hook_block)
         # self.uc.hook_add(UC_HOOK_CODE, self.hook_code)
         self.uc.hook_add(UC_HOOK_INTR, self.hook_intr)
