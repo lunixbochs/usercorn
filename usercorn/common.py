@@ -7,10 +7,10 @@ STACK_BASE = 0x7FFF0000
 BASE = 1024 * 1024
 UC_MEM_ALIGN = 8 * 1024
 
-def capstone_disas(mem, addr, arch):
+def capstone_disas(mem, addr, arch, padhex=0):
     md = Cs(*arch.capstone_init)
     disasm = list(md.disasm(str(mem), addr))
-    hwidth = max(len(i.bytes) * 2 for i in disasm)
+    hwidth = max(max(len(i.bytes) * 2 for i in disasm), padhex)
     mwidth = max(len(i.mnemonic) for i in disasm)
     return '\n'.join([
         '0x%x: %s %s %s' % (

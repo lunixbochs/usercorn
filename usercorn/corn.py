@@ -98,7 +98,7 @@ class Unicorn(Uc):
 
     def print_dis(self, addr, size):
         mem = self.mem_read(addr, size)
-        print disas(mem, addr, self.arch)
+        print disas(mem, addr, self.arch, padhex=self.bsz * 2)
 
     def pack_addr(self, n):
         if self.arch.bits == 64:
