@@ -68,7 +68,7 @@ class Unicorn(Uc):
         # FIXME: this might be buggy
         s = ''
         while not '\0' in s:
-            s += self.mem_read(addr, 4)
+            s += str(self.mem_read(addr, 4)[:])
             addr += 4
         return str(s.split('\0', 1)[0])
 
