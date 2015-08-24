@@ -2,6 +2,7 @@ from unicorn.x86_const import *
 import os
 import sys
 
+from .posix import syscall_args
 from usercorn import syscalls
 
 SYSCALLS = {
@@ -20,13 +21,10 @@ SYSCALLS = {
 }
 
 def syscall(cls):
-    regs = [X86_REG_RDI, X86_REG_RSI, X86_REG_RDX, X86_REG_R10, X86_REG_R8, X86_REG_R9]
-    args = [cls.reg_read(r) for r in regs]
-
+    num, args = syscall_args(cls)
     def call(name, n):
         return getattr(syscalls, name)(cls, *args[:n]) or 0
 
-    num = cls.reg_read(X86_REG_RAX)
     params = SYSCALLS.get(num)
     if params:
         ret = call(*params)
@@ -39,4 +37,6 @@ def interrupt(cls, intno):
     if intno == 0x80:
         syscall(cls)
     else:
+        print 'unhandled interrupt %d' % intno
+        sys.exit(1)
         raise NotImplementedError('unhandled interrupt %d' % intno)
