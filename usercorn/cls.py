@@ -37,8 +37,23 @@ class UserCorn:
         return '0x%x' % addr
 
     def map_segments(self):
-        for addr, size, data in self.loader.segments():
+        # merge overlapping segments
+        segments = [align(addr, size, grow=True) for addr, size, _ in self.loader.segments()]
+        merged = []
+        for addr, size in segments:
+            left = addr
+            right = addr + size
+            for a2, s2 in merged:
+                if (addr >= a2 and addr <= a2 + s2) or (addr < a2 and addr + size > a2):
+                    left = min(a2, addr)
+                    right = max(right, a2 + s2)
+                    merged.remove((a2, s2))
+            merged.append((left, right - left))
+
+        for addr, size in merged:
             self.uc.mem_map(addr, size)
+
+        for addr, size, data in self.loader.segments():
             # FIXME: weird, if I don't touch the data before write it segfaults on ARM
             # Issue #15
             binascii.hexlify(data)
