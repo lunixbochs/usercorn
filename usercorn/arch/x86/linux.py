@@ -20,16 +20,16 @@ SYSCALLS = {
 }
 
 def syscall(cls):
-    regs = [X86_REG_EBX, X86_REG_ECX, X86_REG_EDX, X86_REG_ESI, X86_REG_EDI, X86_REG_EBP]
+    regs = [UC_X86_REG_EBX, UC_X86_REG_ECX, UC_X86_REG_EDX, UC_X86_REG_ESI, UC_X86_REG_EDI, UC_X86_REG_EBP]
     args = [cls.reg_read(r) for r in regs]
     def call(name, n):
         return getattr(syscalls, name)(cls, *args[:n]) or 0
 
-    num = cls.reg_read(X86_REG_EAX)
+    num = cls.reg_read(UC_X86_REG_EAX)
     params = SYSCALLS.get(num)
     if params:
         ret = call(*params)
-        cls.reg_write(X86_REG_EAX, ret)
+        cls.reg_write(UC_X86_REG_EAX, ret)
     else:
         print 'Unsupported syscall:', num
         sys.exit(1)

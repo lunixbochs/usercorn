@@ -24,7 +24,7 @@ def syscall(cls):
     params = SYSCALLS.get(num)
     if params:
         ret = call(*params)
-        cls.reg_write(X86_REG_RAX, ret)
+        cls.reg_write(UC_X86_REG_RAX, ret)
     else:
         print 'Unsupported syscall:', num
         sys.exit(1)

@@ -1,5 +1,5 @@
 from unicorn import *
-from unicorn.x86_const import X86_INS_SYSCALL
+from unicorn.x86_const import UC_X86_INS_SYSCALL
 from unicorn.arm_const import *
 import binascii
 import os
@@ -105,7 +105,7 @@ class UserCorn:
         # self.uc.hook_add(UC_HOOK_CODE, self.hook_code)
         self.uc.hook_add(UC_HOOK_INTR, self.hook_intr)
         self.uc.hook_add(UC_HOOK_MEM_INVALID, self.hook_mem_invalid)
-        self.uc.hook_add(UC_HOOK_INSN, self.hook_syscall, None, X86_INS_SYSCALL)
+        self.uc.hook_add(UC_HOOK_INSN, self.hook_syscall, None, UC_X86_INS_SYSCALL)
         # self.uc.hook_add(UC_HOOK_MEM_READ_WRITE, self.hook_mem_access)
 
         # put argv into target memory

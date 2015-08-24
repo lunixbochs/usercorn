@@ -11,7 +11,7 @@ def syscall(cls):
     else:
         print 'Unsupported syscall:', num
         sys.exit(1)
-    cls.reg_write(X86_REG_EAX, ret)
+    # cls.reg_write(UC_X86_REG_EAX, ret)
 
 def interrupt(cls, intno):
     if intno == 0:
