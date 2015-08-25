@@ -1,6 +1,5 @@
 from capstone import *
 import binascii
-import textwrap
 
 STACK_SIZE = 8 * 1024 * 1024
 STACK_BASE = 0x7FFF0000
@@ -37,4 +36,7 @@ def align(addr, size, to=UC_MEM_ALIGN, grow=False):
     return addr, size
 
 def spaces(s, stride=4):
-    return ' '.join(textwrap.wrap(s, stride))
+    out = []
+    for i in xrange(0, len(s), stride):
+        out.append(s[i:i+stride])
+    return ' '.join(out)
