@@ -9,18 +9,19 @@ UC_MEM_ALIGN = 8 * 1024
 def capstone_disas(mem, addr, arch, padhex=0):
     md = Cs(*arch.capstone_init)
     disasm = list(md.disasm(str(mem), addr))
-    hwidth = max(max(len(i.bytes) * 2 for i in disasm), padhex)
-    mwidth = max(len(i.mnemonic) for i in disasm)
-    out = '\n'.join([
-        '0x%x: %s %s %s' % (
-            i.address,
-            binascii.hexlify(i.bytes).rjust(hwidth),
-            i.mnemonic.ljust(mwidth),
-            i.op_str,
-        )
-        for i in md.disasm(str(mem), addr)
-    ])
-    if not out:
+    if disasm:
+        hwidth = max(max(len(i.bytes) * 2 for i in disasm), padhex)
+        mwidth = max(len(i.mnemonic) for i in disasm)
+        out = '\n'.join([
+            '0x%x: %s %s %s' % (
+                i.address,
+                binascii.hexlify(i.bytes).rjust(hwidth),
+                i.mnemonic.ljust(mwidth),
+                i.op_str,
+            )
+            for i in md.disasm(str(mem), addr)
+        ])
+    else:
         out = spaces(binascii.hexlify(mem))
     return out
 
