@@ -8,19 +8,15 @@ import (
 	"./arch/arch"
 )
 
-type mmap struct {
-	Start, Size uint64
-}
-
 type Unicorn struct {
 	*uc.Uc
-	Arch   arch.Arch
+	Arch   *arch.Arch
 	Bits   int
 	Bsz    int
 	memory []mmap
 }
 
-func NewUnicorn(a arch.Arch) (*Unicorn, error) {
+func NewUnicorn(a *arch.Arch) (*Unicorn, error) {
 	Uc, err := uc.NewUc(a.UC_ARCH, a.UC_MODE)
 	if err != nil {
 		return nil, err
@@ -33,23 +29,49 @@ func NewUnicorn(a arch.Arch) (*Unicorn, error) {
 	}, nil
 }
 
-func (u *Unicorn) mapping(addr, size uint64) mmap {
+func (u *Unicorn) mapping(addr, size uint64) *mmap {
 	for _, m := range u.memory {
 		if addr < m.Start && addr+size > m.Start {
-			return m
+			return &m
 		}
 		if addr >= m.Start && addr < m.Start+m.Size {
-			return m
+			return &m
 		}
 	}
-	return mmap{}
-}
-
-func (u *Unicorn) MemMap(addr, size uint64) error {
 	return nil
 }
 
+func (u *Unicorn) MemMap(addr, size uint64) error {
+	m := u.mapping(addr, size)
+	for m != nil {
+		a, b := m.Start, m.Start+m.Size
+		if addr < a {
+			size = a - addr
+		} else if addr < b && addr+size > b {
+			right := addr + size
+			addr = b
+			size = right - addr
+		} else {
+			return nil
+		}
+		m = u.mapping(addr, size)
+	}
+	u.memory = append(u.memory, mmap{addr, size})
+	return u.Uc.MemMap(addr, size)
+}
+
 func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
+	if addr == 0 {
+		addr = BASE
+	}
+	_, size = align(0, size)
+	addr, size = align(addr, size)
+	for i := addr; i < 1<<uint(u.Bits); i += UC_MEM_ALIGN {
+		if u.mapping(addr, size) == nil {
+			err := u.MemMap(addr, size)
+			return addr, err
+		}
+	}
 	return 0, nil
 }
 

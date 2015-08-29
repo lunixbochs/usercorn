@@ -1,28 +1,17 @@
 package main
 
 import (
-	"fmt"
-
 	"./arch"
-	arch2 "./arch/arch"
 	"./loader"
 )
 
 type Usercorn struct {
 	*Unicorn
 	loader    loader.Loader
-	Arch      *arch2.Arch
-	Bits      int
-	Bsz       int
 	Entry     uint64
 	OS        string
 	StackBase uint64
 }
-
-const (
-	STACK_BASE = 0x7fff000
-	STACK_SIZE = 8 * 1024 * 1024
-)
 
 func NewUsercorn(exe string) (*Usercorn, error) {
 	l, err := loader.LoadFile(exe)
@@ -33,13 +22,15 @@ func NewUsercorn(exe string) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
+	uc, err := NewUnicorn(a)
+	if err != nil {
+		return nil, err
+	}
 	u := &Usercorn{
-		loader: l,
-		Arch:   a,
-		Bits:   l.Bits(),
-		Bsz:    l.Bits() / 8,
-		OS:     l.OS(),
-		Entry:  l.Entry(),
+		Unicorn: uc,
+		loader:  l,
+		OS:      l.OS(),
+		Entry:   l.Entry(),
 	}
 	return u, nil
 }
@@ -68,7 +59,12 @@ func (u *Usercorn) mapMemory() error {
 		return err
 	}
 	for _, seg := range segments {
-		fmt.Printf("0x%x\n", seg.Addr)
+		if err := u.MemMap(seg.Addr, uint64(len(seg.Data))); err != nil {
+			return err
+		}
+		if err := u.MemWrite(seg.Addr, seg.Data); err != nil {
+			return err
+		}
 	}
 	return nil
 }
