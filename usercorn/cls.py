@@ -132,7 +132,8 @@ class UserCorn:
 
         print '[entry point]'
         self.uc.print_dis(self.entry, 64)
-        print '[initial stack]', self.uc.mem_hex(self.uc.reg_read(self.arch.sp), 64)
+        stack_size = self.stack + STACK_SIZE - self.uc.reg_read(self.arch.sp)
+        print '[initial stack]', self.uc.mem_hex(self.uc.reg_read(self.arch.sp), stack_size)
 
         print '====================================='
         print '==== Program output begins here. ===='
