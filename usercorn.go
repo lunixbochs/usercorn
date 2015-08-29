@@ -75,7 +75,7 @@ func (u *Usercorn) setupStack() error {
 		return err
 	}
 	u.StackBase = stack
-	if err := u.RegWrite(u.Arch.SP, stack+STACK_SIZE-uint64(u.Bsz)); err != nil {
+	if err := u.RegWrite(u.Arch.SP, stack+STACK_SIZE); err != nil {
 		return err
 	}
 	return nil
