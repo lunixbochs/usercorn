@@ -3,7 +3,7 @@ package main
 const (
 	BASE         = 1024 * 1024
 	UC_MEM_ALIGN = 8 * 1024
-	STACK_BASE   = 0x7fff000
+	STACK_BASE   = 0x7fff0000
 	STACK_SIZE   = 8 * 1024 * 1024
 )
 
