@@ -98,6 +98,7 @@ func (u *Usercorn) pushStrings(args ...string) error {
 		addrs = append(addrs, argvAddr+pos)
 		pos += uint64(len(args[i]) + 1)
 	}
+	u.MemWrite(argvAddr, buf)
 	u.Push(0)
 	for _, v := range addrs {
 		u.Push(v)
