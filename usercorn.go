@@ -50,7 +50,7 @@ func (u *Usercorn) Run(args ...string) error {
 	}
 	// argc
 	u.Push(uint64(len(args)))
-	return nil
+	return u.Uc.Start(u.Entry, 0)
 }
 
 func (u *Usercorn) mapMemory() error {

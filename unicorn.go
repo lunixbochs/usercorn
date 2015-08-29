@@ -57,6 +57,7 @@ func (u *Unicorn) MemMap(addr, size uint64) error {
 		m = u.mapping(addr, size)
 	}
 	u.memory = append(u.memory, mmap{addr, size})
+	addr, size = align(addr, size, true)
 	return u.Uc.MemMap(addr, size)
 }
 
@@ -64,7 +65,7 @@ func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
 	if addr == 0 {
 		addr = BASE
 	}
-	_, size = align(0, size)
+	_, size = align(0, size, true)
 	addr, size = align(addr, size)
 	for i := addr; i < 1<<uint(u.Bits); i += UC_MEM_ALIGN {
 		if u.mapping(addr, size) == nil {
