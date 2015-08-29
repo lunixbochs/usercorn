@@ -15,7 +15,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = corn.Run(os.Args[2:]...)
+	err = corn.Run(os.Args[1:]...)
 	if err != nil {
 		log.Fatal(err)
 	}
