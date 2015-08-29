@@ -8,10 +8,10 @@ capstone_init = (CS_ARCH_X86, CS_MODE_32)
 sp = UC_X86_REG_ESP
 unicorn_init = (UC_ARCH_X86, UC_MODE_32)
 regs = (
-    (UC_X86_REG_EAX, "rax"),
-    (UC_X86_REG_EBX, "rbx"),
-    (UC_X86_REG_ECX, "rcx"),
-    (UC_X86_REG_EDX, "rdx"),
-    (UC_X86_REG_ESI, "rsi"),
-    (UC_X86_REG_EDI, "rdi"),
+    (UC_X86_REG_EAX, "eax"),
+    (UC_X86_REG_EBX, "ebx"),
+    (UC_X86_REG_ECX, "ecx"),
+    (UC_X86_REG_EDX, "edx"),
+    (UC_X86_REG_ESI, "esi"),
+    (UC_X86_REG_EDI, "edi"),
 )
