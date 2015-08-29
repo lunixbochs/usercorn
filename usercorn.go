@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/hex"
+	"fmt"
+
 	"./arch"
 	"./loader"
 )
@@ -50,6 +53,32 @@ func (u *Usercorn) Run(args ...string) error {
 	}
 	// argc
 	u.Push(uint64(len(args)))
+
+	fmt.Println("[entry point]")
+	mem, err := u.MemRead(u.Entry, 64)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		dis, err := Disas(mem, u.Entry, u.Arch)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(dis)
+		}
+	}
+	sp, err := u.RegRead(u.Arch.SP)
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, u.StackBase+STACK_SIZE-sp)
+	if err := u.MemReadInto(buf, sp); err != nil {
+		return err
+	}
+	fmt.Println("[initial stack]", hex.EncodeToString(buf[:]))
+
+	fmt.Println("=====================================")
+	fmt.Println("==== Program output begins here. ====")
+	fmt.Println("=====================================")
 	return u.Uc.Start(u.Entry, 0)
 }
 
