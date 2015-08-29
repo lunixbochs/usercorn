@@ -80,16 +80,17 @@ class UserCorn:
 
     def hook_mem_invalid(self, uc, access, address, size, value, user_data):
         if access == UC_MEM_WRITE:
-            print(">>> Memory fault on WRITE at 0x%x, data size = %u, data value = 0x%x" % (address, size, value))
+            print ">>> Memory fault on WRITE at 0x%x, data size = %u, data value = 0x%x" % (address, size, value)
             self.uc.mem_map(address, 2 * 1024 * 1024)
             return True
         else:
+            print ">>> Memory fault on READ at 0x%x, data size = %u" % (address, size)
             # stop emulation
             return False
 
     def hook_block(self, uc, addr, size, user_data):
         name = self.symbolicate(addr)
-        print (">>> Basic block at %s, block size = 0x%x <<<" % (name, size))
+        print ">>> Basic block at %s, block size = 0x%x <<<" % (name, size)
         self.uc.print_changed_regs()
         self.uc.print_dis(addr, size)
 
@@ -128,12 +129,13 @@ class UserCorn:
         argv_addr = self.write_argv(argv)
         self.uc.push(len(argv)) # argc
         argv_size = sum([len(a) + 1 for a in argv]) + self.bsz * (len(argv) + 1)
-        print '[argv]', self.uc.mem_hex(argv_addr, argv_size)
+        print '[argv @0x%x]' % (argv_addr), self.uc.mem_hex(argv_addr, argv_size)
 
-        print '[entry point]'
+        print '[entry point @0x%x]' % (self.entry)
         self.uc.print_dis(self.entry, 64)
         stack_size = self.stack + STACK_SIZE - self.uc.reg_read(self.arch.sp)
-        print '[initial stack]', self.uc.mem_hex(self.uc.reg_read(self.arch.sp), stack_size)
+        sp = self.uc.reg_read(self.arch.sp)
+        print ('[initial stack @0x%x]' % sp), self.uc.mem_hex(sp, stack_size)
 
         print '====================================='
         print '==== Program output begins here. ===='
