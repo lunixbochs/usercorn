@@ -9,5 +9,5 @@ type Arch struct {
 	UC_MODE   int
 	SP        int
 	Syscall   func(Usercorn)
-	Interrupt func(Usercorn, int)
+	Interrupt func(Usercorn, uint32)
 }

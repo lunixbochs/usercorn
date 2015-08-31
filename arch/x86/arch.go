@@ -23,7 +23,7 @@ func syscall(u models.Usercorn) {
 
 }
 
-func interrupt(u models.Usercorn, intno int) {
+func interrupt(u models.Usercorn, intno uint32) {
     if intno == 0x80 {
         syscall(u)
     }

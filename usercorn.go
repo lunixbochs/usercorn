@@ -121,14 +121,11 @@ func (u *Usercorn) addHooks() error {
 	})
 	u.HookAdd(uc.UC_HOOK_INTR, func(_ *uc.Uc, intno uint32) {
 		if intno == 0x80 {
-			eax, _ := u.RegRead(uc.UC_X86_REG_EAX)
-			fmt.Printf("Syscall: %d\n", eax)
-			// u.HookSyscall(u)
+			u.Arch.Interrupt(u, intno)
 		}
 	})
 	u.HookAdd(uc.UC_HOOK_INSN, func(_ *uc.Uc) {
-		eax, _ := u.RegRead(uc.UC_X86_REG_EAX)
-		fmt.Printf("Syscall: %d\n", eax)
+		u.Arch.Syscall(u)
 	}, uc.UC_X86_INS_SYSCALL)
 	return nil
 }

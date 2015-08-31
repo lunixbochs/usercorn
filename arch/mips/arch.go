@@ -19,6 +19,6 @@ var Arch = &models.Arch{
 	Interrupt: interrupt,
 }
 
-func interrupt(u models.Usercorn, intno int) {
+func interrupt(u models.Usercorn, intno uint32) {
 
 }
