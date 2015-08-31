@@ -68,12 +68,12 @@ func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
 	_, size = align(0, size, true)
 	addr, size = align(addr, size)
 	for i := addr; i < 1<<uint(u.Bits); i += UC_MEM_ALIGN {
-		if u.mapping(addr, size) == nil {
-			err := u.MemMap(addr, size)
-			return addr, err
+		if u.mapping(i, size) == nil {
+			err := u.MemMap(i, size)
+			return i, err
 		}
 	}
-	return 0, nil
+	return 0, errors.New("Unicorn.Mmap() failed.")
 }
 
 func (u *Unicorn) PackAddr(buf []byte, n uint64) error {
