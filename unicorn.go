@@ -150,3 +150,15 @@ func (u *Unicorn) Pop() (uint64, error) {
 	}
 	return u.UnpackAddr(buf[:u.Bsz]), nil
 }
+
+func (u *Unicorn) ReadRegs(regs []int) ([]uint64, error) {
+	ret := make([]uint64, len(regs))
+	for i, reg := range regs {
+		n, err := u.RegRead(reg)
+		if err != nil {
+			return nil, err
+		}
+		ret[i] = n
+	}
+	return ret, nil
+}

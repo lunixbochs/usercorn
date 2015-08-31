@@ -7,6 +7,7 @@ import (
 
 	"./arch"
 	"./loader"
+	"./syscalls"
 )
 
 type Usercorn struct {
@@ -170,4 +171,12 @@ func (u *Usercorn) pushStrings(args ...string) error {
 		u.Push(v)
 	}
 	return nil
+}
+
+func (u *Usercorn) Syscall(table map[int]string, n int, getArgs func(n int) []uint64) (uint64, error) {
+	name, ok := table[n]
+	if !ok {
+		return 0, fmt.Errorf("OS has no syscall: %d", n)
+	}
+	return syscalls.Call(u, name, getArgs)
 }

@@ -23,8 +23,10 @@ type Usercorn interface {
 	Unicorn
 	Disas(addr, size uint64) (string, error)
 	Mmap(addr, size uint64) (uint64, error)
-	Pop() (uint64, error)
-	Push(n uint64) error
 	PackAddr(buf []byte, n uint64) error
 	UnpackAddr(buf []byte) uint64
+	Pop() (uint64, error)
+	Push(n uint64) error
+	ReadRegs(reg []int) ([]uint64, error)
+	Syscall(table map[int]string, num int, getArgs func(n int) []uint64) (uint64, error)
 }
