@@ -63,16 +63,11 @@ func (u *Usercorn) Run(args ...string) error {
 	u.Push(uint64(len(args)))
 
 	fmt.Printf("[entry point @ 0x%x]\n", u.Entry)
-	mem, err := u.MemRead(u.Entry, 64)
+	dis, err := u.Disas(u.Entry, 64)
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		dis, err := Disas(mem, u.Entry, u.Arch)
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Println(dis)
-		}
+		fmt.Println(dis)
 	}
 	sp, err := u.RegRead(u.Arch.SP)
 	if err != nil {
@@ -92,17 +87,16 @@ func (u *Usercorn) Run(args ...string) error {
 
 func (u *Usercorn) addHooks() error {
 	/*
-		u.HookAdd(uc.UC_HOOK_BLOCK, func(_ *uc.Uc, addr uint64, size uint32) {
-			sym, _ := u.Symbolicate(addr)
-			fmt.Printf("-- block (%s) @0x%x (size 0x%x) --\n", sym, addr, size)
-			mem, _ := u.MemRead(addr, uint64(size))
-			fmt.Println(Disas(mem, addr, u.Arch))
-		})
+	   u.HookAdd(uc.UC_HOOK_BLOCK, func(_ *uc.Uc, addr uint64, size uint32) {
+	       sym, _ := u.Symbolicate(addr)
+	       fmt.Printf("-- block (%s) @0x%x (size 0x%x) --\n", sym, addr, size)
+	       dis, _ := u.Disas(addr, uint64(size))
+	       fmt.Println(dis)
+	   })
 	*/
 	/*
 		u.HookAdd(uc.UC_HOOK_CODE, func(_ *uc.Uc, addr uint64, size uint32) {
-			mem, _ := u.MemRead(addr, uint64(size))
-			dis, _ := Disas(mem, addr, u.Arch)
+			dis, _ := u.Disas(addr, uint64(size))
 			fmt.Printf("0x%x: %s\n", addr, dis)
 		})
 	*/
@@ -114,8 +108,8 @@ func (u *Usercorn) addHooks() error {
 		}
 		ip, _ := u.RegRead(uc.UC_X86_REG_EIP)
 		fmt.Printf(": @0x%x, 0x%x = 0x%x (eip: 0x%x)\n", addr, size, value, ip)
-		mem, _ := u.MemRead(ip, 8)
-		fmt.Println(Disas(mem, ip, u.Arch))
+		dis, _ := u.Disas(ip, 8)
+		fmt.Println(dis)
 		return false
 	})
 	u.HookAdd(uc.UC_HOOK_INTR, func(_ *uc.Uc, intno uint32) {

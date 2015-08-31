@@ -42,6 +42,14 @@ func (u *Unicorn) mapping(addr, size uint64) *mmap {
 	return nil
 }
 
+func (u *Unicorn) Disas(addr, size uint64) (string, error) {
+	mem, err := u.MemRead(addr, size)
+	if err != nil {
+		return "", err
+	}
+	return Disas(mem, addr, u.Arch)
+}
+
 func (u *Unicorn) MemMap(addr, size uint64) error {
 	m := u.mapping(addr, size)
 	for m != nil {
