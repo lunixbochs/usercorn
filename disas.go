@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/bnagy/gapstone"
 	"strings"
@@ -18,9 +19,17 @@ func Disas(mem []byte, addr uint64, arch *models.Arch) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	var width uint
+	for _, insn := range asm {
+		if insn.Size > width {
+			width = insn.Size
+		}
+	}
 	var out []string
 	for _, insn := range asm {
-		out = append(out, fmt.Sprintf("0x%x:  %s  %s", insn.Address, insn.Mnemonic, insn.OpStr))
+		pad := strings.Repeat(" ", int(width-insn.Size)*2)
+		data := pad + hex.EncodeToString(insn.Bytes)
+		out = append(out, fmt.Sprintf("0x%x: %s %s %s", insn.Address, data, insn.Mnemonic, insn.OpStr))
 	}
 	return strings.Join(out, "\n"), nil
 }
