@@ -62,7 +62,7 @@ func (u *Usercorn) Run(args ...string) error {
 	// argc
 	u.Push(uint64(len(args)))
 
-	fmt.Println("[entry point]")
+	fmt.Printf("[entry point @ 0x%x]\n", u.Entry)
 	mem, err := u.MemRead(u.Entry, 64)
 	if err != nil {
 		fmt.Println(err)
@@ -82,12 +82,11 @@ func (u *Usercorn) Run(args ...string) error {
 	if err := u.MemReadInto(buf, sp); err != nil {
 		return err
 	}
-	fmt.Println("[initial stack]", hex.EncodeToString(buf[:]))
+	fmt.Printf("[stack @ 0x%x] %s\n", sp, hex.EncodeToString(buf[:]))
 
 	fmt.Println("=====================================")
 	fmt.Println("==== Program output begins here. ====")
 	fmt.Println("=====================================")
-	fmt.Printf("running at 0x%x\n", u.Entry)
 	return u.Uc.Start(u.Entry, 0)
 }
 
