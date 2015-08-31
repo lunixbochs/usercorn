@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	uc "github.com/lunixbochs/unicorn"
@@ -74,6 +75,19 @@ func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
 		}
 	}
 	return 0, errors.New("Unicorn.Mmap() failed.")
+}
+
+func (u *Unicorn) MemReadStr(addr uint64) (string, error) {
+	var tmp = [4]byte{1, 1, 1, 1}
+	var ret []byte
+	nul := []byte{0}
+	for !bytes.Contains(tmp[:], nul) {
+		u.MemReadInto(tmp[:], addr)
+		addr += 4
+		ret = append(ret, tmp[:]...)
+	}
+	split := bytes.Index(ret, nul)
+	return string(ret[:split]), nil
 }
 
 func (u *Unicorn) PackAddr(buf []byte, n uint64) error {

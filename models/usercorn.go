@@ -10,6 +10,7 @@ type Unicorn interface {
     MemMapProt(addr, size uint64, prot int) error
     MemRead(addr, size uint64) ([]byte, error)
     MemReadInto(dst []byte, addr uint64) error
+    MemReadStr(addr uint64) (string, error)
     MemWrite(addr uint64, data []byte) error
     RegRead(reg int) (uint64, error)
     RegWrite(reg int, value uint64) error
