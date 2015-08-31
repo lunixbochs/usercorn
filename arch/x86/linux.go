@@ -25,8 +25,8 @@ func LinuxSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
 	var regs = []int{uc.UC_X86_REG_EBX, uc.UC_X86_REG_ECX, uc.UC_X86_REG_EDX, uc.UC_X86_REG_ESI, uc.UC_X86_REG_EDI, uc.UC_X86_REG_EBP}
 	args, _ := u.ReadRegs(regs)
-	getArgs := func(n int) []uint64 {
-		return args[:n]
+	getArgs := func(n int) ([]uint64, error) {
+		return args[:n], nil
 	}
 	eax, _ := u.RegRead(uc.UC_X86_REG_EAX)
 	ret, _ := u.Syscall(linuxSyscalls, int(eax), getArgs)

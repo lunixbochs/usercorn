@@ -67,10 +67,14 @@ var syscalls = map[string]Syscall{
 	"munmap": {munmap, 2},
 }
 
-func Call(u models.Usercorn, name string, getArgs func(n int) []uint64) (uint64, error) {
+func Call(u models.Usercorn, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
 	s, ok := syscalls[name]
 	if !ok {
 		return 0, fmt.Errorf("Unknown syscall: %s", s)
 	}
-	return s.Func(u, getArgs(s.Args)), nil
+	args, err := getArgs(s.Args)
+	if err != nil {
+		return 0, err
+	}
+	return s.Func(u, args), nil
 }

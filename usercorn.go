@@ -173,7 +173,7 @@ func (u *Usercorn) pushStrings(args ...string) error {
 	return nil
 }
 
-func (u *Usercorn) Syscall(table map[int]string, n int, getArgs func(n int) []uint64) (uint64, error) {
+func (u *Usercorn) Syscall(table map[int]string, n int, getArgs func(n int) ([]uint64, error)) (uint64, error) {
 	name, ok := table[n]
 	if !ok {
 		return 0, fmt.Errorf("OS has no syscall: %d", n)
