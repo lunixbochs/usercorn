@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	uc "github.com/lunixbochs/unicorn"
 
 	"./arch"
 	"./loader"
@@ -25,12 +26,12 @@ func NewUsercorn(exe string) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
-	uc, err := NewUnicorn(a)
+	unicorn, err := NewUnicorn(a)
 	if err != nil {
 		return nil, err
 	}
 	u := &Usercorn{
-		Unicorn: uc,
+		Unicorn: unicorn,
 		loader:  l,
 		OS:      l.OS(),
 		Entry:   l.Entry(),
@@ -38,7 +39,14 @@ func NewUsercorn(exe string) (*Usercorn, error) {
 	return u, nil
 }
 
+func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
+	return u.loader.Symbolicate(addr)
+}
+
 func (u *Usercorn) Run(args ...string) error {
+	if err := u.addHooks(); err != nil {
+		return err
+	}
 	if err := u.mapMemory(); err != nil {
 		return err
 	}
@@ -79,7 +87,50 @@ func (u *Usercorn) Run(args ...string) error {
 	fmt.Println("=====================================")
 	fmt.Println("==== Program output begins here. ====")
 	fmt.Println("=====================================")
+	fmt.Printf("running at 0x%x\n", u.Entry)
 	return u.Uc.Start(u.Entry, 0)
+}
+
+func (u *Usercorn) addHooks() error {
+	/*
+		u.HookAdd(uc.UC_HOOK_BLOCK, func(_ *uc.Uc, addr uint64, size uint32) {
+			sym, _ := u.Symbolicate(addr)
+			fmt.Printf("-- block (%s) @0x%x (size 0x%x) --\n", sym, addr, size)
+			mem, _ := u.MemRead(addr, uint64(size))
+			fmt.Println(Disas(mem, addr, u.Arch))
+		})
+	*/
+	/*
+		u.HookAdd(uc.UC_HOOK_CODE, func(_ *uc.Uc, addr uint64, size uint32) {
+			mem, _ := u.MemRead(addr, uint64(size))
+			dis, _ := Disas(mem, addr, u.Arch)
+			fmt.Printf("0x%x: %s\n", addr, dis)
+		})
+	*/
+	u.HookAdd(uc.UC_HOOK_MEM_INVALID, func(_ *uc.Uc, access int, addr uint64, size int, value int64) bool {
+		if access == uc.UC_MEM_WRITE {
+			fmt.Printf("invalid write")
+		} else {
+			fmt.Printf("invalid read")
+		}
+		ip, _ := u.RegRead(uc.UC_X86_REG_EIP)
+		fmt.Printf(": @0x%x, 0x%x = 0x%x (eip: 0x%x)\n", addr, size, value, ip)
+		mem, _ := u.MemRead(ip, 8)
+		fmt.Println(Disas(mem, ip, u.Arch))
+		return false
+	})
+	u.HookAdd(uc.UC_HOOK_INTR, func(_ *uc.Uc, intno uint32) {
+		if intno == 0x80 {
+			eax, _ := u.RegRead(uc.UC_X86_REG_EAX)
+			fmt.Printf("Syscall: %d\n", eax)
+			// u.HookSyscall(u)
+		}
+	})
+	u.HookAdd(uc.UC_HOOK_INSN, func(_ *uc.Uc) {
+		eax, _ := u.RegRead(uc.UC_X86_REG_EAX)
+		fmt.Printf("Syscall: %d\n", eax)
+	}, uc.UC_X86_INS_SYSCALL)
+	return nil
 }
 
 func (u *Usercorn) mapMemory() error {

@@ -3,7 +3,7 @@ package arch
 import (
 	"fmt"
 
-	"./arch"
+	"../models"
 	"./arm"
 	"./arm64"
 	"./mips"
@@ -11,7 +11,7 @@ import (
 	"./x86_64"
 )
 
-var archMap = map[string]*arch.Arch{
+var archMap = map[string]*models.Arch{
 	"arm":    arm.Arch,
 	"arm64":  arm64.Arch,
 	"mips":   mips.Arch,
@@ -19,7 +19,7 @@ var archMap = map[string]*arch.Arch{
 	"x86_64": x86_64.Arch,
 }
 
-func GetArch(name, os string) (*arch.Arch, error) {
+func GetArch(name, os string) (*models.Arch, error) {
 	if a, ok := archMap[name]; ok {
 		return a, nil
 	}

@@ -5,18 +5,18 @@ import (
 	"errors"
 	uc "github.com/lunixbochs/unicorn"
 
-	"./arch/arch"
+	"./models"
 )
 
 type Unicorn struct {
 	*uc.Uc
-	Arch   *arch.Arch
+	Arch   *models.Arch
 	Bits   int
 	Bsz    int
 	memory []mmap
 }
 
-func NewUnicorn(a *arch.Arch) (*Unicorn, error) {
+func NewUnicorn(a *models.Arch) (*Unicorn, error) {
 	Uc, err := uc.NewUc(a.UC_ARCH, a.UC_MODE)
 	if err != nil {
 		return nil, err
