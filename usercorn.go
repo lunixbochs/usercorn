@@ -13,7 +13,6 @@ type Usercorn struct {
 	*Unicorn
 	loader    loader.Loader
 	Entry     uint64
-	OS        string
 	StackBase uint64
 }
 
@@ -22,18 +21,17 @@ func NewUsercorn(exe string) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
-	a, err := arch.GetArch(l.Arch(), l.OS())
+	a, os, err := arch.GetArch(l.Arch(), l.OS())
 	if err != nil {
 		return nil, err
 	}
-	unicorn, err := NewUnicorn(a)
+	unicorn, err := NewUnicorn(a, os)
 	if err != nil {
 		return nil, err
 	}
 	u := &Usercorn{
 		Unicorn: unicorn,
 		loader:  l,
-		OS:      l.OS(),
 		Entry:   l.Entry(),
 	}
 	return u, nil
@@ -113,12 +111,10 @@ func (u *Usercorn) addHooks() error {
 		return false
 	})
 	u.HookAdd(uc.UC_HOOK_INTR, func(_ *uc.Uc, intno uint32) {
-		if intno == 0x80 {
-			u.Arch.Interrupt(u, intno)
-		}
+		u.OS.Interrupt(u, intno)
 	})
 	u.HookAdd(uc.UC_HOOK_INSN, func(_ *uc.Uc) {
-		u.Arch.Syscall(u)
+		u.OS.Syscall(u)
 	}, uc.UC_X86_INS_SYSCALL)
 	return nil
 }

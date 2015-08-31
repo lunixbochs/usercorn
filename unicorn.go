@@ -12,21 +12,23 @@ import (
 type Unicorn struct {
 	*uc.Uc
 	Arch   *models.Arch
+	OS     *models.OS
 	Bits   int
 	Bsz    int
 	memory []mmap
 }
 
-func NewUnicorn(a *models.Arch) (*Unicorn, error) {
-	Uc, err := uc.NewUc(a.UC_ARCH, a.UC_MODE)
+func NewUnicorn(arch *models.Arch, os *models.OS) (*Unicorn, error) {
+	Uc, err := uc.NewUc(arch.UC_ARCH, arch.UC_MODE)
 	if err != nil {
 		return nil, err
 	}
 	return &Unicorn{
 		Uc:   Uc,
-		Arch: a,
-		Bits: a.Bits,
-		Bsz:  a.Bits / 8,
+		Arch: arch,
+		OS:   os,
+		Bits: arch.Bits,
+		Bsz:  arch.Bits / 8,
 	}, nil
 }
 

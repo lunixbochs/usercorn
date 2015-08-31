@@ -19,9 +19,14 @@ var archMap = map[string]*models.Arch{
 	"x86_64": x86_64.Arch,
 }
 
-func GetArch(name, os string) (*models.Arch, error) {
-	if a, ok := archMap[name]; ok {
-		return a, nil
+func GetArch(name, os string) (*models.Arch, *models.OS, error) {
+	a, ok := archMap[name]
+	if !ok {
+		return nil, nil, fmt.Errorf("Arch '%s' not found.", name)
 	}
-	return nil, fmt.Errorf("Arch '%s' not found.", name)
+	o, ok := a.OS[os]
+	if !ok {
+		return nil, nil, fmt.Errorf("OS '%s' not found for arch '%s'.", os, name)
+	}
+	return a, o, nil
 }
