@@ -97,7 +97,7 @@ func (u *Usercorn) addHooks() error {
 	/*
 		u.HookAdd(uc.UC_HOOK_CODE, func(_ *uc.Uc, addr uint64, size uint32) {
 			dis, _ := u.Disas(addr, uint64(size))
-			fmt.Printf("0x%x: %s\n", addr, dis)
+			fmt.Println(dis)
 		})
 	*/
 	u.HookAdd(uc.UC_HOOK_MEM_INVALID, func(_ *uc.Uc, access int, addr uint64, size int, value int64) bool {
