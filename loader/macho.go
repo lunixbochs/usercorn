@@ -89,7 +89,7 @@ func NewMachOLoader(r io.ReaderAt) (Loader, error) {
 		LoaderHeader: LoaderHeader{
 			arch:  machineName,
 			bits:  bits,
-			os:    "linux",
+			os:    "darwin",
 			entry: entry,
 		},
 		file: file,
