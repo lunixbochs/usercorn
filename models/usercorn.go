@@ -2,6 +2,7 @@ package models
 
 import (
 	uc "github.com/lunixbochs/unicorn"
+	"io"
 )
 
 // TODO upstream Unicorn interface into bindings
@@ -23,6 +24,7 @@ type Usercorn interface {
 	Unicorn
 	Disas(addr, size uint64) (string, error)
 	Mmap(addr, size uint64) (uint64, error)
+	MemReader(addr uint64) io.Reader
 	PackAddr(buf []byte, n uint64) error
 	UnpackAddr(buf []byte) uint64
 	Pop() (uint64, error)

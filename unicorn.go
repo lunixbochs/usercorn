@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	uc "github.com/lunixbochs/unicorn"
+	"io"
 
 	"./models"
 )
@@ -98,6 +99,10 @@ func (u *Unicorn) MemReadStr(addr uint64) (string, error) {
 	}
 	split := bytes.Index(ret, nul)
 	return string(ret[:split]), nil
+}
+
+func (u *Unicorn) MemReader(addr uint64) io.Reader {
+	return &models.MemReader{u, addr}
 }
 
 func (u *Unicorn) PackAddr(buf []byte, n uint64) error {
