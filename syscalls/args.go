@@ -21,3 +21,9 @@ func StackArgs(u models.Usercorn) func(n int) ([]uint64, error) {
 		return ret, nil
 	}
 }
+
+func RegArgs(u models.Usercorn, regs []int) func(n int) ([]uint64, error) {
+	return func(n int) ([]uint64, error) {
+		return u.ReadRegs(regs[:n])
+	}
+}
