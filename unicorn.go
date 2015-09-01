@@ -78,7 +78,7 @@ func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
 	}
 	_, size = align(0, size, true)
 	addr, size = align(addr, size)
-	for i := addr; i < 1<<uint(u.Bits); i += UC_MEM_ALIGN {
+	for i := addr; i < uint64(1)<<uint64(u.Bits-1); i += UC_MEM_ALIGN {
 		if u.mapping(i, size) == nil {
 			err := u.MemMap(i, size)
 			return i, err
