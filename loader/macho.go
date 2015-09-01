@@ -39,11 +39,11 @@ func findEntry(f *macho.File, bits int) (uint64, error) {
 		binary.Read(bytes.NewReader(data), f.ByteOrder, &cmd)
 		if cmd == macho.LoadCmdUnixThread {
 			if bits == 64 {
-				ip := 2*4 + 16*8
+				ip := 144
 				binary.Read(bytes.NewReader(data[ip:ip+8]), f.ByteOrder, &entry)
 			} else {
 				var ent32 uint32
-				ip := 2*4 + 10*4
+				ip := 56
 				binary.Read(bytes.NewReader(data[ip:ip+4]), f.ByteOrder, &ent32)
 				entry = uint64(ent32)
 			}
