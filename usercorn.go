@@ -7,6 +7,7 @@ import (
 
 	"./arch"
 	"./loader"
+	"./models"
 	"./syscalls"
 )
 
@@ -125,10 +126,26 @@ func (u *Usercorn) mapMemory() error {
 	if err != nil {
 		return err
 	}
+	// merge overlapping segments
+	merged := make([]*models.Segment, 0, len(segments))
+outer:
 	for _, seg := range segments {
-		if err := u.MemMap(seg.Addr, uint64(len(seg.Data))); err != nil {
+		addr, size := align(seg.Addr, uint64(len(seg.Data)), true)
+		s := &models.Segment{addr, addr + size}
+		for _, s2 := range merged {
+			if s2.Overlaps(s) {
+				s2.Merge(s)
+				continue outer
+			}
+		}
+		merged = append(merged, s)
+	}
+	for _, seg := range merged {
+		if err := u.MemMap(seg.Start, seg.End-seg.Start); err != nil {
 			return err
 		}
+	}
+	for _, seg := range segments {
 		if err := u.MemWrite(seg.Addr, seg.Data); err != nil {
 			return err
 		}
