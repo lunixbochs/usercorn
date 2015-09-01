@@ -58,6 +58,14 @@ func NewElfLoader(r io.ReaderAt) (Loader, error) {
 	}, nil
 }
 
+func (e *ElfLoader) DataSegment() (start, end uint64) {
+	sec := e.file.Section(".data")
+	if sec != nil {
+		return sec.Addr, sec.Addr + sec.Size
+	}
+	return 0, 0
+}
+
 func (e *ElfLoader) Segments() ([]Segment, error) {
 	ret := make([]Segment, 0, len(e.file.Progs))
 	for _, prog := range e.file.Progs {

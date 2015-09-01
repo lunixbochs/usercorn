@@ -13,9 +13,10 @@ import (
 
 type Usercorn struct {
 	*Unicorn
-	loader    loader.Loader
-	Entry     uint64
-	StackBase uint64
+	loader      loader.Loader
+	Entry       uint64
+	StackBase   uint64
+	DataSegment *models.Segment
 }
 
 func NewUsercorn(exe string) (*Usercorn, error) {
@@ -32,9 +33,10 @@ func NewUsercorn(exe string) (*Usercorn, error) {
 		return nil, err
 	}
 	u := &Usercorn{
-		Unicorn: unicorn,
-		loader:  l,
-		Entry:   l.Entry(),
+		Unicorn:     unicorn,
+		loader:      l,
+		Entry:       l.Entry(),
+		DataSegment: l.DataSegment(),
 	}
 	return u, nil
 }

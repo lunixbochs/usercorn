@@ -12,6 +12,7 @@ type Loader interface {
 	Entry() uint64
 	Symbolicate(addr uint64) (string, error)
 	Segments() ([]Segment, error)
+	DataSegment() (uint64, uint64)
 }
 
 type LoaderHeader struct {
