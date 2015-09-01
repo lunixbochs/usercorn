@@ -30,6 +30,15 @@ func (f *FakeCgcReader) ReadAt(p []byte, off int64) (int, error) {
 	return n1 + n, err
 }
 
+type CgcLoader struct {
+	Loader
+}
+
+func (c *CgcLoader) OS() string {
+	return "cgc"
+}
+
 func NewCgcLoader(r io.ReaderAt) (Loader, error) {
-	return NewElfLoader(&FakeCgcReader{r})
+	l, err := NewElfLoader(&FakeCgcReader{r})
+	return &CgcLoader{l}, err
 }
