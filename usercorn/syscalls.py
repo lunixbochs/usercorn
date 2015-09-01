@@ -9,7 +9,7 @@ def fork(cls):
 
 def read(cls, a1, a2, a3):
     tmp = os.read(a1, a3)
-    cls.mem_write(a2, tmp + '\0')
+    cls.mem_write(a2, tmp)
     return len(tmp)
 
 def write(cls, a1, a2, a3):

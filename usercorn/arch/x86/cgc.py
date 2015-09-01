@@ -30,7 +30,7 @@ def syscall(cls):
     # receive
     elif num == 3: 
         tmp = os.read(a1, a3)
-        cls.mem_write(a2, tmp + '\0')
+        cls.mem_write(a2, tmp)
         cls.mem_write(a4, cls.pack_addr(len(tmp)))
     # fdwait
     elif num == 4:
