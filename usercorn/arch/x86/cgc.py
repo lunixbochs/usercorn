@@ -1,20 +1,6 @@
 from unicorn.x86_const import *
 import os
-import struct
 import sys
-
-def read_fdset(cls, addr):
-    n, = struct.unpack('<I', cls.mem_read(addr, 4))
-    fds = cls.mem_read(addr + 4, n * 4)
-    return struct.unpack('<%dI' % n, fds)
-
-def write_fdset(cls, addr, fds):
-    mem = struct.pack('<I%dI' % len(fds), len(fds), *fds)
-    cls.mem_write(addr, mem)
-
-def read_timeval(cls, addr):
-    sec, us = struct.unpack('<II', cls.mem_read(addr, 8))
-    return sec + us / 1000000.0
 
 def syscall(cls):
     regs = [UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_ECX, UC_X86_REG_EDX, UC_X86_REG_ESI, UC_X86_REG_EDI, UC_X86_REG_EBP]
@@ -34,11 +20,7 @@ def syscall(cls):
         cls.mem_write(a4, cls.pack_addr(len(tmp)))
     # fdwait
     elif num == 4:
-        readfds = read_fdset(cls, a2)
-        writefds = read_fdset(cls, a3)
-        timeout = read_timeval(cls, a4)
-        r, w, _ = select.select(readfds, writefds, [], timeout)
-        write_fdset(cls, a5, r + w)
+        pass
     # allocate
     elif num == 5:
         addr = cls.mmap(a1)
