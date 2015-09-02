@@ -1,8 +1,10 @@
 package x86_64
 
 import (
-	"../../models"
 	uc "github.com/lunixbochs/unicorn"
+
+	"../../models"
+	"../../syscalls"
 )
 
 var darwinSyscalls = map[int]string{
@@ -22,7 +24,8 @@ var darwinSyscalls = map[int]string{
 
 func DarwinSyscall(u models.Usercorn) {
 	rax, _ := u.RegRead(uc.UC_X86_REG_RAX)
-	AbiSyscall(u, darwinSyscalls, rax-0x2000000)
+	ret, _ := u.Syscall(darwinSyscalls, int(rax-0x2000000), syscalls.RegArgs(u, AbiRegs))
+	u.RegWrite(uc.UC_X86_REG_RAX, ret)
 }
 
 func DarwinInterrupt(u models.Usercorn, intno uint32) {
