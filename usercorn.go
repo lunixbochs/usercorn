@@ -81,7 +81,7 @@ func (u *Usercorn) Run(args ...string) error {
 	fmt.Println("=====================================")
 	fmt.Println("==== Program output begins here. ====")
 	fmt.Println("=====================================")
-	return u.Uc.Start(u.Entry, 0)
+	return u.Uc.Start(u.Entry, 0xffffffffffffffff)
 }
 
 func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
