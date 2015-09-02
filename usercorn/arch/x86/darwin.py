@@ -20,9 +20,11 @@ SYSCALLS = {
 }
 
 def syscall(cls):
+    esp = cls.reg_read(UC_X86_REG_ESP)
     num = cls.reg_read(UC_X86_REG_EAX)
     ret = syscalls.call(cls, SYSCALLS, num, syscalls.stack_args(cls))
     cls.reg_write(UC_X86_REG_EAX, ret)
+    cls.reg_write(UC_X86_REG_ESP, esp)
 
 def interrupt(cls, intno):
     if intno == 0x80:
