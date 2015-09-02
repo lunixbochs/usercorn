@@ -22,6 +22,7 @@ SYSCALLS = {
 
 def syscall(cls):
     num, args = syscall_args(cls)
+    num -= 0x2000000
     ret = syscalls.call(cls, SYSCALLS, num, lambda n: args[:n])
     cls.reg_write(UC_X86_REG_RAX, ret)
 
