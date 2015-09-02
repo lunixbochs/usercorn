@@ -88,17 +88,19 @@ func (e *ElfLoader) Symbolicate(addr uint64) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	var min int64 = -1
 	for _, sym := range syms {
-		dist := addr - sym.Value
-		if dist > 0 && dist <= sym.Size {
-			nearest[dist] = append(nearest[dist], sym)
+		dist := int64(addr - sym.Value)
+		if dist > 0 && uint64(dist) <= sym.Size {
+			if dist < min || min == -1 {
+				min = dist
+			}
+			nearest[uint64(dist)] = append(nearest[uint64(dist)], sym)
 		}
 	}
 	if len(nearest) > 0 {
-		for dist, v := range nearest {
-			sym := v[0]
-			return fmt.Sprintf("%s+0x%x", sym.Name, dist), nil
-		}
+		sym := nearest[uint64(min)][0]
+		return fmt.Sprintf("%s+0x%x", sym.Name, min), nil
 	}
 	return "", nil
 }
