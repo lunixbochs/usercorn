@@ -70,7 +70,7 @@ var syscalls = map[string]Syscall{
 func Call(u models.Usercorn, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
 	s, ok := syscalls[name]
 	if !ok {
-		return 0, fmt.Errorf("Unknown syscall: %s", s)
+		panic(fmt.Errorf("Unknown syscall: %s", name))
 	}
 	args, err := getArgs(s.Args)
 	if err != nil {
