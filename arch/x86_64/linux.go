@@ -2,6 +2,7 @@ package x86_64
 
 import (
 	"../../models"
+	uc "github.com/lunixbochs/unicorn"
 )
 
 var linuxSyscalls = map[int]string{
@@ -16,7 +17,8 @@ var linuxSyscalls = map[int]string{
 }
 
 func LinuxSyscall(u models.Usercorn) {
-	AbiSyscall(u, linuxSyscalls)
+	rax, _ := u.RegRead(uc.UC_X86_REG_RAX)
+	AbiSyscall(u, linuxSyscalls, rax)
 }
 
 func LinuxInterrupt(u models.Usercorn, intno uint32) {
