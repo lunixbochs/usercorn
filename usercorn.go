@@ -32,17 +32,14 @@ func NewUsercorn(exe string) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
+	ds, de := l.DataSegment()
 	u := &Usercorn{
 		Unicorn:     unicorn,
 		loader:      l,
 		Entry:       l.Entry(),
-		DataSegment: l.DataSegment(),
+		DataSegment: &models.Segment{ds, de},
 	}
 	return u, nil
-}
-
-func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
-	return u.loader.Symbolicate(addr)
 }
 
 func (u *Usercorn) Run(args ...string) error {
@@ -85,6 +82,20 @@ func (u *Usercorn) Run(args ...string) error {
 	fmt.Println("==== Program output begins here. ====")
 	fmt.Println("=====================================")
 	return u.Uc.Start(u.Entry, 0)
+}
+
+func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
+	return u.loader.Symbolicate(addr)
+}
+
+func (u *Usercorn) Brk(addr uint64) (uint64, error) {
+	// TODO: this is linux specific
+	s := u.DataSegment
+	if addr > 0 {
+		u.MemMap(s.End, addr)
+		s.End = addr
+	}
+	return s.End, nil
 }
 
 func (u *Usercorn) addHooks() error {

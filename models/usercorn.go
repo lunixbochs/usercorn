@@ -23,6 +23,7 @@ type Unicorn interface {
 type Usercorn interface {
 	Unicorn
 	Disas(addr, size uint64) (string, error)
+	Brk(addr uint64) (uint64, error)
 	Mmap(addr, size uint64) (uint64, error)
 	MemReader(addr uint64) io.Reader
 	MemWriter(addr uint64) io.Writer
