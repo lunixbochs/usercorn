@@ -9,7 +9,7 @@ import (
 	"./models"
 )
 
-func Disas(mem []byte, addr uint64, arch *models.Arch) (string, error) {
+func Disas(mem []byte, addr uint64, arch *models.Arch, pad ...int) (string, error) {
 	engine, err := gapstone.New(arch.CS_ARCH, arch.CS_MODE)
 	if err != nil {
 		return "", err
@@ -20,6 +20,9 @@ func Disas(mem []byte, addr uint64, arch *models.Arch) (string, error) {
 		return "", err
 	}
 	var width uint
+	if len(pad) > 0 {
+		width = uint(pad[0])
+	}
 	for _, insn := range asm {
 		if insn.Size > width {
 			width = insn.Size

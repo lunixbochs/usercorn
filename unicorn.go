@@ -50,7 +50,7 @@ func (u *Unicorn) Disas(addr, size uint64) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return Disas(mem, addr, u.Arch)
+	return Disas(mem, addr, u.Arch, u.Bsz)
 }
 
 func (u *Unicorn) MemMap(addr, size uint64) error {
