@@ -6,9 +6,11 @@ usercorn
 You need [Unicorn](http://www.unicorn-engine.org/) installed, including the Python bindings (`cd bindings/python; make install`)
 
     pip install -r requirements.txt
+    python run.py bins/x86.linux.elf
     python run.py bins/x86_64.linux.elf
-    # (note: MachO loading is implemented but the binary crashes at some point in my tests)
-    python run.py bins/x86_64.osxtest.macho
+    python run.py bins/x86.darwin.macho
+    python run.py bins/x86_64.darwin.macho
+    python run.py bins/x86.linux.cgc
 
 What.
 ----
