@@ -105,6 +105,10 @@ func (u *Unicorn) MemReader(addr uint64) io.Reader {
 	return &models.MemReader{u, addr}
 }
 
+func (u *Unicorn) MemWriter(addr uint64) io.Writer {
+	return &models.MemWriter{u, addr}
+}
+
 func (u *Unicorn) PackAddr(buf []byte, n uint64) error {
 	if len(buf) < u.Bsz {
 		return errors.New("Buffer too small.")

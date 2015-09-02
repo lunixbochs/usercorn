@@ -25,6 +25,7 @@ type Usercorn interface {
 	Disas(addr, size uint64) (string, error)
 	Mmap(addr, size uint64) (uint64, error)
 	MemReader(addr uint64) io.Reader
+	MemWriter(addr uint64) io.Writer
 	PackAddr(buf []byte, n uint64) error
 	UnpackAddr(buf []byte) uint64
 	Pop() (uint64, error)
