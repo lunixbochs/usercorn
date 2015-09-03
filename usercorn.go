@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	uc "github.com/lunixbochs/unicorn"
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
 
 	"./arch"

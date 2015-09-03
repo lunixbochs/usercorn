@@ -2,7 +2,7 @@ package mips
 
 import (
 	cs "github.com/bnagy/gapstone"
-	uc "github.com/lunixbochs/unicorn"
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"../../models"
 )

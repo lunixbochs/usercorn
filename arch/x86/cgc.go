@@ -2,7 +2,7 @@ package x86
 
 import (
 	"crypto/rand"
-	uc "github.com/lunixbochs/unicorn"
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"syscall"
 
 	"../../models"

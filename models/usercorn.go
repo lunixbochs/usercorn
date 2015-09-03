@@ -1,7 +1,7 @@
 package models
 
 import (
-	uc "github.com/lunixbochs/unicorn"
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io"
 )
 

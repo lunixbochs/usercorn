@@ -1,7 +1,7 @@
 package x86_64
 
 import (
-	uc "github.com/lunixbochs/unicorn"
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"../../models"
 	"../../syscalls"
