@@ -21,7 +21,7 @@ type U models.Usercorn
 
 type Syscall struct {
 	Func func(u U, args []uint64) uint64
-	Args int
+	Args []int
 }
 
 func exit(u U, args []uint64) uint64 {
@@ -130,22 +130,24 @@ func writev(u U, args []uint64) uint64 {
 	return 0
 }
 
+type A []int
+
 var syscalls = map[string]Syscall{
-	"exit": {exit, 1},
-	// "fork": {fork, 0},
-	"read":     {read, 3},
-	"write":    {write, 3},
-	"open":     {open, 3},
-	"close":    {_close, 1},
-	"lseek":    {lseek, 3},
-	"mmap":     {mmap, 6},
-	"munmap":   {munmap, 2},
-	"mprotect": {mprotect, 3},
-	"brk":      {brk, 1},
-	"fstat":    {fstat, 2},
-	"getcwd":   {getcwd, 2},
-	"access":   {access, 2},
-	"writev":   {writev, 3},
+	"exit": {exit, A{INT}},
+	// "fork": {fork, A{}},
+	"read":     {read, A{FD, OBUF, LEN}},
+	"write":    {write, A{FD, BUF, LEN}},
+	"open":     {open, A{STR, INT, INT}},
+	"close":    {_close, A{FD}},
+	"lseek":    {lseek, A{FD, OFF, INT}},
+	"mmap":     {mmap, A{PTR, LEN, INT, INT, FD, OFF}},
+	"munmap":   {munmap, A{PTR, LEN}},
+	"mprotect": {mprotect, A{PTR, LEN, INT}},
+	"brk":      {brk, A{PTR}},
+	"fstat":    {fstat, A{FD, PTR}},
+	"getcwd":   {getcwd, A{PTR, LEN}},
+	"access":   {access, A{STR, INT}},
+	"writev":   {writev, A{FD, PTR, INT}},
 }
 
 func Call(u models.Usercorn, name string, getArgs func(n int) ([]uint64, error), strace bool) (uint64, error) {
@@ -153,12 +155,16 @@ func Call(u models.Usercorn, name string, getArgs func(n int) ([]uint64, error),
 	if !ok {
 		panic(fmt.Errorf("Unknown syscall: %s", name))
 	}
-	args, err := getArgs(s.Args)
+	args, err := getArgs(len(s.Args))
 	if err != nil {
 		return 0, err
 	}
 	if strace {
-		fmt.Println("Syscall", name, args)
+		Trace(u, name, args)
 	}
-	return s.Func(u, args), nil
+	ret := s.Func(u, args)
+	if strace {
+		TraceRet(u, name, args, ret)
+	}
+	return ret, nil
 }
