@@ -1,7 +1,6 @@
 package syscalls
 
 import (
-	"encoding/binary"
 	"fmt"
 	"github.com/lunixbochs/struc"
 	"os"
@@ -131,10 +130,14 @@ func writev(u U, a []uint64) uint64 {
 	ptr := u.MemReader(iov)
 	var i uint64
 	for i = 0; i < count; i++ {
-		// TODO: bits support (via Usercorn.Bits() I think)
 		var iovec Iovec64
-		// TODO: endian support
-		struc.UnpackWithOrder(ptr, &iovec, binary.LittleEndian)
+		if u.Bits() == 64 {
+			struc.UnpackWithOrder(ptr, &iovec, u.Endian())
+		} else {
+			var iv32 Iovec32
+			struc.UnpackWithOrder(ptr, &iv32, u.Endian())
+			iovec = Iovec64{uint64(iv32.Base), uint64(iv32.Len)}
+		}
 		data, _ := u.MemRead(iovec.Base, iovec.Len)
 		syscall.Write(fd, data)
 	}

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/binary"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io"
 )
@@ -24,6 +25,7 @@ type Usercorn interface {
 	Unicorn
 	Arch() *Arch
 	Bits() uint
+	Endian() binary.ByteOrder
 	Disas(addr, size uint64) (string, error)
 	Brk(addr uint64) (uint64, error)
 	Mmap(addr, size uint64) (uint64, error)

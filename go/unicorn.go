@@ -16,6 +16,7 @@ type Unicorn struct {
 	OS     *models.OS
 	bits   int
 	Bsz    int
+	endian binary.ByteOrder
 	memory []mmap
 }
 
@@ -30,6 +31,8 @@ func NewUnicorn(arch *models.Arch, os *models.OS) (*Unicorn, error) {
 		OS:   os,
 		bits: arch.Bits,
 		Bsz:  arch.Bits / 8,
+		// TODO
+		endian: binary.LittleEndian,
 	}, nil
 }
 
@@ -39,6 +42,10 @@ func (u *Unicorn) Arch() *models.Arch {
 
 func (u *Unicorn) Bits() uint {
 	return uint(u.bits)
+}
+
+func (u *Unicorn) Endian() binary.ByteOrder {
+	return u.endian
 }
 
 func (u *Unicorn) mapping(addr, size uint64) *mmap {
@@ -122,21 +129,18 @@ func (u *Unicorn) PackAddr(buf []byte, n uint64) error {
 		return errors.New("Buffer too small.")
 	}
 	if u.bits == 64 {
-		// TODO: endian
-		// TODO: just save a pointer/wrapper to these functions?
-		binary.LittleEndian.PutUint64(buf, n)
+		u.endian.PutUint64(buf, n)
 	} else {
-		binary.LittleEndian.PutUint32(buf, uint32(n))
+		u.endian.PutUint32(buf, uint32(n))
 	}
 	return nil
 }
 
 func (u *Unicorn) UnpackAddr(buf []byte) uint64 {
-	// TODO: endian
 	if u.bits == 64 {
-		return binary.LittleEndian.Uint64(buf)
+		return u.endian.Uint64(buf)
 	} else {
-		return uint64(binary.LittleEndian.Uint32(buf))
+		return uint64(u.endian.Uint32(buf))
 	}
 }
 
