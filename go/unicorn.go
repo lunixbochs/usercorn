@@ -12,9 +12,9 @@ import (
 
 type Unicorn struct {
 	*uc.Uc
-	Arch   *models.Arch
+	arch   *models.Arch
 	OS     *models.OS
-	Bits   int
+	bits   int
 	Bsz    int
 	memory []mmap
 }
@@ -26,11 +26,19 @@ func NewUnicorn(arch *models.Arch, os *models.OS) (*Unicorn, error) {
 	}
 	return &Unicorn{
 		Uc:   Uc,
-		Arch: arch,
+		arch: arch,
 		OS:   os,
-		Bits: arch.Bits,
+		bits: arch.Bits,
 		Bsz:  arch.Bits / 8,
 	}, nil
+}
+
+func (u *Unicorn) Arch() *models.Arch {
+	return u.arch
+}
+
+func (u *Unicorn) Bits() uint {
+	return uint(u.bits)
 }
 
 func (u *Unicorn) mapping(addr, size uint64) *mmap {
@@ -50,7 +58,7 @@ func (u *Unicorn) Disas(addr, size uint64) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return Disas(mem, addr, u.Arch, u.Bsz)
+	return Disas(mem, addr, u.arch, u.Bsz)
 }
 
 func (u *Unicorn) MemMap(addr, size uint64) error {
@@ -79,7 +87,7 @@ func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
 	}
 	_, size = align(0, size, true)
 	addr, size = align(addr, size)
-	for i := addr; i < uint64(1)<<uint64(u.Bits-1); i += UC_MEM_ALIGN {
+	for i := addr; i < uint64(1)<<uint64(u.bits-1); i += UC_MEM_ALIGN {
 		if u.mapping(i, size) == nil {
 			err := u.MemMap(i, size)
 			return i, err
@@ -113,7 +121,7 @@ func (u *Unicorn) PackAddr(buf []byte, n uint64) error {
 	if len(buf) < u.Bsz {
 		return errors.New("Buffer too small.")
 	}
-	if u.Bits == 64 {
+	if u.bits == 64 {
 		// TODO: endian
 		// TODO: just save a pointer/wrapper to these functions?
 		binary.LittleEndian.PutUint64(buf, n)
@@ -125,7 +133,7 @@ func (u *Unicorn) PackAddr(buf []byte, n uint64) error {
 
 func (u *Unicorn) UnpackAddr(buf []byte) uint64 {
 	// TODO: endian
-	if u.Bits == 64 {
+	if u.bits == 64 {
 		return binary.LittleEndian.Uint64(buf)
 	} else {
 		return uint64(binary.LittleEndian.Uint32(buf))
@@ -133,11 +141,11 @@ func (u *Unicorn) UnpackAddr(buf []byte) uint64 {
 }
 
 func (u *Unicorn) Push(n uint64) error {
-	sp, err := u.RegRead(u.Arch.SP)
+	sp, err := u.RegRead(u.arch.SP)
 	if err != nil {
 		return err
 	}
-	if err := u.RegWrite(u.Arch.SP, sp-uint64(u.Bsz)); err != nil {
+	if err := u.RegWrite(u.arch.SP, sp-uint64(u.Bsz)); err != nil {
 		return err
 	}
 	var buf [8]byte
@@ -146,7 +154,7 @@ func (u *Unicorn) Push(n uint64) error {
 }
 
 func (u *Unicorn) Pop() (uint64, error) {
-	sp, err := u.RegRead(u.Arch.SP)
+	sp, err := u.RegRead(u.arch.SP)
 	if err != nil {
 		return 0, err
 	}
@@ -154,7 +162,7 @@ func (u *Unicorn) Pop() (uint64, error) {
 	if err := u.MemReadInto(buf[:u.Bsz], sp); err != nil {
 		return 0, err
 	}
-	if err := u.RegWrite(u.Arch.SP, sp+uint64(u.Bsz)); err != nil {
+	if err := u.RegWrite(u.arch.SP, sp+uint64(u.Bsz)); err != nil {
 		return 0, err
 	}
 	return u.UnpackAddr(buf[:u.Bsz]), nil

@@ -74,7 +74,7 @@ func (u *Usercorn) Run(args ...string) error {
 		} else {
 			fmt.Fprintln(os.Stderr, dis)
 		}
-		sp, err := u.RegRead(u.Arch.SP)
+		sp, err := u.RegRead(u.arch.SP)
 		if err != nil {
 			return err
 		}
@@ -192,7 +192,7 @@ func (u *Usercorn) setupStack() error {
 		return err
 	}
 	u.StackBase = stack
-	if err := u.RegWrite(u.Arch.SP, stack+STACK_SIZE); err != nil {
+	if err := u.RegWrite(u.arch.SP, stack+STACK_SIZE); err != nil {
 		return err
 	}
 	return nil
