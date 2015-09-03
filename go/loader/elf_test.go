@@ -11,7 +11,7 @@ import (
 var elfFile io.ReaderAt
 
 func init() {
-	p, err := ioutil.ReadFile("../bins/x86.linux.elf")
+	p, err := ioutil.ReadFile("../../bins/x86.linux.elf")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -6,13 +6,13 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	if _, err := LoadFile("../bins/x86.linux.elf"); err != nil {
+	if _, err := LoadFile("../../bins/x86.linux.elf"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := LoadFile("../bins/x86.linux.cgc"); err != nil {
+	if _, err := LoadFile("../../bins/x86.linux.cgc"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := LoadFile("../bins/x86.darwin.macho"); err != nil {
+	if _, err := LoadFile("../../bins/x86.darwin.macho"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Load(bytes.NewReader([]byte(""))); err == nil {

@@ -11,7 +11,7 @@ import (
 var cgcFile io.ReaderAt
 
 func init() {
-	p, err := ioutil.ReadFile("../bins/x86.linux.cgc")
+	p, err := ioutil.ReadFile("../../bins/x86.linux.cgc")
 	if err != nil {
 		log.Fatal(err)
 	}
