@@ -1,21 +1,36 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("Usage: %s <exe> [args...]\n", os.Args[0])
+	verbose := flag.Bool("v", false, "verbose output")
+	strace := flag.Bool("strace", false, "trace syscalls")
+	mtrace := flag.Bool("mtrace", false, "trace memory access")
+	etrace := flag.Bool("etrace", false, "trace execution")
+	flag.Usage = func() {
+		fmt.Printf("Usage: %s [options] <exe> [args...]\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+	args := flag.Args()
+	if len(args) < 1 {
+		flag.Usage()
 		os.Exit(1)
 	}
-	corn, err := NewUsercorn(os.Args[1])
+	corn, err := NewUsercorn(args[0])
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = corn.Run(os.Args[1:]...)
+	corn.Verbose = *verbose
+	corn.TraceSys = *strace
+	corn.TraceMem = *mtrace
+	corn.TraceExec = *etrace
+	err = corn.Run(args...)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -17,6 +17,10 @@ type Usercorn struct {
 	Entry       uint64
 	StackBase   uint64
 	DataSegment *models.Segment
+	Verbose     bool
+	TraceSys    bool
+	TraceMem    bool
+	TraceExec   bool
 }
 
 func NewUsercorn(exe string) (*Usercorn, error) {
@@ -61,26 +65,28 @@ func (u *Usercorn) Run(args ...string) error {
 	// argc
 	u.Push(uint64(len(args)))
 
-	fmt.Printf("[entry point @ 0x%x]\n", u.Entry)
-	dis, err := u.Disas(u.Entry, 64)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(dis)
-	}
-	sp, err := u.RegRead(u.Arch.SP)
-	if err != nil {
-		return err
-	}
-	buf := make([]byte, u.StackBase+STACK_SIZE-sp)
-	if err := u.MemReadInto(buf, sp); err != nil {
-		return err
-	}
-	fmt.Printf("[stack @ 0x%x] %s\n", sp, hex.EncodeToString(buf[:]))
+	if u.Verbose {
+		fmt.Printf("[entry point @ 0x%x]\n", u.Entry)
+		dis, err := u.Disas(u.Entry, 64)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(dis)
+		}
+		sp, err := u.RegRead(u.Arch.SP)
+		if err != nil {
+			return err
+		}
+		buf := make([]byte, u.StackBase+STACK_SIZE-sp)
+		if err := u.MemReadInto(buf, sp); err != nil {
+			return err
+		}
+		fmt.Printf("[stack @ 0x%x] %s\n", sp, hex.EncodeToString(buf[:]))
 
-	fmt.Println("=====================================")
-	fmt.Println("==== Program output begins here. ====")
-	fmt.Println("=====================================")
+		fmt.Println("=====================================")
+		fmt.Println("==== Program output begins here. ====")
+		fmt.Println("=====================================")
+	}
 	return u.Uc.Start(u.Entry, 0xffffffffffffffff)
 }
 
@@ -99,20 +105,27 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 }
 
 func (u *Usercorn) addHooks() error {
-	/*
-	   u.HookAdd(uc.UC_HOOK_BLOCK, func(_ *uc.Uc, addr uint64, size uint32) {
-	       sym, _ := u.Symbolicate(addr)
-	       fmt.Printf("-- block (%s) @0x%x (size 0x%x) --\n", sym, addr, size)
-	       dis, _ := u.Disas(addr, uint64(size))
-	       fmt.Println(dis)
-	   })
-	*/
-	/*
+	if u.TraceExec {
+		u.HookAdd(uc.UC_HOOK_BLOCK, func(_ *uc.Uc, addr uint64, size uint32) {
+			sym, _ := u.Symbolicate(addr)
+			fmt.Printf("-- block (%s) @0x%x (size 0x%x) --\n", sym, addr, size)
+			dis, _ := u.Disas(addr, uint64(size))
+			fmt.Println(dis)
+		})
 		u.HookAdd(uc.UC_HOOK_CODE, func(_ *uc.Uc, addr uint64, size uint32) {
 			dis, _ := u.Disas(addr, uint64(size))
 			fmt.Println(dis)
 		})
-	*/
+	}
+	if u.TraceMem {
+		u.HookAdd(uc.UC_HOOK_MEM_READ_WRITE, func(_ *uc.Uc, access int, addr uint64, size int, value int64) {
+			if access == uc.UC_MEM_WRITE {
+				fmt.Printf("MEM_WRITE 0x%x %d 0x%x\n", addr, size, value)
+			} else {
+				fmt.Printf("MEM_READ 0x%x %d 0x%x\n", addr, size, value)
+			}
+		})
+	}
 	u.HookAdd(uc.UC_HOOK_MEM_INVALID, func(_ *uc.Uc, access int, addr uint64, size int, value int64) bool {
 		if access == uc.UC_MEM_WRITE {
 			fmt.Printf("invalid write")
@@ -209,5 +222,5 @@ func (u *Usercorn) Syscall(table map[int]string, n int, getArgs func(n int) ([]u
 		panic(fmt.Sprintf("Syscall missing: %d", n))
 		return 0, fmt.Errorf("OS has no syscall: %d", n)
 	}
-	return syscalls.Call(u, name, getArgs)
+	return syscalls.Call(u, name, getArgs, u.TraceSys)
 }
