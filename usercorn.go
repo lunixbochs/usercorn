@@ -108,7 +108,10 @@ func (u *Usercorn) addHooks() error {
 	if u.TraceExec {
 		u.HookAdd(uc.UC_HOOK_BLOCK, func(_ *uc.Uc, addr uint64, size uint32) {
 			sym, _ := u.Symbolicate(addr)
-			fmt.Printf("-- block (%s) @0x%x (size 0x%x) --\n", sym, addr, size)
+			if sym != "" {
+				sym = " (" + sym + ")"
+			}
+			fmt.Printf("-- block%s @0x%x (size 0x%x) --\n", sym, addr, size)
 			dis, _ := u.Disas(addr, uint64(size))
 			if dis != "" {
 				fmt.Println(dis)
