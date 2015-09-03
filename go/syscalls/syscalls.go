@@ -125,21 +125,24 @@ func access(u U, a []uint64) uint64 {
 	return errno(err)
 }
 
+func readv(u U, a []uint64) uint64 {
+	fd, iov, count := int(a[0]), a[1], a[2]
+	for vec := range iovecIter(u.MemReader(iov), count, int(u.Bits()), u.Endian()) {
+		data, _ := u.MemRead(vec.Base, vec.Len)
+		syscall.Write(fd, data)
+	}
+	return 0
+}
+
 func writev(u U, a []uint64) uint64 {
 	fd, iov, count := int(a[0]), a[1], a[2]
-	ptr := u.MemReader(iov)
-	var i uint64
-	for i = 0; i < count; i++ {
-		var iovec Iovec64
-		if u.Bits() == 64 {
-			struc.UnpackWithOrder(ptr, &iovec, u.Endian())
-		} else {
-			var iv32 Iovec32
-			struc.UnpackWithOrder(ptr, &iv32, u.Endian())
-			iovec = Iovec64{uint64(iv32.Base), uint64(iv32.Len)}
+	for vec := range iovecIter(u.MemReader(iov), count, int(u.Bits()), u.Endian()) {
+		tmp := make([]byte, vec.Len)
+		n, _ := syscall.Read(fd, tmp)
+		if n <= 0 {
+			break
 		}
-		data, _ := u.MemRead(iovec.Base, iovec.Len)
-		syscall.Write(fd, data)
+		u.MemWrite(vec.Base, tmp[:n])
 	}
 	return 0
 }
@@ -161,6 +164,7 @@ var syscalls = map[string]Syscall{
 	"fstat":    {fstat, A{FD, PTR}},
 	"getcwd":   {getcwd, A{PTR, LEN}},
 	"access":   {access, A{STR, INT}},
+	"readv":    {readv, A{FD, PTR, INT}},
 	"writev":   {writev, A{FD, PTR, INT}},
 }
 
