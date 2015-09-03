@@ -10,6 +10,9 @@ import (
 )
 
 func Disas(mem []byte, addr uint64, arch *models.Arch, pad ...int) (string, error) {
+	if len(mem) == 0 {
+		return "", nil
+	}
 	engine, err := gapstone.New(arch.CS_ARCH, arch.CS_MODE)
 	if err != nil {
 		return "", err

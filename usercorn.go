@@ -110,7 +110,9 @@ func (u *Usercorn) addHooks() error {
 			sym, _ := u.Symbolicate(addr)
 			fmt.Printf("-- block (%s) @0x%x (size 0x%x) --\n", sym, addr, size)
 			dis, _ := u.Disas(addr, uint64(size))
-			fmt.Println(dis)
+			if dis != "" {
+				fmt.Println(dis)
+			}
 		})
 		u.HookAdd(uc.UC_HOOK_CODE, func(_ *uc.Uc, addr uint64, size uint32) {
 			dis, _ := u.Disas(addr, uint64(size))
