@@ -11,7 +11,10 @@ import (
 )
 
 func errno(err error) uint64 {
-	return uint64(err.(syscall.Errno))
+	if err != nil {
+		return ^uint64(err.(syscall.Errno))
+	}
+	return 0
 }
 
 type U models.Usercorn
