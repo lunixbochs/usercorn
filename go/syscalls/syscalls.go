@@ -21,6 +21,7 @@ type U models.Usercorn
 type Syscall struct {
 	Func func(u U, a []uint64) uint64
 	Args []int
+	Ret  int
 }
 
 func exit(u U, a []uint64) uint64 {
@@ -150,22 +151,22 @@ func writev(u U, a []uint64) uint64 {
 type A []int
 
 var syscalls = map[string]Syscall{
-	"exit": {exit, A{INT}},
-	// "fork": {fork, A{}},
-	"read":     {read, A{FD, OBUF, LEN}},
-	"write":    {write, A{FD, BUF, LEN}},
-	"open":     {open, A{STR, INT, INT}},
-	"close":    {_close, A{FD}},
-	"lseek":    {lseek, A{FD, OFF, INT}},
-	"mmap":     {mmap, A{PTR, LEN, INT, INT, FD, OFF}},
-	"munmap":   {munmap, A{PTR, LEN}},
-	"mprotect": {mprotect, A{PTR, LEN, INT}},
-	"brk":      {brk, A{PTR}},
-	"fstat":    {fstat, A{FD, PTR}},
-	"getcwd":   {getcwd, A{PTR, LEN}},
-	"access":   {access, A{STR, INT}},
-	"readv":    {readv, A{FD, PTR, INT}},
-	"writev":   {writev, A{FD, PTR, INT}},
+	"exit": {exit, A{INT}, INT},
+	// "fork": {fork, A{}, INT},
+	"read":     {read, A{FD, OBUF, LEN}, INT},
+	"write":    {write, A{FD, BUF, LEN}, INT},
+	"open":     {open, A{STR, INT, INT}, FD},
+	"close":    {_close, A{FD}, INT},
+	"lseek":    {lseek, A{FD, OFF, INT}, INT},
+	"mmap":     {mmap, A{PTR, LEN, INT, INT, FD, OFF}, PTR},
+	"munmap":   {munmap, A{PTR, LEN}, INT},
+	"mprotect": {mprotect, A{PTR, LEN, INT}, INT},
+	"brk":      {brk, A{PTR}, PTR},
+	"fstat":    {fstat, A{FD, PTR}, INT},
+	"getcwd":   {getcwd, A{PTR, LEN}, INT},
+	"access":   {access, A{STR, INT}, INT},
+	"readv":    {readv, A{FD, PTR, INT}, INT},
+	"writev":   {writev, A{FD, PTR, INT}, INT},
 }
 
 func Call(u models.Usercorn, name string, getArgs func(n int) ([]uint64, error), strace bool) (uint64, error) {

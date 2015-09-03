@@ -19,23 +19,33 @@ const (
 	PTR
 )
 
+func traceBasicArg(u models.Unicorn, name string, arg uint64, t int) string {
+	switch t {
+	case INT, FD:
+		return fmt.Sprintf("%d", int32(arg))
+	case STR:
+		s, _ := u.MemReadStr(arg)
+		return fmt.Sprintf("%#v", s)
+	default:
+		return fmt.Sprintf("0x%x", arg)
+	}
+}
+
+func traceArg(u models.Unicorn, name string, args []uint64, t int) string {
+	switch t {
+	case BUF:
+		mem, _ := u.MemRead(args[0], args[1])
+		return fmt.Sprintf("%#v", string(mem))
+	default:
+		return traceBasicArg(u, name, args[0], t)
+	}
+}
+
 func traceArgs(u models.Usercorn, name string, args []uint64) string {
 	types := syscalls[name].Args
 	ret := make([]string, 0, len(types))
 	for i, t := range types {
-		var s string
-		switch t {
-		case INT, FD:
-			s = fmt.Sprintf("%d", int32(args[i]))
-		case STR:
-			s, _ = u.MemReadStr(args[i])
-			s = fmt.Sprintf("%#v", s)
-		case BUF:
-			mem, _ := u.MemRead(args[i], args[i+1])
-			s = fmt.Sprintf("%#v", string(mem))
-		default:
-			s = fmt.Sprintf("0x%x", args[i])
-		}
+		s := traceArg(u, name, args[i:], t)
 		ret = append(ret, s)
 	}
 	return strings.Join(ret, ", ")
@@ -57,6 +67,6 @@ func TraceRet(u models.Usercorn, name string, args []uint64, ret uint64) {
 			}
 		}
 	}
-	out = append(out, fmt.Sprintf("0x%x", ret))
+	out = append(out, traceBasicArg(u, name, ret, syscalls[name].Ret))
 	fmt.Fprintf(os.Stderr, " = %s\n", strings.Join(out, ", "))
 }
