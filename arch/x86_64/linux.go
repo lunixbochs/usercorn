@@ -25,6 +25,7 @@ var linuxSyscalls = map[int]string{
 	14:  "rt_sigprocmask",
 	15:  "rt_sigreturn",
 	16:  "ioctl",
+	20:  "writev",
 	21:  "access",
 	60:  "exit",
 	63:  "uname",

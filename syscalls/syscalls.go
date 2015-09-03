@@ -1,6 +1,7 @@
 package syscalls
 
 import (
+	"encoding/binary"
 	"fmt"
 	"github.com/lunixbochs/struc"
 	"os"
@@ -112,6 +113,20 @@ func access(u U, args []uint64) uint64 {
 	return errno(err)
 }
 
+func writev(u U, args []uint64) uint64 {
+	ptr := u.MemReader(args[1])
+	var i uint64
+	for i = 0; i < args[2]; i++ {
+		// TODO: bits support (via Usercorn.Bits() I think)
+		var iovec Iovec64
+		// TODO: endian support
+		struc.UnpackWithOrder(ptr, &iovec, binary.LittleEndian)
+		data, _ := u.MemRead(iovec.Base, iovec.Len)
+		syscall.Write(int(args[0]), data)
+	}
+	return 0
+}
+
 var syscalls = map[string]Syscall{
 	"exit": {exit, 1},
 	// "fork": {fork, 0},
@@ -127,6 +142,7 @@ var syscalls = map[string]Syscall{
 	"fstat":    {fstat, 2},
 	"getcwd":   {getcwd, 2},
 	"access":   {access, 2},
+	"writev":   {writev, 3},
 }
 
 func Call(u models.Usercorn, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
