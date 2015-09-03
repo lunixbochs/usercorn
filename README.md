@@ -7,8 +7,12 @@ Usercorn has two implementations: Go and Python. The Go variant is more advanced
 
 *Go Instructions*
 
-    go get ./go
-    go build -o usercorn ./go
+    # not windows:
+    make
+
+    # windows:
+    go build -i -o usercorn ./go
+
     # test executables
     ./usercorn bins/x86.linux.elf
     ./usercorn bins/x86_64.linux.elf
@@ -21,6 +25,7 @@ Usercorn has two implementations: Go and Python. The Go variant is more advanced
 Install the Unicorn Python bindings (`cd bindings/python; make install`)
 
     pip install -r py/requirements.txt
+
     # test executables
     python py/run.py bins/x86.linux.elf
     python py/run.py bins/x86_64.linux.elf
