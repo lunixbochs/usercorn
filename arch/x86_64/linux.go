@@ -40,7 +40,9 @@ func LinuxSyscall(u models.Usercorn) {
 	switch name {
 	case "uname":
 		addr, _ := u.RegRead(AbiRegs[0])
-		syscalls.Uname(u, addr, 64)
+		uname := &models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86_64"}
+		uname.Pad(64)
+		syscalls.Uname(u, addr, uname)
 	case "arch_prctl":
 	default:
 		ret, _ = u.Syscall(linuxSyscalls, int(rax), syscalls.RegArgs(u, AbiRegs))
