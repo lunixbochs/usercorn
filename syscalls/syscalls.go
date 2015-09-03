@@ -20,48 +20,54 @@ func errno(err error) uint64 {
 type U models.Usercorn
 
 type Syscall struct {
-	Func func(u U, args []uint64) uint64
+	Func func(u U, a []uint64) uint64
 	Args []int
 }
 
-func exit(u U, args []uint64) uint64 {
-	syscall.Exit(int(args[0]))
+func exit(u U, a []uint64) uint64 {
+	code := int(a[0])
+	syscall.Exit(code)
 	return 0
 }
 
-func read(u U, args []uint64) uint64 {
-	tmp := make([]byte, args[2])
-	n, _ := syscall.Read(int(args[0]), tmp)
-	u.MemWrite(args[1], tmp[:n])
+func read(u U, a []uint64) uint64 {
+	fd, buf, size := int(a[0]), a[1], a[2]
+	tmp := make([]byte, size)
+	n, _ := syscall.Read(fd, tmp)
+	u.MemWrite(buf, tmp[:n])
 	return uint64(n)
 }
 
-func write(u U, args []uint64) uint64 {
-	mem, _ := u.MemRead(args[1], args[2])
-	n, _ := syscall.Write(int(args[0]), mem)
+func write(u U, a []uint64) uint64 {
+	fd, buf, size := int(a[0]), a[1], a[2]
+	mem, _ := u.MemRead(buf, size)
+	n, _ := syscall.Write(fd, mem)
 	return uint64(n)
 }
 
-func open(u U, args []uint64) uint64 {
-	path, _ := u.MemReadStr(args[0])
-	fd, _ := syscall.Open(path, int(args[1]), uint32(args[2]))
+func open(u U, a []uint64) uint64 {
+	path, _ := u.MemReadStr(a[0])
+	mode, flags := int(a[1]), uint32(a[2])
+	fd, _ := syscall.Open(path, mode, flags)
 	return uint64(fd)
 }
 
-func _close(u U, args []uint64) uint64 {
-	syscall.Close(int(args[0]))
+func _close(u U, a []uint64) uint64 {
+	fd := int(a[0])
+	syscall.Close(fd)
 	return 0
 }
 
-func lseek(u U, args []uint64) uint64 {
-	off, _ := syscall.Seek(int(args[0]), int64(args[1]), int(args[2]))
+func lseek(u U, a []uint64) uint64 {
+	fd, offset, whence := int(a[0]), int64(a[1]), int(a[2])
+	off, _ := syscall.Seek(fd, offset, whence)
 	return uint64(off)
 }
 
-func mmap(u U, args []uint64) uint64 {
-	size := args[1]
-	addr, _ := u.Mmap(args[0], size)
-	fd, off := int(int32(args[4])), int64(args[5])
+func mmap(u U, a []uint64) uint64 {
+	addr_hint, size, prot, flags, fd, off := a[0], a[1], a[2], a[3], int(int32(a[4])), int64(a[5])
+	prot, flags = flags, prot // ignore go error
+	addr, _ := u.Mmap(addr_hint, size)
 	if fd > 0 {
 		fd2, _ := syscall.Dup(fd)
 		f := os.NewFile(uintptr(fd2), "")
@@ -73,59 +79,64 @@ func mmap(u U, args []uint64) uint64 {
 	return uint64(addr)
 }
 
-func munmap(u U, args []uint64) uint64 {
+func munmap(u U, a []uint64) uint64 {
 	return 0
 }
 
-func mprotect(u U, args []uint64) uint64 {
+func mprotect(u U, a []uint64) uint64 {
 	return 0
 }
 
-func brk(u U, args []uint64) uint64 {
+func brk(u U, a []uint64) uint64 {
 	// TODO: return is Linux specific
-	ret, _ := u.Brk(args[0])
+	addr := a[0]
+	ret, _ := u.Brk(addr)
 	return ret
 }
 
-func fstat(u U, args []uint64) uint64 {
+func fstat(u U, a []uint64) uint64 {
+	fd, buf := int(a[0]), a[1]
 	var stat syscall.Stat_t
-	err := syscall.Fstat(int(args[0]), &stat)
+	err := syscall.Fstat(fd, &stat)
 	if err != nil {
 		return 1
 	}
-	err = struc.Pack(u.MemWriter(args[1]), &stat)
+	err = struc.Pack(u.MemWriter(buf), &stat)
 	if err != nil {
 		panic(err)
 	}
 	return 0
 }
 
-func getcwd(u U, args []uint64) uint64 {
+func getcwd(u U, a []uint64) uint64 {
+	buf, size := a[0], a[1]
 	wd, _ := os.Getwd()
-	if uint64(len(wd)) > args[1] {
-		wd = wd[:args[1]]
+	if uint64(len(wd)) > size {
+		wd = wd[:size]
 	}
-	u.MemWrite(args[0], []byte(wd))
+	u.MemWrite(buf, []byte(wd))
 	return 0
 }
 
-func access(u U, args []uint64) uint64 {
+func access(u U, a []uint64) uint64 {
 	// TODO: portability
-	path, _ := u.MemReadStr(args[0])
-	err := syscall.Access(path, uint32(args[1]))
+	path, _ := u.MemReadStr(a[0])
+	amode := uint32(a[1])
+	err := syscall.Access(path, amode)
 	return errno(err)
 }
 
-func writev(u U, args []uint64) uint64 {
-	ptr := u.MemReader(args[1])
+func writev(u U, a []uint64) uint64 {
+	fd, iov, count := int(a[0]), a[1], a[2]
+	ptr := u.MemReader(iov)
 	var i uint64
-	for i = 0; i < args[2]; i++ {
+	for i = 0; i < count; i++ {
 		// TODO: bits support (via Usercorn.Bits() I think)
 		var iovec Iovec64
 		// TODO: endian support
 		struc.UnpackWithOrder(ptr, &iovec, binary.LittleEndian)
 		data, _ := u.MemRead(iovec.Base, iovec.Len)
-		syscall.Write(int(args[0]), data)
+		syscall.Write(fd, data)
 	}
 	return 0
 }
