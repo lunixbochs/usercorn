@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	uc "github.com/lunixbochs/unicorn"
+	"os"
 
 	"./arch"
 	"./loader"
@@ -66,12 +67,12 @@ func (u *Usercorn) Run(args ...string) error {
 	u.Push(uint64(len(args)))
 
 	if u.Verbose {
-		fmt.Printf("[entry point @ 0x%x]\n", u.Entry)
+		fmt.Fprintf(os.Stderr, "[entry point @ 0x%x]\n", u.Entry)
 		dis, err := u.Disas(u.Entry, 64)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 		} else {
-			fmt.Println(dis)
+			fmt.Fprintln(os.Stderr, dis)
 		}
 		sp, err := u.RegRead(u.Arch.SP)
 		if err != nil {
@@ -81,11 +82,11 @@ func (u *Usercorn) Run(args ...string) error {
 		if err := u.MemReadInto(buf, sp); err != nil {
 			return err
 		}
-		fmt.Printf("[stack @ 0x%x] %s\n", sp, hex.EncodeToString(buf[:]))
+		fmt.Fprintf(os.Stderr, "[stack @ 0x%x] %s\n", sp, hex.EncodeToString(buf[:]))
 
-		fmt.Println("=====================================")
-		fmt.Println("==== Program output begins here. ====")
-		fmt.Println("=====================================")
+		fmt.Fprintln(os.Stderr, "=====================================")
+		fmt.Fprintln(os.Stderr, "==== Program output begins here. ====")
+		fmt.Fprintln(os.Stderr, "=====================================")
 	}
 	return u.Uc.Start(u.Entry, 0xffffffffffffffff)
 }
@@ -111,36 +112,37 @@ func (u *Usercorn) addHooks() error {
 			if sym != "" {
 				sym = " (" + sym + ")"
 			}
-			fmt.Printf("-- block%s @0x%x (size 0x%x) --\n", sym, addr, size)
+			fmt.Fprintf(os.Stderr, "-- block%s @0x%x (size 0x%x) --\n", sym, addr, size)
 			dis, _ := u.Disas(addr, uint64(size))
 			if dis != "" {
-				fmt.Println(dis)
+				fmt.Fprintln(os.Stderr, dis)
 			}
 		})
 		u.HookAdd(uc.UC_HOOK_CODE, func(_ *uc.Uc, addr uint64, size uint32) {
 			dis, _ := u.Disas(addr, uint64(size))
-			fmt.Println(dis)
+			fmt.Fprintln(os.Stderr, dis)
 		})
 	}
 	if u.TraceMem {
 		u.HookAdd(uc.UC_HOOK_MEM_READ_WRITE, func(_ *uc.Uc, access int, addr uint64, size int, value int64) {
 			if access == uc.UC_MEM_WRITE {
-				fmt.Printf("MEM_WRITE 0x%x %d 0x%x\n", addr, size, value)
+				fmt.Fprintf(os.Stderr, "MEM_WRITE")
 			} else {
-				fmt.Printf("MEM_READ 0x%x %d 0x%x\n", addr, size, value)
+				fmt.Fprintf(os.Stderr, "MEM_READ")
 			}
+			fmt.Fprintf(os.Stderr, " 0x%x %d 0x%x\n", addr, size, value)
 		})
 	}
 	u.HookAdd(uc.UC_HOOK_MEM_INVALID, func(_ *uc.Uc, access int, addr uint64, size int, value int64) bool {
 		if access == uc.UC_MEM_WRITE {
-			fmt.Printf("invalid write")
+			fmt.Fprintf(os.Stderr, "invalid write")
 		} else {
-			fmt.Printf("invalid read")
+			fmt.Fprintf(os.Stderr, "invalid read")
 		}
 		ip, _ := u.RegRead(uc.UC_X86_REG_EIP)
-		fmt.Printf(": @0x%x, 0x%x = 0x%x (eip: 0x%x)\n", addr, size, value, ip)
+		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x (eip: 0x%x)\n", addr, size, value, ip)
 		dis, _ := u.Disas(ip, 8)
-		fmt.Println(dis)
+		fmt.Fprintln(os.Stderr, dis)
 		return false
 	})
 	u.HookAdd(uc.UC_HOOK_INTR, func(_ *uc.Uc, intno uint32) {
