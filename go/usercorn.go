@@ -53,7 +53,7 @@ func (u *Usercorn) Run(args ...string) error {
 	if err := u.addHooks(); err != nil {
 		return err
 	}
-	if err := u.mapMemory(); err != nil {
+	if err := u.mapBinary(u.loader); err != nil {
 		return err
 	}
 	if err := u.setupStack(); err != nil {
@@ -156,9 +156,9 @@ func (u *Usercorn) addHooks() error {
 	return nil
 }
 
-func (u *Usercorn) mapMemory() error {
+func (u *Usercorn) mapBinary(l loader.Loader) error {
 	var dynamic bool
-	switch u.loader.Type() {
+	switch l.Type() {
 	case loader.EXEC:
 		dynamic = false
 	case loader.DYN:
@@ -166,7 +166,7 @@ func (u *Usercorn) mapMemory() error {
 	default:
 		return errors.New("Unsupported file load type.")
 	}
-	segments, err := u.loader.Segments()
+	segments, err := l.Segments()
 	if err != nil {
 		return err
 	}
