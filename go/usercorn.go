@@ -6,6 +6,7 @@ import (
 	"fmt"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
+	"path/filepath"
 
 	"./arch"
 	"./loader"
@@ -23,10 +24,10 @@ type Usercorn struct {
 	TraceSys    bool
 	TraceMem    bool
 	TraceExec   bool
-	loadBias    uint64
+	LoadPrefix  string
 }
 
-func NewUsercorn(exe string) (*Usercorn, error) {
+func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 	l, err := loader.LoadFile(exe)
 	if err != nil {
 		return nil, err
@@ -43,17 +44,19 @@ func NewUsercorn(exe string) (*Usercorn, error) {
 	u := &Usercorn{
 		Unicorn:     unicorn,
 		loader:      l,
-		Entry:       l.Entry(),
+		LoadPrefix:  prefix,
 		DataSegment: &models.Segment{ds, de},
 	}
+	entry, err := u.mapBinary(u.loader)
+	if err != nil {
+		return nil, err
+	}
+	u.Entry = entry
 	return u, nil
 }
 
 func (u *Usercorn) Run(args ...string) error {
 	if err := u.addHooks(); err != nil {
-		return err
-	}
-	if err := u.mapBinary(u.loader); err != nil {
 		return err
 	}
 	if err := u.setupStack(); err != nil {
@@ -90,7 +93,18 @@ func (u *Usercorn) Run(args ...string) error {
 		fmt.Fprintln(os.Stderr, "==== Program output begins here. ====")
 		fmt.Fprintln(os.Stderr, "=====================================")
 	}
-	return u.Uc.Start(u.loadBias+u.Entry, 0xffffffffffffffff)
+	return u.Uc.Start(u.Entry, 0xffffffffffffffff)
+}
+
+func (u *Usercorn) PrefixPath(path string, force bool) string {
+	if filepath.IsAbs(path) {
+		_, err := os.Stat(path)
+		exists := !os.IsNotExist(err)
+		if force || exists {
+			return filepath.Join(u.LoadPrefix, path)
+		}
+	}
+	return path
 }
 
 func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
@@ -156,7 +170,7 @@ func (u *Usercorn) addHooks() error {
 	return nil
 }
 
-func (u *Usercorn) mapBinary(l loader.Loader) error {
+func (u *Usercorn) mapBinary(l loader.Loader) (uint64, error) {
 	var dynamic bool
 	switch l.Type() {
 	case loader.EXEC:
@@ -164,11 +178,11 @@ func (u *Usercorn) mapBinary(l loader.Loader) error {
 	case loader.DYN:
 		dynamic = true
 	default:
-		return errors.New("Unsupported file load type.")
+		return 0, errors.New("Unsupported file load type.")
 	}
 	segments, err := l.Segments()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	// merge overlapping segments
 	merged := make([]*models.Segment, 0, len(segments))
@@ -184,24 +198,34 @@ outer:
 		}
 		merged = append(merged, s)
 	}
+	var loadBias uint64
 	for _, seg := range merged {
 		size := seg.End - seg.Start
-		if dynamic && seg.Start == 0 && u.loadBias == 0 {
-			u.loadBias, err = u.Mmap(0x1000000, size)
-			fmt.Printf("load bias: 0x%x\n", u.loadBias)
+		if dynamic && seg.Start == 0 && loadBias == 0 {
+			loadBias, err = u.Mmap(0x1000000, size)
 		} else {
-			err = u.MemMap(u.loadBias+seg.Start, seg.End-seg.Start)
+			err = u.MemMap(loadBias+seg.Start, seg.End-seg.Start)
 		}
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 	for _, seg := range segments {
-		if err := u.MemWrite(u.loadBias+seg.Addr, seg.Data); err != nil {
-			return err
+		if err := u.MemWrite(loadBias+seg.Addr, seg.Data); err != nil {
+			return 0, err
 		}
 	}
-	return nil
+	interp := l.Interp()
+	if interp != "" {
+		bin, err := loader.LoadFile(u.PrefixPath(interp, true))
+		if err != nil {
+			return 0, err
+		}
+		loadBias, err := u.mapBinary(bin)
+		return loadBias + bin.Entry(), err
+	} else {
+		return loadBias + l.Entry(), nil
+	}
 }
 
 func (u *Usercorn) setupStack() error {

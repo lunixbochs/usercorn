@@ -27,6 +27,7 @@ type Usercorn interface {
 	Bits() uint
 	Endian() binary.ByteOrder
 	Disas(addr, size uint64) (string, error)
+	PrefixPath(s string, force bool) string
 	Brk(addr uint64) (uint64, error)
 	Mmap(addr, size uint64) (uint64, error)
 	MemReader(addr uint64) io.Reader

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"strings"
 )
 
 var machineMap = map[elf.Machine]string{
@@ -56,6 +58,16 @@ func NewElfLoader(r io.ReaderAt) (Loader, error) {
 		},
 		file: file,
 	}, nil
+}
+
+func (e *ElfLoader) Interp() string {
+	for _, prog := range e.file.Progs {
+		if prog.Type == elf.PT_INTERP {
+			data, _ := ioutil.ReadAll(prog.Open())
+			return strings.TrimRight(string(data), "\x00")
+		}
+	}
+	return ""
 }
 
 func (e *ElfLoader) Type() int {

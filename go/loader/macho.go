@@ -96,6 +96,10 @@ func NewMachOLoader(r io.ReaderAt) (Loader, error) {
 	}, nil
 }
 
+func (m *MachOLoader) Interp() string {
+	return ""
+}
+
 func (m *MachOLoader) Type() int {
 	return EXEC
 }
