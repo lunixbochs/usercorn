@@ -58,6 +58,17 @@ func NewElfLoader(r io.ReaderAt) (Loader, error) {
 	}, nil
 }
 
+func (e *ElfLoader) Type() int {
+	switch e.file.Type {
+	case elf.ET_EXEC:
+		return EXEC
+	case elf.ET_DYN:
+		return DYN
+	default:
+		return UNKNOWN
+	}
+}
+
 func (e *ElfLoader) DataSegment() (start, end uint64) {
 	sec := e.file.Section(".data")
 	if sec != nil {

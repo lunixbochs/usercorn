@@ -10,6 +10,7 @@ type Loader interface {
 	Bits() int
 	OS() string
 	Entry() uint64
+	Type() int
 	Symbolicate(addr uint64) (string, error)
 	Segments() ([]Segment, error)
 	DataSegment() (uint64, uint64)

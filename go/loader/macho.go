@@ -96,6 +96,10 @@ func NewMachOLoader(r io.ReaderAt) (Loader, error) {
 	}, nil
 }
 
+func (m *MachOLoader) Type() int {
+	return EXEC
+}
+
 func (m *MachOLoader) DataSegment() (start, end uint64) {
 	seg := m.file.Segment("__DATA")
 	if seg != nil {

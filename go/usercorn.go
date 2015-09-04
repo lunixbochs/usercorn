@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
@@ -22,6 +23,7 @@ type Usercorn struct {
 	TraceSys    bool
 	TraceMem    bool
 	TraceExec   bool
+	loadBias    uint64
 }
 
 func NewUsercorn(exe string) (*Usercorn, error) {
@@ -88,7 +90,7 @@ func (u *Usercorn) Run(args ...string) error {
 		fmt.Fprintln(os.Stderr, "==== Program output begins here. ====")
 		fmt.Fprintln(os.Stderr, "=====================================")
 	}
-	return u.Uc.Start(u.Entry, 0xffffffffffffffff)
+	return u.Uc.Start(u.loadBias+u.Entry, 0xffffffffffffffff)
 }
 
 func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
@@ -155,6 +157,15 @@ func (u *Usercorn) addHooks() error {
 }
 
 func (u *Usercorn) mapMemory() error {
+	var dynamic bool
+	switch u.loader.Type() {
+	case loader.EXEC:
+		dynamic = false
+	case loader.DYN:
+		dynamic = true
+	default:
+		return errors.New("Unsupported file load type.")
+	}
 	segments, err := u.loader.Segments()
 	if err != nil {
 		return err
@@ -174,12 +185,19 @@ outer:
 		merged = append(merged, s)
 	}
 	for _, seg := range merged {
-		if err := u.MemMap(seg.Start, seg.End-seg.Start); err != nil {
+		size := seg.End - seg.Start
+		if dynamic && seg.Start == 0 && u.loadBias == 0 {
+			u.loadBias, err = u.Mmap(0x1000000, size)
+			fmt.Printf("load bias: 0x%x\n", u.loadBias)
+		} else {
+			err = u.MemMap(u.loadBias+seg.Start, seg.End-seg.Start)
+		}
+		if err != nil {
 			return err
 		}
 	}
 	for _, seg := range segments {
-		if err := u.MemWrite(seg.Addr, seg.Data); err != nil {
+		if err := u.MemWrite(u.loadBias+seg.Addr, seg.Data); err != nil {
 			return err
 		}
 	}
