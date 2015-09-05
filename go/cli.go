@@ -24,9 +24,13 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	absPrefix, err := filepath.Abs(*prefix)
-	if err != nil {
-		log.Fatal(err)
+	absPrefix := ""
+	var err error
+	if *prefix != "" {
+		absPrefix, err = filepath.Abs(*prefix)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	corn, err := NewUsercorn(args[0], absPrefix)
 	if err != nil {

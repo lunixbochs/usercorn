@@ -97,7 +97,7 @@ func (u *Usercorn) Run(args ...string) error {
 }
 
 func (u *Usercorn) PrefixPath(path string, force bool) string {
-	if filepath.IsAbs(path) {
+	if filepath.IsAbs(path) && u.LoadPrefix != "" {
 		_, err := os.Stat(path)
 		exists := !os.IsNotExist(err)
 		if force || exists {
