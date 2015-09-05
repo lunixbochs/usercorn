@@ -34,6 +34,8 @@ var linuxSyscalls = map[int]string{
 	158: "arch_prctl",
 }
 
+var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86_64"}
+
 func LinuxSyscall(u models.Usercorn) {
 	rax, _ := u.RegRead(uc.UC_X86_REG_RAX)
 	name, _ := linuxSyscalls[int(rax)]
@@ -41,9 +43,8 @@ func LinuxSyscall(u models.Usercorn) {
 	switch name {
 	case "uname":
 		addr, _ := u.RegRead(AbiRegs[0])
-		uname := &models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86_64"}
-		uname.Pad(64)
-		syscalls.Uname(u, addr, uname)
+		StaticUname.Pad(64)
+		syscalls.Uname(u, addr, &StaticUname)
 	case "arch_prctl":
 	default:
 		ret, _ = u.Syscall(int(rax), name, syscalls.RegArgs(u, AbiRegs))
