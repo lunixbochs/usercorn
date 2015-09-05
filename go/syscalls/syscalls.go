@@ -169,7 +169,7 @@ var syscalls = map[string]Syscall{
 	"writev":   {writev, A{FD, PTR, INT}, INT},
 }
 
-func Call(u models.Usercorn, name string, getArgs func(n int) ([]uint64, error), strace bool) (uint64, error) {
+func Call(u models.Usercorn, num int, name string, getArgs func(n int) ([]uint64, error), strace bool) (uint64, error) {
 	s, ok := syscalls[name]
 	if !ok {
 		panic(fmt.Errorf("Unknown syscall: %s", name))

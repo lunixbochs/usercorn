@@ -27,7 +27,8 @@ var LinuxRegs = []int{uc.UC_X86_REG_EBX, uc.UC_X86_REG_ECX, uc.UC_X86_REG_EDX, u
 func LinuxSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
 	eax, _ := u.RegRead(uc.UC_X86_REG_EAX)
-	ret, _ := u.Syscall(linuxSyscalls, int(eax), syscalls.RegArgs(u, LinuxRegs))
+	name, _ := linuxSyscalls[int(eax)]
+	ret, _ := u.Syscall(int(eax), name, syscalls.RegArgs(u, LinuxRegs))
 	u.RegWrite(uc.UC_X86_REG_EAX, ret)
 }
 

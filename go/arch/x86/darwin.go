@@ -26,7 +26,8 @@ func DarwinSyscall(u models.Usercorn) {
 	esp, _ := u.RegRead(uc.UC_X86_REG_ESP)
 	eax, _ := u.RegRead(uc.UC_X86_REG_EAX)
 	getArgs := syscalls.StackArgs(u)
-	ret, _ := u.Syscall(darwinSyscalls, int(eax), getArgs)
+	name, _ := darwinSyscalls[int(eax)]
+	ret, _ := u.Syscall(int(eax), name, getArgs)
 	u.RegWrite(uc.UC_X86_REG_EAX, ret)
 	u.RegWrite(uc.UC_X86_REG_ESP, esp)
 }

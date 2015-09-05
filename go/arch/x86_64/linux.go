@@ -46,7 +46,7 @@ func LinuxSyscall(u models.Usercorn) {
 		syscalls.Uname(u, addr, uname)
 	case "arch_prctl":
 	default:
-		ret, _ = u.Syscall(linuxSyscalls, int(rax), syscalls.RegArgs(u, AbiRegs))
+		ret, _ = u.Syscall(int(rax), name, syscalls.RegArgs(u, AbiRegs))
 	}
 	u.RegWrite(uc.UC_X86_REG_RAX, ret)
 }

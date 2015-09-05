@@ -24,7 +24,9 @@ var darwinSyscalls = map[int]string{
 
 func DarwinSyscall(u models.Usercorn) {
 	rax, _ := u.RegRead(uc.UC_X86_REG_RAX)
-	ret, _ := u.Syscall(darwinSyscalls, int(rax-0x2000000), syscalls.RegArgs(u, AbiRegs))
+	num := int(rax - 0x2000000)
+	name, _ := darwinSyscalls[num]
+	ret, _ := u.Syscall(num, name, syscalls.RegArgs(u, AbiRegs))
 	u.RegWrite(uc.UC_X86_REG_RAX, ret)
 }
 
