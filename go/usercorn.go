@@ -139,12 +139,15 @@ func (u *Usercorn) addHooks() error {
 			if sym != "" {
 				sym = " (" + sym + ")"
 			}
-			fmt.Fprintf(os.Stderr, "| block%s @0x%x\n", sym, addr)
-			if u.deadlock == 0 {
+			blockLine := fmt.Sprintf("| block%s @0x%x", sym, addr)
+			if u.TraceReg && u.deadlock == 0 {
 				changes := u.status.Changes()
-				if u.TraceReg {
+				if changes.Count() > 0 {
+					fmt.Fprintln(os.Stderr, blockLine)
 					changes.Print(true, true)
 				}
+			} else {
+				fmt.Fprintln(os.Stderr, blockLine)
 			}
 			u.lastBlock = addr
 			/*

@@ -108,10 +108,10 @@ func (cs *Changes) Print(color, onlyChanged bool) {
 	i := 0
 	for _, c := range cs.Changes {
 		if c.Changed() || !onlyChanged {
-			i++
 			if i > 0 && i%3 == 0 {
 				fmt.Fprintln(os.Stderr)
 			}
+			i++
 			fmt.Fprintf(os.Stderr, " ")
 			c.Print(cs.Bsz, color)
 		}
