@@ -99,7 +99,11 @@ func (u *Usercorn) Run(args ...string) error {
 			return err
 		}
 		fmt.Fprintf(os.Stderr, "[stack @ 0x%x] %s\n", sp, hex.EncodeToString(buf[:]))
-
+	}
+	if u.Verbose || u.TraceReg {
+		u.status.Changes().Print(true, false)
+	}
+	if u.Verbose {
 		fmt.Fprintln(os.Stderr, "=====================================")
 		fmt.Fprintln(os.Stderr, "==== Program output begins here. ====")
 		fmt.Fprintln(os.Stderr, "=====================================")
