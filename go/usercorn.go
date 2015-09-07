@@ -136,7 +136,7 @@ func (u *Usercorn) addHooks() error {
 			}
 			fmt.Fprintf(os.Stderr, "| block%s @0x%x\n", sym, addr)
 			if u.TraceReg {
-				u.status.Print(true)
+				u.status.Changes().Print(true, true)
 			}
 			/*
 				dis, _ := u.Disas(addr, uint64(size))
