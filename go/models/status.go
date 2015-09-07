@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/mgutz/ansi"
@@ -59,28 +60,26 @@ func colorPad(s, color string, pad int) string {
 	return s
 }
 
-// FIXME: stderr
-
 func (s *StatusDiff) PrintReg(name string, val, oldVal uint64) {
 	bsz := s.U.Bits() / 4
 	hexFmt := fmt.Sprintf("%%0%dx", bsz)
 	lineStart := fmt.Sprintf(" %4s 0x", name)
 	if val != oldVal {
 		if s.Color {
-			fmt.Printf(" %s 0x", colorPad(name, chNew, 4))
+			fmt.Fprintf(os.Stderr, " %s 0x", colorPad(name, chNew, 4))
 			for _, change := range splitChanges(val, oldVal, hexFmt) {
 				col := chSame
 				if change.Changed {
 					col = chNew
 				}
-				fmt.Printf(col + change.New)
+				fmt.Fprintf(os.Stderr, col+change.New)
 			}
-			fmt.Printf(ansi.Reset)
+			fmt.Fprintf(os.Stderr, ansi.Reset)
 		} else {
-			fmt.Printf("+ "+lineStart+hexFmt, val)
+			fmt.Fprintf(os.Stderr, "+ "+lineStart+hexFmt, val)
 		}
 	} else {
-		fmt.Printf(lineStart+hexFmt, val)
+		fmt.Fprintf(os.Stderr, lineStart+hexFmt, val)
 	}
 }
 
@@ -93,12 +92,12 @@ func (s *StatusDiff) Print(onlyChanged bool) {
 			continue
 		}
 		if i > 0 && i%3 == 0 {
-			fmt.Println()
+			fmt.Fprintln(os.Stderr)
 		}
 		i++
-		fmt.Printf(" ")
+		fmt.Fprintf(os.Stderr, " ")
 		s.PrintReg(name, val, oldVal)
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 	s.oldRegs = regs
 }
