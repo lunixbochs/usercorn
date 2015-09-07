@@ -3,8 +3,10 @@ package models
 import (
 	"fmt"
 	"sort"
+	"testing"
 
 	"github.com/lunixbochs/fvbommel-util/sortorder"
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 )
 
 type Reg struct {
@@ -56,6 +58,23 @@ func (a *Arch) RegisterOS(os *OS) {
 		panic("Duplicate OS " + os.Name)
 	}
 	a.OS[os.Name] = os
+}
+
+func (a *Arch) SmokeTest(t *testing.T) {
+	u, err := uc.NewUc(a.UC_ARCH, a.UC_MODE)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := u.RegWrite(a.SP, 0x1000); err != nil {
+		t.Fatal(err)
+	}
+	val, err := u.RegRead(a.SP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val != 0x1000 {
+		t.Fatal(a.Radare + " failed to read/write stack pointer")
+	}
 }
 
 func (a *Arch) RegDump(u Unicorn) ([]RegVal, error) {
