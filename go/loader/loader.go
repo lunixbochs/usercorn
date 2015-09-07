@@ -1,5 +1,9 @@
 package loader
 
+import (
+	"encoding/binary"
+)
+
 type Segment struct {
 	Addr uint64
 	Data []byte
@@ -18,10 +22,11 @@ type Loader interface {
 }
 
 type LoaderHeader struct {
-	arch  string
-	bits  int
-	os    string
-	entry uint64
+	arch      string
+	bits      int
+	byteOrder binary.ByteOrder
+	os        string
+	entry     uint64
 }
 
 func (l *LoaderHeader) Arch() string {
@@ -30,6 +35,13 @@ func (l *LoaderHeader) Arch() string {
 
 func (l *LoaderHeader) Bits() int {
 	return l.bits
+}
+
+func (l *LoaderHeader) ByteOrder() binary.ByteOrder {
+	if l.byteOrder == nil {
+		return binary.LittleEndian
+	}
+	return l.byteOrder
 }
 
 func (l *LoaderHeader) OS() string {

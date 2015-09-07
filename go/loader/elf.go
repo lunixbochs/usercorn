@@ -50,10 +50,11 @@ func NewElfLoader(r io.ReaderAt) (Loader, error) {
 	}
 	return &ElfLoader{
 		LoaderHeader: LoaderHeader{
-			arch:  machineName,
-			bits:  bits,
-			os:    "linux",
-			entry: file.Entry,
+			arch:      machineName,
+			bits:      bits,
+			os:        "linux",
+			entry:     file.Entry,
+			byteOrder: file.ByteOrder,
 		},
 		file: file,
 	}, nil
