@@ -13,6 +13,7 @@ type Arch struct {
 	UC_MODE int
 	SP      int
 	OS      map[string]*OS
+	Regs    map[int]string
 }
 
 func (a *Arch) RegisterOS(os *OS) {
@@ -23,6 +24,18 @@ func (a *Arch) RegisterOS(os *OS) {
 		panic("Duplicate OS " + os.Name)
 	}
 	a.OS[os.Name] = os
+}
+
+func (a *Arch) RegDump(u Unicorn) (map[string]uint64, error) {
+	ret := make(map[string]uint64, len(a.Regs))
+	for enum, name := range a.Regs {
+		val, err := u.RegRead(enum)
+		if err != nil {
+			return nil, err
+		}
+		ret[name] = val
+	}
+	return ret, nil
 }
 
 type OS struct {

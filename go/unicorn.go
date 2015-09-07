@@ -183,3 +183,7 @@ func (u *Unicorn) ReadRegs(regs []int) ([]uint64, error) {
 	}
 	return ret, nil
 }
+
+func (u *Unicorn) RegDump() (map[string]uint64, error) {
+	return u.arch.RegDump(u)
+}
