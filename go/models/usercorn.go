@@ -37,6 +37,6 @@ type Usercorn interface {
 	Pop() (uint64, error)
 	Push(n uint64) error
 	ReadRegs(reg []int) ([]uint64, error)
-	RegDump() (map[string]uint64, error)
+	RegDump() ([]RegVal, error)
 	Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error)
 }

@@ -11,7 +11,7 @@ import (
 type StatusDiff struct {
 	U       Usercorn
 	Color   bool
-	oldRegs map[string]uint64
+	oldRegs []RegVal
 }
 
 var chSame = ansi.ColorCode("black:default")
@@ -134,9 +134,12 @@ func (cs *Changes) Count() int {
 func (s *StatusDiff) Changes() *Changes {
 	regs, _ := s.U.RegDump()
 	cs := make([]*Change, 0, len(regs))
-	for name, val := range regs {
-		oldVal, _ := s.oldRegs[name]
-		cs = append(cs, NewChange(name, val, oldVal))
+	for i, reg := range regs {
+		var oldReg RegVal
+		if s.oldRegs != nil {
+			oldReg = s.oldRegs[i]
+		}
+		cs = append(cs, NewChange(reg.Name, reg.Val, oldReg.Val))
 	}
 	s.oldRegs = regs
 	return &Changes{Bsz: int(s.U.Bits() / 4), Changes: cs}
