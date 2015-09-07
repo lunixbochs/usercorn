@@ -19,7 +19,7 @@ type Usercorn struct {
 	loader      loader.Loader
 	Entry       uint64
 	StackBase   uint64
-	DataSegment *models.Segment
+	DataSegment models.Segment
 	Verbose     bool
 	TraceSys    bool
 	TraceMem    bool
@@ -45,7 +45,7 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 		Unicorn:     unicorn,
 		loader:      l,
 		LoadPrefix:  prefix,
-		DataSegment: &models.Segment{ds, de},
+		DataSegment: models.Segment{ds, de},
 	}
 	entry, err := u.mapBinary(u.loader)
 	if err != nil {
