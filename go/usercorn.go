@@ -25,6 +25,7 @@ type Usercorn struct {
 	TraceMem    bool
 	TraceExec   bool
 	LoadPrefix  string
+	status      models.StatusDiff
 }
 
 func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
@@ -47,6 +48,7 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 		LoadPrefix:  prefix,
 		DataSegment: models.Segment{ds, de},
 	}
+	u.status = models.StatusDiff{U: u, Color: true}
 	entry, err := u.mapBinary(u.loader)
 	if err != nil {
 		return nil, err
@@ -132,6 +134,7 @@ func (u *Usercorn) addHooks() error {
 				sym = " (" + sym + ")"
 			}
 			fmt.Fprintf(os.Stderr, "-- block%s @0x%x (size 0x%x) --\n", sym, addr, size)
+			u.status.Print(false)
 			dis, _ := u.Disas(addr, uint64(size))
 			if dis != "" {
 				fmt.Fprintln(os.Stderr, dis)
