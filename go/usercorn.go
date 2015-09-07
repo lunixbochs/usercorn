@@ -52,6 +52,9 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 		return nil, err
 	}
 	u.Entry = entry
+	if os.Init != nil {
+		os.Init(u)
+	}
 	return u, nil
 }
 
@@ -156,7 +159,9 @@ func (u *Usercorn) addHooks() error {
 			fmt.Fprintf(os.Stderr, "invalid read")
 		}
 		ip, _ := u.RegRead(uc.UC_X86_REG_EIP)
+		gs, _ := u.RegRead(uc.UC_X86_REG_GS)
 		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x (eip: 0x%x)\n", addr, size, value, ip)
+		fmt.Fprintf(os.Stderr, "gs: 0x%x\n", gs)
 		dis, _ := u.Disas(ip, 8)
 		fmt.Fprintln(os.Stderr, dis)
 		return false

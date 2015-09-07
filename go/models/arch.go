@@ -27,6 +27,7 @@ func (a *Arch) RegisterOS(os *OS) {
 
 type OS struct {
 	Name      string
+	Init      func(Usercorn)
 	Syscall   func(Usercorn)
 	Interrupt func(Usercorn, uint32)
 }
