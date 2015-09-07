@@ -12,6 +12,7 @@ type Segment struct {
 type Loader interface {
 	Arch() string
 	Bits() int
+	ByteOrder() binary.ByteOrder
 	OS() string
 	Entry() uint64
 	Type() int

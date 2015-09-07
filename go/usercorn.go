@@ -43,7 +43,7 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
-	unicorn, err := NewUnicorn(a, os)
+	unicorn, err := NewUnicorn(a, os, l.ByteOrder())
 	if err != nil {
 		return nil, err
 	}

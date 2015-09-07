@@ -25,7 +25,7 @@ type Usercorn interface {
 	Unicorn
 	Arch() *Arch
 	Bits() uint
-	Endian() binary.ByteOrder
+	ByteOrder() binary.ByteOrder
 	Disas(addr, size uint64) (string, error)
 	PrefixPath(s string, force bool) string
 	Brk(addr uint64) (uint64, error)
