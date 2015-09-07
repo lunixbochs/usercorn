@@ -134,7 +134,7 @@ func (u *Usercorn) addHooks() error {
 				sym = " (" + sym + ")"
 			}
 			fmt.Fprintf(os.Stderr, "-- block%s @0x%x (size 0x%x) --\n", sym, addr, size)
-			u.status.Print(false)
+			u.status.Print(true)
 			dis, _ := u.Disas(addr, uint64(size))
 			if dis != "" {
 				fmt.Fprintln(os.Stderr, dis)
