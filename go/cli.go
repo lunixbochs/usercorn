@@ -13,6 +13,7 @@ func main() {
 	strace := flag.Bool("strace", false, "trace syscalls")
 	mtrace := flag.Bool("mtrace", false, "trace memory access")
 	etrace := flag.Bool("etrace", false, "trace execution")
+	rtrace := flag.Bool("rtrace", false, "trace register modification")
 	prefix := flag.String("prefix", "", "library load prefix")
 	flag.Usage = func() {
 		fmt.Printf("Usage: %s [options] <exe> [args...]\n", os.Args[0])
@@ -39,6 +40,7 @@ func main() {
 	corn.Verbose = *verbose
 	corn.TraceSys = *strace
 	corn.TraceMem = *mtrace
+	corn.TraceReg = *rtrace
 	corn.TraceExec = *etrace
 	err = corn.Run(args...)
 	if err != nil {

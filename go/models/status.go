@@ -86,11 +86,13 @@ func (s *StatusDiff) PrintReg(name string, val, oldVal uint64) {
 func (s *StatusDiff) Print(onlyChanged bool) {
 	regs, _ := s.U.RegDump()
 	i := 0
+	any := false
 	for name, val := range regs {
 		oldVal, _ := s.oldRegs[name]
 		if onlyChanged && val == oldVal {
 			continue
 		}
+		any = true
 		if i > 0 && i%3 == 0 {
 			fmt.Fprintln(os.Stderr)
 		}
@@ -98,6 +100,8 @@ func (s *StatusDiff) Print(onlyChanged bool) {
 		fmt.Fprintf(os.Stderr, " ")
 		s.PrintReg(name, val, oldVal)
 	}
-	fmt.Fprintln(os.Stderr)
+	if any {
+		fmt.Fprintln(os.Stderr)
+	}
 	s.oldRegs = regs
 }

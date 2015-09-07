@@ -24,6 +24,7 @@ type Usercorn struct {
 	TraceSys    bool
 	TraceMem    bool
 	TraceExec   bool
+	TraceReg    bool
 	LoadPrefix  string
 	status      models.StatusDiff
 }
@@ -127,22 +128,28 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 }
 
 func (u *Usercorn) addHooks() error {
-	if u.TraceExec {
+	if u.TraceExec || u.TraceReg {
 		u.HookAdd(uc.UC_HOOK_BLOCK, func(_ *uc.Uc, addr uint64, size uint32) {
 			sym, _ := u.Symbolicate(addr)
 			if sym != "" {
 				sym = " (" + sym + ")"
 			}
-			fmt.Fprintf(os.Stderr, "-- block%s @0x%x (size 0x%x) --\n", sym, addr, size)
-			u.status.Print(true)
-			dis, _ := u.Disas(addr, uint64(size))
-			if dis != "" {
-				fmt.Fprintln(os.Stderr, dis)
+			fmt.Fprintf(os.Stderr, "| block%s @0x%x\n", sym, addr)
+			if u.TraceReg {
+				u.status.Print(true)
 			}
+			/*
+				dis, _ := u.Disas(addr, uint64(size))
+				if dis != "" {
+					fmt.Fprintln(os.Stderr, dis)
+				}
+			*/
 		})
 		u.HookAdd(uc.UC_HOOK_CODE, func(_ *uc.Uc, addr uint64, size uint32) {
-			dis, _ := u.Disas(addr, uint64(size))
-			fmt.Fprintln(os.Stderr, dis)
+			if u.TraceExec {
+				dis, _ := u.Disas(addr, uint64(size))
+				fmt.Fprintln(os.Stderr, dis)
+			}
 		})
 	}
 	if u.TraceMem {
