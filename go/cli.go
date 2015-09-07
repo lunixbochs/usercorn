@@ -9,20 +9,21 @@ import (
 )
 
 func main() {
-	verbose := flag.Bool("v", false, "verbose output")
-	strace := flag.Bool("strace", false, "trace syscalls")
-	mtrace := flag.Bool("mtrace", false, "trace memory access")
-	etrace := flag.Bool("etrace", false, "trace execution")
-	rtrace := flag.Bool("rtrace", false, "trace register modification")
-	prefix := flag.String("prefix", "", "library load prefix")
-	flag.Usage = func() {
+	fs := flag.NewFlagSet("cli", flag.ExitOnError)
+	verbose := fs.Bool("v", false, "verbose output")
+	strace := fs.Bool("strace", false, "trace syscalls")
+	mtrace := fs.Bool("mtrace", false, "trace memory access")
+	etrace := fs.Bool("etrace", false, "trace execution")
+	rtrace := fs.Bool("rtrace", false, "trace register modification")
+	prefix := fs.String("prefix", "", "library load prefix")
+	fs.Usage = func() {
 		fmt.Printf("Usage: %s [options] <exe> [args...]\n", os.Args[0])
-		flag.PrintDefaults()
+		fs.PrintDefaults()
 	}
-	flag.Parse()
-	args := flag.Args()
+	fs.Parse(os.Args[1:])
+	args := fs.Args()
 	if len(args) < 1 {
-		flag.Usage()
+		fs.Usage()
 		os.Exit(1)
 	}
 	absPrefix := ""
