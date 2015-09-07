@@ -11,13 +11,12 @@ import (
 )
 
 var machineMap = map[elf.Machine]string{
-	elf.EM_386:         "x86",
-	elf.EM_X86_64:      "x86_64",
-	elf.EM_ARM:         "arm",
-	elf.EM_MIPS:        "mipseb",
-	elf.EM_MIPS_RS3_LE: "mipsel",
-	elf.EM_PPC:         "ppc",
-	elf.EM_PPC64:       "ppc64",
+	elf.EM_386:    "x86",
+	elf.EM_X86_64: "x86_64",
+	elf.EM_ARM:    "arm",
+	elf.EM_MIPS:   "mips",
+	elf.EM_PPC:    "ppc",
+	elf.EM_PPC64:  "ppc64",
 }
 
 type ElfLoader struct {
