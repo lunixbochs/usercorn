@@ -19,6 +19,7 @@ Usercorn has two implementations: Go and Python. The Go variant is more advanced
     ./usercorn bins/x86.darwin.macho
     ./usercorn bins/x86_64.darwin.macho
     ./usercorn bins/x86.linux.cgc
+    ./usercorn bins/mipsel.linux.elf
 
 *Python Instructions*
 
