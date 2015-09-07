@@ -27,6 +27,11 @@ type Usercorn struct {
 	TraceReg    bool
 	LoadPrefix  string
 	status      models.StatusDiff
+
+	// deadlock detection
+	lastBlock uint64
+	lastCode  uint64
+	deadlock  int
 }
 
 func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
@@ -135,9 +140,13 @@ func (u *Usercorn) addHooks() error {
 				sym = " (" + sym + ")"
 			}
 			fmt.Fprintf(os.Stderr, "| block%s @0x%x\n", sym, addr)
-			if u.TraceReg {
-				u.status.Changes().Print(true, true)
+			if u.deadlock == 0 {
+				changes := u.status.Changes()
+				if u.TraceReg {
+					changes.Print(true, true)
+				}
 			}
+			u.lastBlock = addr
 			/*
 				dis, _ := u.Disas(addr, uint64(size))
 				if dis != "" {
@@ -145,11 +154,32 @@ func (u *Usercorn) addHooks() error {
 				}
 			*/
 		})
+	}
+	if u.TraceExec {
 		u.HookAdd(uc.UC_HOOK_CODE, func(_ *uc.Uc, addr uint64, size uint32) {
 			if u.TraceExec {
 				dis, _ := u.Disas(addr, uint64(size))
 				fmt.Fprintln(os.Stderr, dis)
 			}
+			if addr == u.lastCode {
+				u.deadlock++
+				changes := u.status.Changes()
+				if changes.Count() > 0 {
+					if u.TraceReg {
+						changes.Print(true, true)
+					}
+					u.deadlock = 0
+				}
+				if u.deadlock > 2 {
+					sym, _ := u.Symbolicate(addr)
+					if sym != "" {
+						sym = " (" + sym + ")"
+					}
+					fmt.Fprintf(os.Stderr, "FATAL: deadlock detected at 0x%x%s\n", addr, sym)
+					u.Stop()
+				}
+			}
+			u.lastCode = addr
 		})
 	}
 	if u.TraceMem {

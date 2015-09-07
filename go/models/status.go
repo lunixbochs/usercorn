@@ -36,11 +36,6 @@ type Change struct {
 	Name     string
 }
 
-type Changes struct {
-	Bsz     int
-	Changes []*Change
-}
-
 func NewChange(name string, val, oldVal uint64) *Change {
 	return &Change{
 		Old:  oldVal,
@@ -104,6 +99,11 @@ func (c *Change) Print(bsz int, color bool) {
 	}
 }
 
+type Changes struct {
+	Bsz     int
+	Changes []*Change
+}
+
 func (cs *Changes) Print(color, onlyChanged bool) {
 	i := 0
 	for _, c := range cs.Changes {
@@ -119,6 +119,16 @@ func (cs *Changes) Print(color, onlyChanged bool) {
 	if i > 0 {
 		fmt.Fprintln(os.Stderr)
 	}
+}
+
+func (cs *Changes) Count() int {
+	ret := 0
+	for _, c := range cs.Changes {
+		if c.Changed() {
+			ret += 1
+		}
+	}
+	return ret
 }
 
 func (s *StatusDiff) Changes() *Changes {
