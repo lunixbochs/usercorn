@@ -179,6 +179,7 @@ func (u *Usercorn) addHooks() error {
 						sym = " (" + sym + ")"
 					}
 					fmt.Fprintf(os.Stderr, "FATAL: deadlock detected at 0x%x%s\n", addr, sym)
+					changes.Print(true, false)
 					u.Stop()
 				}
 			}
