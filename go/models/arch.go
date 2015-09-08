@@ -60,31 +60,41 @@ func (a *Arch) RegisterOS(os *OS) {
 	a.OS[os.Name] = os
 }
 
-func (a *Arch) SmokeTest(t *testing.T) {
-	u, err := uc.NewUc(a.UC_ARCH, a.UC_MODE)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := u.RegWrite(a.SP, 0x1000); err != nil {
-		t.Fatal(err)
-	}
-	val, err := u.RegRead(a.SP)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != 0x1000 {
-		t.Fatal(a.Radare + " failed to read/write stack pointer")
-	}
-}
-
-func (a *Arch) RegDump(u Unicorn) ([]RegVal, error) {
+func (a *Arch) getRegList() regList {
 	if a.regList == nil {
 		rl := a.Regs.Items()
 		sort.Sort(rl)
 		a.regList = rl
 	}
+	return a.regList
+}
+
+func (a *Arch) SmokeTest(t *testing.T) {
+	u, err := uc.NewUc(a.UC_ARCH, a.UC_MODE)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range a.getRegList() {
+		if u.RegWrite(r.Enum, 0x1000); err != nil {
+			t.Fatal(err)
+		}
+		val, err := u.RegRead(r.Enum)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if val != 0x1000 {
+			t.Fatal(a.Radare + " failed to read/write register " + r.Name)
+		}
+		// clear the register in case registers are aliased
+		if u.RegWrite(r.Enum, 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func (a *Arch) RegDump(u Unicorn) ([]RegVal, error) {
 	ret := make([]RegVal, len(a.Regs))
-	for i, r := range a.regList {
+	for i, r := range a.getRegList() {
 		val, err := u.RegRead(r.Enum)
 		if err != nil {
 			return nil, err
