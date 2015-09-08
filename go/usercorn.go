@@ -154,12 +154,6 @@ func (u *Usercorn) addHooks() error {
 				fmt.Fprintln(os.Stderr, blockLine)
 			}
 			u.lastBlock = addr
-			/*
-				dis, _ := u.Disas(addr, uint64(size))
-				if dis != "" {
-					fmt.Fprintln(os.Stderr, dis)
-				}
-			*/
 		})
 	}
 	if u.TraceExec {
@@ -186,6 +180,8 @@ func (u *Usercorn) addHooks() error {
 					changes.Print(true, false)
 					u.Stop()
 				}
+			} else {
+				u.deadlock = 0
 			}
 			u.lastCode = addr
 		})
@@ -206,12 +202,8 @@ func (u *Usercorn) addHooks() error {
 		} else {
 			fmt.Fprintf(os.Stderr, "invalid read")
 		}
-		ip, _ := u.RegRead(uc.X86_REG_EIP)
-		gs, _ := u.RegRead(uc.X86_REG_GS)
-		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x (eip: 0x%x)\n", addr, size, value, ip)
-		fmt.Fprintf(os.Stderr, "gs: 0x%x\n", gs)
-		dis, _ := u.Disas(ip, 8)
-		fmt.Fprintln(os.Stderr, dis)
+		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x\n", addr, size, value)
+		u.status.Changes().Print(true, false)
 		return false
 	})
 	u.HookAdd(uc.HOOK_INTR, func(_ uc.Unicorn, intno uint32) {
