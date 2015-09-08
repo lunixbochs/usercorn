@@ -248,6 +248,7 @@ outer:
 		}
 		merged = append(merged, s)
 	}
+	// map merged segments
 	var loadBias uint64
 	for _, seg := range merged {
 		size := seg.End - seg.Start
@@ -260,11 +261,13 @@ outer:
 			return 0, err
 		}
 	}
+	// write segment memory
 	for _, seg := range segments {
 		if err := u.MemWrite(loadBias+seg.Addr, seg.Data); err != nil {
 			return 0, err
 		}
 	}
+	// load interpreter if present
 	interp := l.Interp()
 	if interp != "" {
 		bin, err := loader.LoadFile(u.PrefixPath(interp, true))
