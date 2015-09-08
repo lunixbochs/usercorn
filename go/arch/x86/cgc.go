@@ -51,5 +51,5 @@ func CgcInterrupt(u models.Usercorn, intno uint32) {
 }
 
 func init() {
-	Arch.RegisterOS(&models.OS{Name: "cgc", Syscall: CgcSyscall, Interrupt: CgcInterrupt})
+	Arch.RegisterOS(&models.OS{Name: "cgc", Interrupt: CgcInterrupt})
 }

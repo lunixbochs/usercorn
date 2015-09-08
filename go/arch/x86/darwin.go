@@ -39,5 +39,5 @@ func DarwinInterrupt(u models.Usercorn, intno uint32) {
 }
 
 func init() {
-	Arch.RegisterOS(&models.OS{Name: "darwin", Syscall: DarwinSyscall, Interrupt: DarwinInterrupt})
+	Arch.RegisterOS(&models.OS{Name: "darwin", Interrupt: DarwinInterrupt})
 }

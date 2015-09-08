@@ -58,8 +58,8 @@ func (c *Change) Mask(bsz int) []ChangeMask {
 		if (s1[i] == s2[i]) != matching {
 			if i > pos {
 				masks = append(masks, ChangeMask{
-					Old:     s1[pos:i],
-					New:     s2[pos:i],
+					New:     s1[pos:i],
+					Old:     s2[pos:i],
 					Changed: !matching,
 				})
 				pos = i

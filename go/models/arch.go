@@ -70,7 +70,7 @@ func (a *Arch) getRegList() regList {
 }
 
 func (a *Arch) SmokeTest(t *testing.T) {
-	u, err := uc.NewUc(a.UC_ARCH, a.UC_MODE)
+	u, err := uc.NewUnicorn(a.UC_ARCH, a.UC_MODE)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func (a *Arch) SmokeTest(t *testing.T) {
 	}
 }
 
-func (a *Arch) RegDump(u Unicorn) ([]RegVal, error) {
+func (a *Arch) RegDump(u uc.Unicorn) ([]RegVal, error) {
 	ret := make([]RegVal, len(a.Regs))
 	for i, r := range a.getRegList() {
 		val, err := u.RegRead(r.Enum)
@@ -107,7 +107,6 @@ func (a *Arch) RegDump(u Unicorn) ([]RegVal, error) {
 type OS struct {
 	Name      string
 	Init      func(Usercorn)
-	Syscall   func(Usercorn)
 	Interrupt func(Usercorn, uint32)
 }
 

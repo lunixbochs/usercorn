@@ -19,7 +19,7 @@ const (
 	PTR
 )
 
-func traceBasicArg(u models.Unicorn, name string, arg uint64, t int) string {
+func traceBasicArg(u models.Usercorn, name string, arg uint64, t int) string {
 	switch t {
 	case INT, FD:
 		return fmt.Sprintf("%d", int32(arg))
@@ -31,7 +31,7 @@ func traceBasicArg(u models.Unicorn, name string, arg uint64, t int) string {
 	}
 }
 
-func traceArg(u models.Unicorn, name string, args []uint64, t int) string {
+func traceArg(u models.Usercorn, name string, args []uint64, t int) string {
 	switch t {
 	case BUF:
 		mem, _ := u.MemRead(args[0], args[1])

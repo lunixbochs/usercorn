@@ -11,7 +11,7 @@ import (
 )
 
 type Unicorn struct {
-	*uc.Uc
+	uc.Unicorn
 	arch   *models.Arch
 	OS     *models.OS
 	bits   int
@@ -21,17 +21,17 @@ type Unicorn struct {
 }
 
 func NewUnicorn(arch *models.Arch, os *models.OS, order binary.ByteOrder) (*Unicorn, error) {
-	Uc, err := uc.NewUc(arch.UC_ARCH, arch.UC_MODE)
+	Uc, err := uc.NewUnicorn(arch.UC_ARCH, arch.UC_MODE)
 	if err != nil {
 		return nil, err
 	}
 	return &Unicorn{
-		Uc:    Uc,
-		arch:  arch,
-		OS:    os,
-		bits:  arch.Bits,
-		Bsz:   arch.Bits / 8,
-		order: order,
+		Unicorn: Uc,
+		arch:    arch,
+		OS:      os,
+		bits:    arch.Bits,
+		Bsz:     arch.Bits / 8,
+		order:   order,
 	}, nil
 }
 
@@ -84,7 +84,7 @@ func (u *Unicorn) MemMap(addr, size uint64) error {
 	}
 	u.memory = append(u.memory, mmap{addr, size})
 	addr, size = align(addr, size, true)
-	return u.Uc.MemMap(addr, size)
+	return u.Unicorn.MemMap(addr, size)
 }
 
 func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {

@@ -1,7 +1,11 @@
 package models
 
+import (
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+)
+
 type MemReader struct {
-	U    Unicorn
+	U    uc.Unicorn
 	Addr uint64
 }
 
@@ -15,7 +19,7 @@ func (m *MemReader) Read(p []byte) (int, error) {
 }
 
 type MemWriter struct {
-	U    Unicorn
+	U    uc.Unicorn
 	Addr uint64
 }
 

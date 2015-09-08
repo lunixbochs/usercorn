@@ -59,5 +59,5 @@ func LinuxInterrupt(u models.Usercorn, intno uint32) {
 }
 
 func init() {
-	Arch.RegisterOS(&models.OS{Name: "linux", Syscall: LinuxSyscall, Interrupt: LinuxInterrupt})
+	Arch.RegisterOS(&models.OS{Name: "linux", Init: AbiInit(LinuxSyscall), Interrupt: LinuxInterrupt})
 }
