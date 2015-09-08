@@ -37,7 +37,7 @@ var linuxSyscalls = map[int]string{
 var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86_64"}
 
 func LinuxSyscall(u models.Usercorn) {
-	rax, _ := u.RegRead(uc.UC_X86_REG_RAX)
+	rax, _ := u.RegRead(uc.X86_REG_RAX)
 	name, _ := linuxSyscalls[int(rax)]
 	var ret uint64
 	switch name {
@@ -49,7 +49,7 @@ func LinuxSyscall(u models.Usercorn) {
 	default:
 		ret, _ = u.Syscall(int(rax), name, syscalls.RegArgs(u, AbiRegs))
 	}
-	u.RegWrite(uc.UC_X86_REG_RAX, ret)
+	u.RegWrite(uc.X86_REG_RAX, ret)
 }
 
 func LinuxInterrupt(u models.Usercorn, intno uint32) {

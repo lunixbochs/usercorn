@@ -17,7 +17,7 @@ func writeAddr(u models.Usercorn, addr, val uint64) {
 func CgcSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
 	args, _ := u.ReadRegs(LinuxRegs)
-	eax, _ := u.RegRead(uc.UC_X86_REG_EAX)
+	eax, _ := u.RegRead(uc.X86_REG_EAX)
 	var ret uint64
 	switch eax {
 	case 1: // _terminate
@@ -41,7 +41,7 @@ func CgcSyscall(u models.Usercorn) {
 		u.MemWrite(args[0], tmp)
 		writeAddr(u, args[2], args[1])
 	}
-	u.RegWrite(uc.UC_X86_REG_EAX, ret)
+	u.RegWrite(uc.X86_REG_EAX, ret)
 }
 
 func CgcInterrupt(u models.Usercorn, intno uint32) {

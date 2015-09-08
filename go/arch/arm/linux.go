@@ -25,12 +25,12 @@ var linuxSyscalls = map[int]string{
 	192: "mmap",
 }
 
-var LinuxRegs = []int{uc.UC_ARM_REG_R0, uc.UC_ARM_REG_R1, uc.UC_ARM_REG_R2, uc.UC_ARM_REG_R3, uc.UC_ARM_REG_R4, uc.UC_ARM_REG_R5, uc.UC_ARM_REG_R6}
+var LinuxRegs = []int{uc.ARM_REG_R0, uc.ARM_REG_R1, uc.ARM_REG_R2, uc.ARM_REG_R3, uc.ARM_REG_R4, uc.ARM_REG_R5, uc.ARM_REG_R6}
 var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "arm"}
 
 func LinuxSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
-	num, _ := u.RegRead(uc.UC_ARM_REG_R7)
+	num, _ := u.RegRead(uc.ARM_REG_R7)
 	// TODO: EABI has a different syscall base (OABI is 0x900000)
 	if num > 0x900000 {
 		num -= 0x900000
@@ -45,7 +45,7 @@ func LinuxSyscall(u models.Usercorn) {
 	default:
 		ret, _ = u.Syscall(int(num), name, syscalls.RegArgs(u, LinuxRegs))
 	}
-	u.RegWrite(uc.UC_ARM_REG_R0, ret)
+	u.RegWrite(uc.ARM_REG_R0, ret)
 }
 
 func LinuxInterrupt(u models.Usercorn, intno uint32) {

@@ -25,12 +25,12 @@ var linuxSyscalls = map[int]string{
 	243: "set_thread_area",
 }
 
-var LinuxRegs = []int{uc.UC_X86_REG_EBX, uc.UC_X86_REG_ECX, uc.UC_X86_REG_EDX, uc.UC_X86_REG_ESI, uc.UC_X86_REG_EDI, uc.UC_X86_REG_EBP}
+var LinuxRegs = []int{uc.X86_REG_EBX, uc.X86_REG_ECX, uc.X86_REG_EDX, uc.X86_REG_ESI, uc.X86_REG_EDI, uc.X86_REG_EBP}
 var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86"}
 
 func LinuxSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
-	eax, _ := u.RegRead(uc.UC_X86_REG_EAX)
+	eax, _ := u.RegRead(uc.X86_REG_EAX)
 	name, _ := linuxSyscalls[int(eax)]
 	var ret uint64
 	switch name {
@@ -41,7 +41,7 @@ func LinuxSyscall(u models.Usercorn) {
 	default:
 		ret, _ = u.Syscall(int(eax), name, syscalls.RegArgs(u, LinuxRegs))
 	}
-	u.RegWrite(uc.UC_X86_REG_EAX, ret)
+	u.RegWrite(uc.X86_REG_EAX, ret)
 }
 
 func LinuxInterrupt(u models.Usercorn, intno uint32) {

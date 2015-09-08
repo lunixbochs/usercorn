@@ -138,7 +138,7 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 
 func (u *Usercorn) addHooks() error {
 	if u.TraceExec || u.TraceReg {
-		u.HookAdd(uc.UC_HOOK_BLOCK, func(_ *uc.Uc, addr uint64, size uint32) {
+		u.HookAdd(uc.HOOK_BLOCK, func(_ *uc.Uc, addr uint64, size uint32) {
 			sym, _ := u.Symbolicate(addr)
 			if sym != "" {
 				sym = " (" + sym + ")"
@@ -163,7 +163,7 @@ func (u *Usercorn) addHooks() error {
 		})
 	}
 	if u.TraceExec {
-		u.HookAdd(uc.UC_HOOK_CODE, func(_ *uc.Uc, addr uint64, size uint32) {
+		u.HookAdd(uc.HOOK_CODE, func(_ *uc.Uc, addr uint64, size uint32) {
 			if u.TraceExec {
 				dis, _ := u.Disas(addr, uint64(size))
 				fmt.Fprintln(os.Stderr, dis)
@@ -191,8 +191,8 @@ func (u *Usercorn) addHooks() error {
 		})
 	}
 	if u.TraceMem {
-		u.HookAdd(uc.UC_HOOK_MEM_READ_WRITE, func(_ *uc.Uc, access int, addr uint64, size int, value int64) {
-			if access == uc.UC_MEM_WRITE {
+		u.HookAdd(uc.HOOK_MEM_READ_WRITE, func(_ *uc.Uc, access int, addr uint64, size int, value int64) {
+			if access == uc.MEM_WRITE {
 				fmt.Fprintf(os.Stderr, "MEM_WRITE")
 			} else {
 				fmt.Fprintf(os.Stderr, "MEM_READ")
@@ -200,26 +200,26 @@ func (u *Usercorn) addHooks() error {
 			fmt.Fprintf(os.Stderr, " 0x%x %d 0x%x\n", addr, size, value)
 		})
 	}
-	u.HookAdd(uc.UC_HOOK_MEM_INVALID, func(_ *uc.Uc, access int, addr uint64, size int, value int64) bool {
-		if access == uc.UC_MEM_WRITE {
+	u.HookAdd(uc.HOOK_MEM_INVALID, func(_ *uc.Uc, access int, addr uint64, size int, value int64) bool {
+		if access == uc.MEM_WRITE {
 			fmt.Fprintf(os.Stderr, "invalid write")
 		} else {
 			fmt.Fprintf(os.Stderr, "invalid read")
 		}
-		ip, _ := u.RegRead(uc.UC_X86_REG_EIP)
-		gs, _ := u.RegRead(uc.UC_X86_REG_GS)
+		ip, _ := u.RegRead(uc.X86_REG_EIP)
+		gs, _ := u.RegRead(uc.X86_REG_GS)
 		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x (eip: 0x%x)\n", addr, size, value, ip)
 		fmt.Fprintf(os.Stderr, "gs: 0x%x\n", gs)
 		dis, _ := u.Disas(ip, 8)
 		fmt.Fprintln(os.Stderr, dis)
 		return false
 	})
-	u.HookAdd(uc.UC_HOOK_INTR, func(_ *uc.Uc, intno uint32) {
+	u.HookAdd(uc.HOOK_INTR, func(_ *uc.Uc, intno uint32) {
 		u.OS.Interrupt(u, intno)
 	})
-	u.HookAdd(uc.UC_HOOK_INSN, func(_ *uc.Uc) {
+	u.HookAdd(uc.HOOK_INSN, func(_ *uc.Uc) {
 		u.OS.Syscall(u)
-	}, uc.UC_X86_INS_SYSCALL)
+	}, uc.X86_INS_SYSCALL)
 	return nil
 }
 

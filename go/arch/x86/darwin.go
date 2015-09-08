@@ -23,13 +23,13 @@ var darwinSyscalls = map[int]string{
 }
 
 func DarwinSyscall(u models.Usercorn) {
-	esp, _ := u.RegRead(uc.UC_X86_REG_ESP)
-	eax, _ := u.RegRead(uc.UC_X86_REG_EAX)
+	esp, _ := u.RegRead(uc.X86_REG_ESP)
+	eax, _ := u.RegRead(uc.X86_REG_EAX)
 	getArgs := syscalls.StackArgs(u)
 	name, _ := darwinSyscalls[int(eax)]
 	ret, _ := u.Syscall(int(eax), name, getArgs)
-	u.RegWrite(uc.UC_X86_REG_EAX, ret)
-	u.RegWrite(uc.UC_X86_REG_ESP, esp)
+	u.RegWrite(uc.X86_REG_EAX, ret)
+	u.RegWrite(uc.X86_REG_ESP, esp)
 }
 
 func DarwinInterrupt(u models.Usercorn, intno uint32) {
