@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/lunixbochs/fvbommel-util/sortorder"
@@ -21,9 +22,19 @@ type RegVal struct {
 
 type regList []Reg
 
-func (r regList) Len() int           { return len(r) }
-func (r regList) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r regList) Less(i, j int) bool { return sortorder.NaturalLess(r[i].Name, r[j].Name) }
+func (r regList) Len() int      { return len(r) }
+func (r regList) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
+func (r regList) Less(i, j int) bool {
+	inum := strings.IndexAny(r[i].Name, "0123456789")
+	jnum := strings.IndexAny(r[j].Name, "0123456789")
+	if inum != -1 && jnum != -1 {
+		return sortorder.NaturalLess(r[i].Name, r[j].Name)
+	} else if inum == -1 {
+		return true
+	} else {
+		return false
+	}
+}
 
 type regMap map[int]string
 

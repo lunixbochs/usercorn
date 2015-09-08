@@ -105,20 +105,49 @@ type Changes struct {
 }
 
 func (cs *Changes) Print(color, onlyChanged bool) {
-	i := 0
-	for _, c := range cs.Changes {
-		if c.Changed() || !onlyChanged {
-			if i > 0 && i%3 == 0 {
-				fmt.Fprintln(os.Stderr)
-			}
-			i++
-			fmt.Fprintf(os.Stderr, " ")
+	var printRow = func(changes []*Change, cols int) {
+		if len(changes) < cols && len(changes) > 0 {
+			padLen := cs.Bsz + len(" regn 0x ")
+			pad := strings.Repeat(" ", padLen*(cols-len(changes)))
+			fmt.Fprintf(os.Stderr, pad)
+		}
+		for _, c := range changes {
 			c.Print(cs.Bsz, color)
+			fmt.Fprintf(os.Stderr, " ")
+		}
+		if len(changes) > 0 {
+			fmt.Fprintln(os.Stderr)
 		}
 	}
-	if i > 0 {
-		fmt.Fprintln(os.Stderr)
+	changes := cs.Changes
+	if onlyChanged {
+		changes = cs.Changed()
 	}
+	// print column-wise output
+	cols := 4
+	rows := len(changes) / cols
+	lastRow := changes[rows*cols:]
+	row := make([]*Change, cols)
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			row[j] = changes[j*rows+i]
+		}
+		printRow(row, cols)
+	}
+	if rows == 0 {
+		cols = 0
+	}
+	printRow(lastRow, cols)
+}
+
+func (cs *Changes) Changed() []*Change {
+	ret := make([]*Change, 0, cs.Count())
+	for _, c := range cs.Changes {
+		if c.Changed() {
+			ret = append(ret, c)
+		}
+	}
+	return ret
 }
 
 func (cs *Changes) Count() int {
