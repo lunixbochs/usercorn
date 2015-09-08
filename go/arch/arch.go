@@ -6,7 +6,9 @@ import (
 	"../models"
 	"./arm"
 	"./arm64"
+	"./m68k"
 	"./mips"
+	"./sparc"
 	"./x86"
 	"./x86_64"
 )
@@ -14,7 +16,9 @@ import (
 var archMap = map[string]*models.Arch{
 	"arm":    arm.Arch,
 	"arm64":  arm64.Arch,
+	"m68k":   m68k.Arch,
 	"mips":   mips.Arch,
+	"sparc":  sparc.Arch,
 	"x86":    x86.Arch,
 	"x86_64": x86_64.Arch,
 }
