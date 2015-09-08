@@ -144,7 +144,7 @@ func (u *Usercorn) addHooks() error {
 				sym = " (" + sym + ")"
 			}
 			blockLine := fmt.Sprintf("| block%s @0x%x", sym, addr)
-			if u.TraceReg && u.deadlock == 0 {
+			if !u.TraceExec && u.TraceReg && u.deadlock == 0 {
 				changes := u.status.Changes()
 				if changes.Count() > 0 {
 					fmt.Fprintln(os.Stderr, blockLine)
@@ -158,13 +158,19 @@ func (u *Usercorn) addHooks() error {
 	}
 	if u.TraceExec {
 		u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+			var changes *models.Changes
+			if addr == u.lastCode || u.TraceReg && u.TraceExec {
+				changes = u.status.Changes()
+			}
 			if u.TraceExec {
+				if u.TraceReg {
+					changes.Print(true, true)
+				}
 				dis, _ := u.Disas(addr, uint64(size))
 				fmt.Fprintln(os.Stderr, dis)
 			}
 			if addr == u.lastCode {
 				u.deadlock++
-				changes := u.status.Changes()
 				if changes.Count() > 0 {
 					if u.TraceReg {
 						changes.Print(true, true)
