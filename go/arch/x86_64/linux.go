@@ -38,7 +38,14 @@ var linuxSyscalls = map[int]string{
 var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86_64"}
 
 func LinuxInit(u models.Usercorn, args, env []string) error {
-	return AbiInit(u, args, env, LinuxSyscall)
+	auxv, err := models.SetupElfAuxv(u)
+	if err != nil {
+		return err
+	}
+	if err := u.PushBytes(auxv); err != nil {
+		return err
+	}
+	return AbiInit(u, args, env, auxv, LinuxSyscall)
 }
 
 func LinuxSyscall(u models.Usercorn) {

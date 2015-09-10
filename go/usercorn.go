@@ -16,8 +16,12 @@ import (
 
 type Usercorn struct {
 	*Unicorn
-	loader      loader.Loader
-	Entry       uint64
+	loader loader.Loader
+
+	interpBase uint64
+	entry      uint64
+	binEntry   uint64
+
 	StackBase   uint64
 	DataSegment models.Segment
 	Verbose     bool
@@ -55,11 +59,10 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 		DataSegment: models.Segment{ds, de},
 	}
 	u.status = models.StatusDiff{U: u, Color: true}
-	entry, err := u.mapBinary(u.loader)
+	u.interpBase, u.entry, u.binEntry, err = u.mapBinary(u.loader)
 	if err != nil {
 		return nil, err
 	}
-	u.Entry = entry
 	return u, nil
 }
 
@@ -76,8 +79,8 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		}
 	}
 	if u.Verbose {
-		fmt.Fprintf(os.Stderr, "[entry point @ 0x%x]\n", u.Entry)
-		dis, err := u.Disas(u.Entry, 64)
+		fmt.Fprintf(os.Stderr, "[entry point @ 0x%x]\n", u.entry)
+		dis, err := u.Disas(u.entry, 64)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		} else {
@@ -101,7 +104,26 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		fmt.Fprintln(os.Stderr, "==== Program output begins here. ====")
 		fmt.Fprintln(os.Stderr, "=====================================")
 	}
-	return u.Unicorn.Start(u.Entry, 0xffffffffffffffff)
+	return u.Unicorn.Start(u.entry, 0xffffffffffffffff)
+}
+
+func (u *Usercorn) Loader() loader.Loader {
+	return u.loader
+}
+
+func (u *Usercorn) InterpBase() uint64 {
+	// points to interpreter base or 0
+	return u.interpBase
+}
+
+func (u *Usercorn) Entry() uint64 {
+	// points to effective program entry: either an interpreter or the binary
+	return u.entry
+}
+
+func (u *Usercorn) BinEntry() uint64 {
+	// points to binary entry, even if an interpreter is used
+	return u.entry
 }
 
 func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
@@ -236,7 +258,7 @@ func (u *Usercorn) addHooks() error {
 	return nil
 }
 
-func (u *Usercorn) mapBinary(l loader.Loader) (uint64, error) {
+func (u *Usercorn) mapBinary(l loader.Loader) (interpBase, realEntry, entry uint64, err error) {
 	var dynamic bool
 	switch l.Type() {
 	case loader.EXEC:
@@ -244,11 +266,12 @@ func (u *Usercorn) mapBinary(l loader.Loader) (uint64, error) {
 	case loader.DYN:
 		dynamic = true
 	default:
-		return 0, errors.New("Unsupported file load type.")
+		err = errors.New("Unsupported file load type.")
+		return
 	}
 	segments, err := l.Segments()
 	if err != nil {
-		return 0, err
+		return
 	}
 	// merge overlapping segments
 	merged := make([]*models.Segment, 0, len(segments))
@@ -274,26 +297,27 @@ outer:
 			err = u.MemMap(loadBias+seg.Start, seg.End-seg.Start)
 		}
 		if err != nil {
-			return 0, err
+			return
 		}
 	}
 	// write segment memory
 	for _, seg := range segments {
 		if err := u.MemWrite(loadBias+seg.Addr, seg.Data); err != nil {
-			return 0, err
+			return 0, 0, 0, err
 		}
 	}
+	entry = loadBias + l.Entry()
 	// load interpreter if present
 	interp := l.Interp()
 	if interp != "" {
 		bin, err := loader.LoadFile(u.PrefixPath(interp, true))
 		if err != nil {
-			return 0, err
+			return 0, 0, 0, err
 		}
-		loadBias, err := u.mapBinary(bin)
-		return loadBias, err
+		interpBias, interpEntry, _, err := u.mapBinary(bin)
+		return interpBias, interpEntry, entry, err
 	} else {
-		return loadBias + l.Entry(), nil
+		return 0, entry, entry, nil
 	}
 }
 

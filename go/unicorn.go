@@ -102,6 +102,14 @@ func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
 	return 0, errors.New("Unicorn.Mmap() failed.")
 }
 
+func (u *Unicorn) MmapWrite(addr uint64, p []byte) (uint64, error) {
+	addr, err := u.Mmap(addr, uint64(len(p)))
+	if err != nil {
+		return 0, err
+	}
+	return addr, u.MemWrite(addr, p)
+}
+
 func (u *Unicorn) MemReadStr(addr uint64) (string, error) {
 	var tmp = [4]byte{1, 1, 1, 1}
 	var ret []byte

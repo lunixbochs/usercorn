@@ -70,6 +70,17 @@ func (e *ElfLoader) Interp() string {
 	return ""
 }
 
+func (e *ElfLoader) Header() ([]byte, int) {
+	for _, prog := range e.file.Progs {
+		if prog.Type == elf.PT_PHDR {
+			data := make([]byte, prog.Memsz)
+			prog.Open().Read(data)
+			return data, len(e.file.Progs)
+		}
+	}
+	return nil, 0
+}
+
 func (e *ElfLoader) Type() int {
 	switch e.file.Type {
 	case elf.ET_EXEC:

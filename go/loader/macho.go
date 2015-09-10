@@ -100,6 +100,10 @@ func (m *MachOLoader) Interp() string {
 	return ""
 }
 
+func (m *MachOLoader) Header() ([]byte, int) {
+	return nil, 0
+}
+
 func (m *MachOLoader) Type() int {
 	return EXEC
 }
