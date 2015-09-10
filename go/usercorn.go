@@ -127,6 +127,10 @@ func (u *Usercorn) BinEntry() uint64 {
 }
 
 func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
+	// end marker
+	if err := u.Push(0); err != nil {
+		return err
+	}
 	// auxv
 	if err := u.PushBytes(auxv); err != nil {
 		return err
