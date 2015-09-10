@@ -16,7 +16,8 @@ import (
 
 type Usercorn struct {
 	*Unicorn
-	loader loader.Loader
+	loader       loader.Loader
+	interpLoader loader.Loader
 
 	interpBase uint64
 	entry      uint64
@@ -167,6 +168,12 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 }
 
 func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
+	if u.interpLoader != nil {
+		sym, err := u.interpLoader.Symbolicate(addr)
+		if sym != "" && err == nil {
+			return sym, nil
+		}
+	}
 	return u.loader.Symbolicate(addr)
 }
 
@@ -318,6 +325,7 @@ outer:
 		if err != nil {
 			return 0, 0, 0, err
 		}
+		u.interpLoader = bin
 		_, interpEntry, interpBias, err := u.mapBinary(bin)
 		return interpBias, interpEntry, entry, err
 	} else {
