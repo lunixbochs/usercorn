@@ -43,7 +43,7 @@ func main() {
 	corn.TraceMem = *mtrace
 	corn.TraceReg = *rtrace
 	corn.TraceExec = *etrace
-	err = corn.Run(args, nil)
+	err = corn.Run(args, os.Environ())
 	if err != nil {
 		log.Fatal(err)
 	}
