@@ -29,7 +29,7 @@ var LinuxRegs = []int{uc.ARM_REG_R0, uc.ARM_REG_R1, uc.ARM_REG_R2, uc.ARM_REG_R3
 var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "arm"}
 
 func LinuxInit(u models.Usercorn, args, env []string) error {
-	return u.PosixInit(args, env)
+	return u.PosixInit(args, env, nil)
 }
 
 func LinuxSyscall(u models.Usercorn) {

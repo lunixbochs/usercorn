@@ -104,7 +104,11 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	return u.Unicorn.Start(u.Entry, 0xffffffffffffffff)
 }
 
-func (u *Usercorn) PosixInit(args, env []string) error {
+func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
+	// auxv
+	if err := u.PushBytes(auxv); err != nil {
+		return err
+	}
 	// envp
 	envp, err := u.pushStrings(env...)
 	if err != nil {
@@ -306,6 +310,7 @@ func (u *Usercorn) setupStack() error {
 }
 
 func (u *Usercorn) pushStrings(args ...string) ([]uint64, error) {
+	// TODO: does anything case if these are actually on the stack?
 	argvSize := 0
 	for _, v := range args {
 		argvSize += len(v) + 1

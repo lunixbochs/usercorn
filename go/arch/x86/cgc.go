@@ -15,7 +15,7 @@ func writeAddr(u models.Usercorn, addr, val uint64) {
 }
 
 func CgcInit(u models.Usercorn, args, env []string) error {
-	return u.PosixInit(args, env)
+	return u.PosixInit(args, env, nil)
 }
 
 func CgcSyscall(u models.Usercorn) {

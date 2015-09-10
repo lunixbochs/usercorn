@@ -20,10 +20,12 @@ type Usercorn interface {
 	MemWriter(addr uint64) io.Writer
 	PackAddr(buf []byte, n uint64) error
 	UnpackAddr(buf []byte) uint64
+	PopBytes(p []byte) error
+	PushBytes(p []byte) error
 	Pop() (uint64, error)
 	Push(n uint64) error
 	ReadRegs(reg []int) ([]uint64, error)
 	RegDump() ([]RegVal, error)
-	PosixInit(args, env []string) error
+	PosixInit(args, env []string, auxv []byte) error
 	Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error)
 }

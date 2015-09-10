@@ -12,5 +12,5 @@ func AbiInit(u models.Usercorn, args, env []string, syscall func(models.Usercorn
 	u.HookAdd(uc.HOOK_INSN, func(_ uc.Unicorn) {
 		syscall(u)
 	}, uc.X86_INS_SYSCALL)
-	return u.PosixInit(args, env)
+	return u.PosixInit(args, env, nil)
 }

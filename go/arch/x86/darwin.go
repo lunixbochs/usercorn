@@ -23,7 +23,7 @@ var darwinSyscalls = map[int]string{
 }
 
 func DarwinInit(u models.Usercorn, args, env []string) error {
-	return u.PosixInit(args, env)
+	return u.PosixInit(args, env, nil)
 }
 
 func DarwinSyscall(u models.Usercorn) {
