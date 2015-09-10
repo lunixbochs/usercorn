@@ -4,6 +4,12 @@ import (
 	"encoding/binary"
 )
 
+type Symbol struct {
+	Name       string
+	Start, End uint64
+	Dynamic    bool
+}
+
 type Loader interface {
 	Arch() string
 	Bits() int
@@ -13,7 +19,7 @@ type Loader interface {
 	Type() int
 	Interp() string
 	Header() ([]byte, int)
-	Symbolicate(addr uint64) (string, error)
+	Symbols() ([]Symbol, error)
 	Segments() ([]SegmentData, error)
 	DataSegment() (uint64, uint64)
 }

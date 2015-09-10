@@ -30,12 +30,9 @@ func TestMachOSymbol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	name, err := macho.Symbolicate(macho.Entry())
+	_, err = macho.Symbols()
 	if err != nil {
 		t.Fatal(err)
-	}
-	if name == "" {
-		t.Fatal("macho.Symbolicate() failed")
 	}
 }
 

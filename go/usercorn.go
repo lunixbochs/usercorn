@@ -168,13 +168,32 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 }
 
 func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
+	symbols, err := u.loader.Symbols()
+	if err != nil {
+		return "", err
+	}
 	if u.interpLoader != nil {
-		sym, err := u.interpLoader.Symbolicate(addr)
-		if sym != "" && err == nil {
-			return sym, nil
+		interpSym, err := u.interpLoader.Symbols()
+		if err == nil && interpSym != nil {
+			symbols = append(symbols, interpSym...)
 		}
 	}
-	return u.loader.Symbolicate(addr)
+	nearest := make(map[uint64][]models.Symbol)
+	var min int64 = -1
+	for _, sym := range symbols {
+		dist := int64(addr - sym.Start)
+		if dist > 0 && (sym.Start+uint64(dist) <= sym.End || sym.End == 0) {
+			if dist < min || min == -1 {
+				min = dist
+			}
+			nearest[uint64(dist)] = append(nearest[uint64(dist)], sym)
+		}
+	}
+	if len(nearest) > 0 {
+		sym := nearest[uint64(min)][0]
+		return fmt.Sprintf("%s+0x%x", sym.Name, min), nil
+	}
+	return "", nil
 }
 
 func (u *Usercorn) Brk(addr uint64) (uint64, error) {

@@ -118,25 +118,29 @@ func (e *ElfLoader) Segments() ([]models.SegmentData, error) {
 	return ret, nil
 }
 
-func (e *ElfLoader) Symbolicate(addr uint64) (string, error) {
-	nearest := make(map[uint64][]elf.Symbol)
+func (e *ElfLoader) Symbols() ([]models.Symbol, error) {
 	syms, err := e.file.Symbols()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	var min int64 = -1
-	for _, sym := range syms {
-		dist := int64(addr - sym.Value)
-		if dist > 0 && uint64(dist) <= sym.Size {
-			if dist < min || min == -1 {
-				min = dist
-			}
-			nearest[uint64(dist)] = append(nearest[uint64(dist)], sym)
-		}
+	// don't care about missing dyn symtab
+	dyn, _ := e.file.DynamicSymbols()
+	symbols := make([]models.Symbol, 0, len(syms)+len(dyn))
+	for _, s := range syms {
+		symbols = append(symbols, models.Symbol{
+			Name:    s.Name,
+			Start:   s.Value,
+			End:     s.Value + s.Size,
+			Dynamic: false,
+		})
 	}
-	if len(nearest) > 0 {
-		sym := nearest[uint64(min)][0]
-		return fmt.Sprintf("%s+0x%x", sym.Name, min), nil
+	for _, s := range dyn {
+		symbols = append(symbols, models.Symbol{
+			Name:    s.Name,
+			Start:   s.Value,
+			End:     s.Value + s.Size,
+			Dynamic: true,
+		})
 	}
-	return "", nil
+	return symbols, nil
 }

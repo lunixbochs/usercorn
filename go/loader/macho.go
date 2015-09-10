@@ -138,21 +138,25 @@ func (m *MachOLoader) Segments() ([]models.SegmentData, error) {
 	return ret, nil
 }
 
-func (m *MachOLoader) Symbolicate(addr uint64) (string, error) {
-	nearest := make(map[int64][]macho.Symbol)
-	var min int64 = -1
-	for _, sym := range m.file.Symtab.Syms {
-		dist := int64(addr - sym.Value)
-		if dist > 0 {
-			if dist < min || min < 0 {
-				min = dist
+func (m *MachOLoader) Symbols() ([]models.Symbol, error) {
+	var symbols []models.Symbol
+	if m.file.Symtab == nil {
+		return nil, errors.New("no symbol table found")
+	} else {
+		syms := m.file.Symtab.Syms
+		symbols := make([]models.Symbol, len(syms))
+		for i, s := range syms {
+			symbols[i] = models.Symbol{
+				Name:  s.Name,
+				Start: s.Value,
+				End:   0,
 			}
-			nearest[dist] = append(nearest[dist], sym)
 		}
 	}
-	if len(nearest) > 0 {
-		sym := nearest[min][0]
-		return fmt.Sprintf("%s+0x%x", sym.Name, min), nil
+	if m.file.Dysymtab != nil {
+		for _, v := range m.file.Dysymtab.IndirectSyms {
+			symbols[v].Dynamic = true
+		}
 	}
-	return "", nil
+	return symbols, nil
 }

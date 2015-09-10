@@ -30,12 +30,9 @@ func TestElfSymbol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	name, err := elf.Symbolicate(elf.Entry())
+	_, err = elf.Symbols()
 	if err != nil {
 		t.Fatal(err)
-	}
-	if name == "" {
-		t.Fatal("elf.Symbolicate() failed")
 	}
 }
 
