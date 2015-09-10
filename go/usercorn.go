@@ -318,7 +318,7 @@ outer:
 		if err != nil {
 			return 0, 0, 0, err
 		}
-		interpBias, interpEntry, _, err := u.mapBinary(bin)
+		_, interpEntry, interpBias, err := u.mapBinary(bin)
 		return interpBias, interpEntry, entry, err
 	} else {
 		return 0, entry, entry, nil
