@@ -129,8 +129,12 @@ func access(u U, a []uint64) uint64 {
 func readv(u U, a []uint64) uint64 {
 	fd, iov, count := int(a[0]), a[1], a[2]
 	for vec := range iovecIter(u.MemReader(iov), count, int(u.Bits()), u.ByteOrder()) {
-		data, _ := u.MemRead(vec.Base, vec.Len)
-		syscall.Write(fd, data)
+		tmp := make([]byte, vec.Len)
+		n, _ := syscall.Read(fd, tmp)
+		if n <= 0 {
+			break
+		}
+		u.MemWrite(vec.Base, tmp[:n])
 	}
 	return 0
 }
@@ -138,12 +142,8 @@ func readv(u U, a []uint64) uint64 {
 func writev(u U, a []uint64) uint64 {
 	fd, iov, count := int(a[0]), a[1], a[2]
 	for vec := range iovecIter(u.MemReader(iov), count, int(u.Bits()), u.ByteOrder()) {
-		tmp := make([]byte, vec.Len)
-		n, _ := syscall.Read(fd, tmp)
-		if n <= 0 {
-			break
-		}
-		u.MemWrite(vec.Base, tmp[:n])
+		data, _ := u.MemRead(vec.Base, vec.Len)
+		syscall.Write(fd, data)
 	}
 	return 0
 }
