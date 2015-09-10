@@ -60,28 +60,21 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 		return nil, err
 	}
 	u.Entry = entry
-	if os.Init != nil {
-		os.Init(u)
-	}
 	return u, nil
 }
 
-func (u *Usercorn) Run(args ...string) error {
+func (u *Usercorn) Run(args []string, env []string) error {
 	if err := u.addHooks(); err != nil {
 		return err
 	}
 	if err := u.setupStack(); err != nil {
 		return err
 	}
-	// envp
-	u.Push(0)
-	// argv
-	if err := u.pushStrings(args...); err != nil {
-		return err
+	if u.OS.Init != nil {
+		if err := u.OS.Init(u, args, env); err != nil {
+			return err
+		}
 	}
-	// argc
-	u.Push(uint64(len(args)))
-
 	if u.Verbose {
 		fmt.Fprintf(os.Stderr, "[entry point @ 0x%x]\n", u.Entry)
 		dis, err := u.Disas(u.Entry, 64)
@@ -109,6 +102,19 @@ func (u *Usercorn) Run(args ...string) error {
 		fmt.Fprintln(os.Stderr, "=====================================")
 	}
 	return u.Unicorn.Start(u.Entry, 0xffffffffffffffff)
+}
+
+func (u *Usercorn) PosixInit(args, env []string) error {
+	// envp
+	if err := u.Push(0); err != nil {
+		return err
+	}
+	// argv
+	if err := u.pushStrings(args...); err != nil {
+		return err
+	}
+	// argc
+	return u.Push(uint64(len(args)))
 }
 
 func (u *Usercorn) PrefixPath(path string, force bool) string {

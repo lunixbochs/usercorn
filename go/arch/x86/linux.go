@@ -28,6 +28,10 @@ var linuxSyscalls = map[int]string{
 var LinuxRegs = []int{uc.X86_REG_EBX, uc.X86_REG_ECX, uc.X86_REG_EDX, uc.X86_REG_ESI, uc.X86_REG_EDI, uc.X86_REG_EBP}
 var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86"}
 
+func LinuxInit(u models.Usercorn, args, env []string) error {
+	return u.PosixInit(args, env)
+}
+
 func LinuxSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
 	eax, _ := u.RegRead(uc.X86_REG_EAX)
@@ -51,5 +55,5 @@ func LinuxInterrupt(u models.Usercorn, intno uint32) {
 }
 
 func init() {
-	Arch.RegisterOS(&models.OS{Name: "linux", Interrupt: LinuxInterrupt})
+	Arch.RegisterOS(&models.OS{Name: "linux", Init: LinuxInit, Interrupt: LinuxInterrupt})
 }

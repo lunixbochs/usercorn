@@ -22,6 +22,10 @@ var darwinSyscalls = map[int]string{
 	199: "lseek",
 }
 
+func DarwinInit(u models.Usercorn, args, env []string) error {
+	return u.PosixInit(args, env)
+}
+
 func DarwinSyscall(u models.Usercorn) {
 	esp, _ := u.RegRead(uc.X86_REG_ESP)
 	eax, _ := u.RegRead(uc.X86_REG_EAX)
@@ -39,5 +43,5 @@ func DarwinInterrupt(u models.Usercorn, intno uint32) {
 }
 
 func init() {
-	Arch.RegisterOS(&models.OS{Name: "darwin", Interrupt: DarwinInterrupt})
+	Arch.RegisterOS(&models.OS{Name: "darwin", Init: DarwinInit, Interrupt: DarwinInterrupt})
 }

@@ -14,6 +14,10 @@ func writeAddr(u models.Usercorn, addr, val uint64) {
 	u.MemWrite(addr, buf[:])
 }
 
+func CgcInit(u models.Usercorn, args, env []string) error {
+	return u.PosixInit(args, env)
+}
+
 func CgcSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
 	args, _ := u.ReadRegs(LinuxRegs)
@@ -51,5 +55,5 @@ func CgcInterrupt(u models.Usercorn, intno uint32) {
 }
 
 func init() {
-	Arch.RegisterOS(&models.OS{Name: "cgc", Interrupt: CgcInterrupt})
+	Arch.RegisterOS(&models.OS{Name: "cgc", Init: CgcInit, Interrupt: CgcInterrupt})
 }

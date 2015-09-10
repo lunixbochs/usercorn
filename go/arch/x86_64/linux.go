@@ -37,6 +37,10 @@ var linuxSyscalls = map[int]string{
 
 var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86_64"}
 
+func LinuxInit(u models.Usercorn, args, env []string) error {
+	return AbiInit(u, args, env, LinuxSyscall)
+}
+
 func LinuxSyscall(u models.Usercorn) {
 	rax, _ := u.RegRead(uc.X86_REG_RAX)
 	name, _ := linuxSyscalls[int(rax)]
@@ -60,5 +64,5 @@ func LinuxInterrupt(u models.Usercorn, intno uint32) {
 }
 
 func init() {
-	Arch.RegisterOS(&models.OS{Name: "linux", Init: AbiInit(LinuxSyscall), Interrupt: LinuxInterrupt})
+	Arch.RegisterOS(&models.OS{Name: "linux", Init: LinuxInit, Interrupt: LinuxInterrupt})
 }
