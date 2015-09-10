@@ -1,5 +1,10 @@
 package models
 
+type SegmentData struct {
+	Addr uint64
+	Data []byte
+}
+
 type Segment struct {
 	Start, End uint64
 }

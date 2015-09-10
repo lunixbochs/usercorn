@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"../models"
 )
 
 var machoCpuMap = map[macho.Cpu]string{
@@ -63,7 +65,7 @@ func MatchMachO(r io.ReaderAt) bool {
 	return false
 }
 
-func NewMachOLoader(r io.ReaderAt) (Loader, error) {
+func NewMachOLoader(r io.ReaderAt) (models.Loader, error) {
 	file, err := macho.NewFile(r)
 	if err != nil {
 		return nil, err
@@ -116,8 +118,8 @@ func (m *MachOLoader) DataSegment() (start, end uint64) {
 	return 0, 0
 }
 
-func (m *MachOLoader) Segments() ([]Segment, error) {
-	ret := make([]Segment, 0, len(m.file.Loads))
+func (m *MachOLoader) Segments() ([]models.SegmentData, error) {
+	ret := make([]models.SegmentData, 0, len(m.file.Loads))
 	for _, l := range m.file.Loads {
 		if s, ok := l.(*macho.Segment); ok {
 			switch s.Cmd {
@@ -126,7 +128,7 @@ func (m *MachOLoader) Segments() ([]Segment, error) {
 				if err != nil {
 					return nil, err
 				}
-				ret = append(ret, Segment{
+				ret = append(ret, models.SegmentData{
 					Addr: s.Addr,
 					Data: data,
 				})

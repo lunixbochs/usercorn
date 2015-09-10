@@ -16,8 +16,8 @@ import (
 
 type Usercorn struct {
 	*Unicorn
-	loader       loader.Loader
-	interpLoader loader.Loader
+	loader       models.Loader
+	interpLoader models.Loader
 
 	interpBase uint64
 	entry      uint64
@@ -108,7 +108,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	return u.Unicorn.Start(u.entry, 0xffffffffffffffff)
 }
 
-func (u *Usercorn) Loader() loader.Loader {
+func (u *Usercorn) Loader() models.Loader {
 	return u.loader
 }
 
@@ -269,7 +269,7 @@ func (u *Usercorn) addHooks() error {
 	return nil
 }
 
-func (u *Usercorn) mapBinary(l loader.Loader) (interpBase, realEntry, entry uint64, err error) {
+func (u *Usercorn) mapBinary(l models.Loader) (interpBase, realEntry, entry uint64, err error) {
 	var dynamic bool
 	switch l.Type() {
 	case loader.EXEC:

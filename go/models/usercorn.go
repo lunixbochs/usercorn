@@ -1,7 +1,6 @@
 package models
 
 import (
-	"../loader"
 	"encoding/binary"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io"
@@ -30,7 +29,7 @@ type Usercorn interface {
 	ReadRegs(reg []int) ([]uint64, error)
 	RegDump() ([]RegVal, error)
 
-	Loader() loader.Loader
+	Loader() Loader
 	InterpBase() uint64
 	Entry() uint64
 	BinEntry() uint64

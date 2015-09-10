@@ -5,9 +5,11 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+
+	"../models"
 )
 
-func LoadFile(path string) (Loader, error) {
+func LoadFile(path string) (models.Loader, error) {
 	p, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -15,7 +17,7 @@ func LoadFile(path string) (Loader, error) {
 	return Load(bytes.NewReader(p))
 }
 
-func Load(r io.ReaderAt) (Loader, error) {
+func Load(r io.ReaderAt) (models.Loader, error) {
 	if MatchElf(r) {
 		return NewElfLoader(r)
 	} else if MatchMachO(r) {

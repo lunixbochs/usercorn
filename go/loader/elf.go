@@ -8,6 +8,8 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
+
+	"../models"
 )
 
 var machineMap = map[elf.Machine]string{
@@ -30,7 +32,7 @@ func MatchElf(r io.ReaderAt) bool {
 	return bytes.Equal(getMagic(r), elfMagic)
 }
 
-func NewElfLoader(r io.ReaderAt) (Loader, error) {
+func NewElfLoader(r io.ReaderAt) (models.Loader, error) {
 	file, err := elf.NewFile(r)
 	if err != nil {
 		return nil, err
@@ -100,15 +102,15 @@ func (e *ElfLoader) DataSegment() (start, end uint64) {
 	return 0, 0
 }
 
-func (e *ElfLoader) Segments() ([]Segment, error) {
-	ret := make([]Segment, 0, len(e.file.Progs))
+func (e *ElfLoader) Segments() ([]models.SegmentData, error) {
+	ret := make([]models.SegmentData, 0, len(e.file.Progs))
 	for _, prog := range e.file.Progs {
 		if prog.Type != elf.PT_LOAD {
 			continue
 		}
 		data := make([]byte, prog.Memsz)
 		prog.Open().Read(data)
-		ret = append(ret, Segment{
+		ret = append(ret, models.SegmentData{
 			Addr: prog.Vaddr,
 			Data: data,
 		})

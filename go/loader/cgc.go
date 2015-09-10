@@ -3,6 +3,8 @@ package loader
 import (
 	"bytes"
 	"io"
+
+	"../models"
 )
 
 var cgcMagic = []byte{0x7f, 0x43, 0x47, 0x43}
@@ -31,14 +33,14 @@ func (f *FakeCgcReader) ReadAt(p []byte, off int64) (int, error) {
 }
 
 type CgcLoader struct {
-	Loader
+	models.Loader
 }
 
 func (c *CgcLoader) OS() string {
 	return "cgc"
 }
 
-func NewCgcLoader(r io.ReaderAt) (Loader, error) {
+func NewCgcLoader(r io.ReaderAt) (models.Loader, error) {
 	l, err := NewElfLoader(&FakeCgcReader{r})
 	return &CgcLoader{l}, err
 }
