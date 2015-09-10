@@ -23,7 +23,7 @@ var darwinSyscalls = map[int]string{
 }
 
 func DarwinInit(u models.Usercorn, args, env []string) error {
-	return AbiInit(u, args, env, LinuxSyscall)
+	return AbiInit(u, args, env, DarwinSyscall)
 }
 
 func DarwinSyscall(u models.Usercorn) {
