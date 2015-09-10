@@ -19,6 +19,7 @@ type Usercorn struct {
 	loader       models.Loader
 	interpLoader models.Loader
 
+	base       uint64
 	interpBase uint64
 	entry      uint64
 	binEntry   uint64
@@ -60,7 +61,7 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 		DataSegment: models.Segment{ds, de},
 	}
 	u.status = models.StatusDiff{U: u, Color: true}
-	u.interpBase, u.entry, u.binEntry, err = u.mapBinary(u.loader)
+	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(u.loader)
 	if err != nil {
 		return nil, err
 	}
@@ -168,30 +169,43 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 }
 
 func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
+	var symbolicate = func(addr uint64, symbols []models.Symbol) (result models.Symbol, distance uint64) {
+		if len(symbols) == 0 {
+			return
+		}
+		nearest := make(map[uint64][]models.Symbol)
+		var min int64 = -1
+		for _, sym := range symbols {
+			dist := int64(addr - sym.Start)
+			if dist > 0 && (sym.Start+uint64(dist) <= sym.End || sym.End == 0) && sym.Name != "" {
+				if dist < min || min == -1 {
+					min = dist
+				}
+				nearest[uint64(dist)] = append(nearest[uint64(dist)], sym)
+			}
+		}
+		if len(nearest) > 0 {
+			sym := nearest[uint64(min)][0]
+			return sym, uint64(min)
+		}
+		return
+	}
 	symbols, err := u.loader.Symbols()
 	if err != nil {
 		return "", err
 	}
+	var interpSym []models.Symbol
 	if u.interpLoader != nil {
-		interpSym, err := u.interpLoader.Symbols()
-		if err == nil && interpSym != nil {
-			symbols = append(symbols, interpSym...)
-		}
+		interpSym, _ = u.interpLoader.Symbols()
 	}
-	nearest := make(map[uint64][]models.Symbol)
-	var min int64 = -1
-	for _, sym := range symbols {
-		dist := int64(addr - sym.Start)
-		if dist > 0 && (sym.Start+uint64(dist) <= sym.End || sym.End == 0) {
-			if dist < min || min == -1 {
-				min = dist
-			}
-			nearest[uint64(dist)] = append(nearest[uint64(dist)], sym)
-		}
+	sym, sdist := symbolicate(addr-u.base, symbols)
+	isym, idist := symbolicate(addr-u.interpBase, interpSym)
+	if idist < sdist && isym.Name != "" || sym.Name == "" {
+		sym = isym
+		sdist = idist
 	}
-	if len(nearest) > 0 {
-		sym := nearest[uint64(min)][0]
-		return fmt.Sprintf("%s+0x%x", sym.Name, min), nil
+	if sym.Name != "" {
+		return fmt.Sprintf("%s+0x%x", sym.Name, sdist), nil
 	}
 	return "", nil
 }
@@ -288,7 +302,7 @@ func (u *Usercorn) addHooks() error {
 	return nil
 }
 
-func (u *Usercorn) mapBinary(l models.Loader) (interpBase, realEntry, entry uint64, err error) {
+func (u *Usercorn) mapBinary(l models.Loader) (interpBase, entry, base, realEntry uint64, err error) {
 	var dynamic bool
 	switch l.Type() {
 	case loader.EXEC:
@@ -333,7 +347,7 @@ outer:
 	// write segment memory
 	for _, seg := range segments {
 		if err := u.MemWrite(loadBias+seg.Addr, seg.Data); err != nil {
-			return 0, 0, 0, err
+			return 0, 0, 0, 0, err
 		}
 	}
 	entry = loadBias + l.Entry()
@@ -342,13 +356,13 @@ outer:
 	if interp != "" {
 		bin, err := loader.LoadFile(u.PrefixPath(interp, true))
 		if err != nil {
-			return 0, 0, 0, err
+			return 0, 0, 0, 0, err
 		}
 		u.interpLoader = bin
-		_, interpEntry, interpBias, err := u.mapBinary(bin)
-		return interpBias, interpEntry, entry, err
+		_, _, interpBias, interpEntry, err := u.mapBinary(bin)
+		return interpBias, interpEntry, loadBias, entry, err
 	} else {
-		return 0, entry, entry, nil
+		return 0, entry, loadBias, entry, nil
 	}
 }
 
