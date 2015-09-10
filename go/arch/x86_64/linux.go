@@ -32,6 +32,7 @@ var linuxSyscalls = map[int]string{
 	79:  "getcwd",
 	80:  "chdir",
 	158: "arch_prctl",
+	231: "exit_group",
 }
 
 var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86_64"}

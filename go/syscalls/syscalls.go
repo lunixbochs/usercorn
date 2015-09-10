@@ -151,7 +151,8 @@ func writev(u U, a []uint64) uint64 {
 type A []int
 
 var syscalls = map[string]Syscall{
-	"exit": {exit, A{INT}, INT},
+	"exit":       {exit, A{INT}, INT},
+	"exit_group": {exit, A{INT}, INT},
 	// "fork": {fork, A{}, INT},
 	"read":     {read, A{FD, OBUF, LEN}, INT},
 	"write":    {write, A{FD, BUF, LEN}, INT},
