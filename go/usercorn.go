@@ -106,11 +106,19 @@ func (u *Usercorn) Run(args []string, env []string) error {
 
 func (u *Usercorn) PosixInit(args, env []string) error {
 	// envp
-	if err := u.Push(0); err != nil {
+	envp, err := u.pushStrings(env...)
+	if err != nil {
+		return err
+	}
+	if err := u.pushAddrs(envp); err != nil {
 		return err
 	}
 	// argv
-	if err := u.pushStrings(args...); err != nil {
+	argv, err := u.pushStrings(args...)
+	if err != nil {
+		return err
+	}
+	if err := u.pushAddrs(argv); err != nil {
 		return err
 	}
 	// argc
@@ -297,14 +305,14 @@ func (u *Usercorn) setupStack() error {
 	return nil
 }
 
-func (u *Usercorn) pushStrings(args ...string) error {
+func (u *Usercorn) pushStrings(args ...string) ([]uint64, error) {
 	argvSize := 0
 	for _, v := range args {
 		argvSize += len(v) + 1
 	}
 	argvAddr, err := u.Mmap(0, uint64(argvSize))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	buf := make([]byte, argvSize)
 	addrs := make([]uint64, 0, len(args)+1)
@@ -315,9 +323,17 @@ func (u *Usercorn) pushStrings(args ...string) error {
 		pos += uint64(len(args[i]) + 1)
 	}
 	u.MemWrite(argvAddr, buf)
-	u.Push(0)
+	return addrs, nil
+}
+
+func (u *Usercorn) pushAddrs(addrs []uint64) error {
+	if err := u.Push(0); err != nil {
+		return err
+	}
 	for _, v := range addrs {
-		u.Push(v)
+		if err := u.Push(v); err != nil {
+			return err
+		}
 	}
 	return nil
 }
