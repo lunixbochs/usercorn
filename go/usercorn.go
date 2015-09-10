@@ -273,7 +273,7 @@ outer:
 			return 0, err
 		}
 		loadBias, err := u.mapBinary(bin)
-		return loadBias + bin.Entry(), err
+		return loadBias, err
 	} else {
 		return loadBias + l.Entry(), nil
 	}
