@@ -46,9 +46,9 @@ func setupElfAuxv(u Usercorn) ([]Elf64Auxv, error) {
 		return nil, err
 	}
 	auxv = add(auxv, ELF_AT_PHDR, phdrAddr)
-	auxv = add(auxv, ELF_AT_PHDR, phdrAddr)
-	auxv = add(auxv, ELF_AT_PHENT, uint64(len(phdr)))
+	auxv = add(auxv, ELF_AT_PHENT, uint64(u.Bits()*8*2))
 	auxv = add(auxv, ELF_AT_PHNUM, uint64(phdrCount))
+	auxv = add(auxv, ELF_AT_ENTRY, uint64(u.BinEntry()))
 	// TODO: set/track a page size somewhere - on Arch.OS?
 	auxv = add(auxv, ELF_AT_PAGESZ, 0x1000)
 	auxv = add(auxv, ELF_AT_BASE, u.InterpBase())

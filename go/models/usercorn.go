@@ -31,6 +31,7 @@ type Usercorn interface {
 
 	Loader() Loader
 	InterpBase() uint64
+	Base() uint64
 	Entry() uint64
 	BinEntry() uint64
 	PrefixPath(s string, force bool) string

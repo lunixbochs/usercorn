@@ -118,6 +118,11 @@ func (u *Usercorn) InterpBase() uint64 {
 	return u.interpBase
 }
 
+func (u *Usercorn) Base() uint64 {
+	// points to program base
+	return u.base
+}
+
 func (u *Usercorn) Entry() uint64 {
 	// points to effective program entry: either an interpreter or the binary
 	return u.entry
