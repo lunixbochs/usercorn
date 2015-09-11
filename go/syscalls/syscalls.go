@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/lunixbochs/struc"
 	"os"
+	"strings"
 	"syscall"
 
 	"../models"
@@ -11,7 +12,7 @@ import (
 
 func errno(err error) uint64 {
 	if err != nil {
-		return ^uint64(err.(syscall.Errno))
+		return uint64(err.(syscall.Errno))
 	}
 	return 0
 }
@@ -47,6 +48,9 @@ func write(u U, a []uint64) uint64 {
 
 func open(u U, a []uint64) uint64 {
 	path, _ := u.MemReadStr(a[0])
+	if strings.Contains(path, "/lib/") {
+		path = u.PrefixPath(path, false)
+	}
 	mode, flags := int(a[1]), uint32(a[2])
 	fd, _ := syscall.Open(path, mode, flags)
 	return uint64(fd)
@@ -97,12 +101,26 @@ func brk(u U, a []uint64) uint64 {
 func fstat(u U, a []uint64) uint64 {
 	fd, buf := int(a[0]), a[1]
 	var stat syscall.Stat_t
-	err := syscall.Fstat(fd, &stat)
-	if err != nil {
-		return 1
+	if err := syscall.Fstat(fd, &stat); err != nil {
+		return errno(err)
 	}
-	err = struc.Pack(u.MemWriter(buf), &stat)
-	if err != nil {
+	if err := struc.Pack(u.MemWriter(buf), &stat); err != nil {
+		panic(err)
+	}
+	return 0
+}
+
+func stat(u U, a []uint64) uint64 {
+	path, _ := u.MemReadStr(a[0])
+	if strings.Contains(path, "/lib/") {
+		path = u.PrefixPath(path, false)
+	}
+	buf := a[1]
+	var stat syscall.Stat_t
+	if err := syscall.Stat(path, &stat); err != nil {
+		return errno(err)
+	}
+	if err := struc.Pack(u.MemWriter(buf), &stat); err != nil {
 		panic(err)
 	}
 	return 0
@@ -164,6 +182,7 @@ var syscalls = map[string]Syscall{
 	"mprotect": {mprotect, A{PTR, LEN, INT}, INT},
 	"brk":      {brk, A{PTR}, PTR},
 	"fstat":    {fstat, A{FD, PTR}, INT},
+	"stat":     {fstat, A{STR, PTR}, INT},
 	"getcwd":   {getcwd, A{PTR, LEN}, INT},
 	"access":   {access, A{STR, INT}, INT},
 	"readv":    {readv, A{FD, PTR, INT}, INT},

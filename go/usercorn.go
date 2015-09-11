@@ -164,10 +164,11 @@ func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
 
 func (u *Usercorn) PrefixPath(path string, force bool) string {
 	if filepath.IsAbs(path) && u.LoadPrefix != "" {
-		_, err := os.Stat(path)
+		target := filepath.Join(u.LoadPrefix, path)
+		_, err := os.Stat(target)
 		exists := !os.IsNotExist(err)
 		if force || exists {
-			return filepath.Join(u.LoadPrefix, path)
+			return target
 		}
 	}
 	return path
