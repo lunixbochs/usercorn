@@ -11,9 +11,9 @@ var Arch = &models.Arch{
 	Bits:    32,
 	Radare:  "sparc",
 	CS_ARCH: cs.CS_ARCH_SPARC,
-	CS_MODE: cs.CS_MODE_BIG_ENDIAN,
+	CS_MODE: cs.CS_MODE_32,
 	UC_ARCH: uc.ARCH_SPARC,
-	UC_MODE: uc.MODE_BIG_ENDIAN,
+	UC_MODE: uc.MODE_32,
 	SP:      uc.SPARC_REG_SP,
 	Regs: map[int]string{
 		uc.SPARC_REG_G0: "g0",
