@@ -29,10 +29,12 @@ func (r regList) Less(i, j int) bool {
 	jnum := strings.IndexAny(r[j].Name, "0123456789")
 	if inum != -1 && jnum != -1 {
 		return sortorder.NaturalLess(r[i].Name, r[j].Name)
-	} else if inum == -1 {
+	} else if inum == -1 && jnum != -1 {
 		return true
-	} else {
+	} else if jnum == -1 && inum != -1 {
 		return false
+	} else {
+		return strings.Compare(r[i].Name, r[j].Name) == -1
 	}
 }
 
