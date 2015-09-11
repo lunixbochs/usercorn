@@ -112,6 +112,7 @@ func (e *ElfLoader) Segments() ([]models.SegmentData, error) {
 		prog.Open().Read(data)
 		ret = append(ret, models.SegmentData{
 			Addr: prog.Vaddr,
+			Size: prog.Memsz,
 			Data: data,
 		})
 	}

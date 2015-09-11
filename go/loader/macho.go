@@ -130,6 +130,7 @@ func (m *MachOLoader) Segments() ([]models.SegmentData, error) {
 				}
 				ret = append(ret, models.SegmentData{
 					Addr: s.Addr,
+					Size: s.Memsz,
 					Data: data,
 				})
 			}

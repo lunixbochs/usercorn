@@ -1,8 +1,8 @@
 package models
 
 type SegmentData struct {
-	Addr uint64
-	Data []byte
+	Addr, Size uint64
+	Data       []byte
 }
 
 type Segment struct {

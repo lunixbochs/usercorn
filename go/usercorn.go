@@ -327,7 +327,7 @@ func (u *Usercorn) mapBinary(l models.Loader) (interpBase, entry, base, realEntr
 	merged := make([]*models.Segment, 0, len(segments))
 outer:
 	for _, seg := range segments {
-		addr, size := align(seg.Addr, uint64(len(seg.Data)), true)
+		addr, size := align(seg.Addr, seg.Size, true)
 		s := &models.Segment{addr, addr + size}
 		for _, s2 := range merged {
 			if s2.Overlaps(s) {
