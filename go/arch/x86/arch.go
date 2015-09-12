@@ -14,6 +14,7 @@ var Arch = &models.Arch{
 	CS_MODE: cs.CS_MODE_32,
 	UC_ARCH: uc.ARCH_X86,
 	UC_MODE: uc.MODE_32,
+	PC:      uc.X86_REG_EIP,
 	SP:      uc.X86_REG_ESP,
 	Regs: map[int]string{
 		uc.X86_REG_EAX: "eax",

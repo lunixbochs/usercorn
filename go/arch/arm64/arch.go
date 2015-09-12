@@ -14,6 +14,7 @@ var Arch = &models.Arch{
 	CS_MODE: cs.CS_MODE_ARM,
 	UC_ARCH: uc.ARCH_ARM64,
 	UC_MODE: uc.MODE_ARM,
+	PC:      uc.ARM64_REG_PC,
 	SP:      uc.ARM64_REG_SP,
 	Regs: map[int]string{
 		uc.ARM64_REG_X1:  "x1",

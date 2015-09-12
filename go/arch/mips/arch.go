@@ -14,6 +14,7 @@ var Arch = &models.Arch{
 	CS_MODE: cs.CS_MODE_MIPS32 + cs.CS_MODE_LITTLE_ENDIAN,
 	UC_ARCH: uc.ARCH_MIPS,
 	UC_MODE: uc.MODE_MIPS32 + uc.MODE_LITTLE_ENDIAN,
+	PC:      uc.MIPS_REG_PC,
 	SP:      uc.MIPS_REG_SP,
 	Regs: map[int]string{
 		uc.MIPS_REG_AT: "at",

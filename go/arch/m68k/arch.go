@@ -15,6 +15,7 @@ var Arch = &models.Arch{
 	CS_MODE: 0,
 	UC_ARCH: uc.ARCH_M68K,
 	UC_MODE: uc.MODE_BIG_ENDIAN,
+	PC:      uc.M68K_REG_PC,
 	SP:      uc.M68K_REG_A7,
 	Regs: map[int]string{
 		uc.M68K_REG_D0: "d0",

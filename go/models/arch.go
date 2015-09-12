@@ -55,6 +55,7 @@ type Arch struct {
 	CS_MODE uint
 	UC_ARCH int
 	UC_MODE int
+	PC      int
 	SP      int
 	OS      map[string]*OS
 	Regs    regMap
@@ -87,22 +88,27 @@ func (a *Arch) SmokeTest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, r := range a.getRegList() {
-		if u.RegWrite(r.Enum, 0x1000); err != nil {
+	var testReg = func(name string, enum int) {
+		if u.RegWrite(enum, 0x1000); err != nil {
 			t.Fatal(err)
 		}
-		val, err := u.RegRead(r.Enum)
+		val, err := u.RegRead(enum)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if val != 0x1000 {
-			t.Fatal(a.Radare + " failed to read/write register " + r.Name)
+			t.Fatal(a.Radare + " failed to read/write register " + name)
 		}
 		// clear the register in case registers are aliased
-		if u.RegWrite(r.Enum, 0); err != nil {
+		if u.RegWrite(enum, 0); err != nil {
 			t.Fatal(err)
 		}
 	}
+	for _, r := range a.getRegList() {
+		testReg(r.Name, r.Enum)
+	}
+	testReg("PC", a.PC)
+	testReg("SP", a.SP)
 }
 
 func (a *Arch) RegDump(u uc.Unicorn) ([]RegVal, error) {
