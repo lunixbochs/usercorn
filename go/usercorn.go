@@ -33,6 +33,7 @@ type Usercorn struct {
 	TraceReg    bool
 	LoadPrefix  string
 	status      models.StatusDiff
+	stacktrace  models.Stacktrace
 
 	// deadlock detection
 	lastBlock uint64
@@ -106,7 +107,14 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		fmt.Fprintln(os.Stderr, "==== Program output begins here. ====")
 		fmt.Fprintln(os.Stderr, "=====================================")
 	}
-	return u.Unicorn.Start(u.entry, 0xffffffffffffffff)
+	err := u.Unicorn.Start(u.entry, 0xffffffffffffffff)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Registers:")
+		u.status.Changes().Print(true, false)
+		fmt.Fprintln(os.Stderr, "Stacktrace:")
+		u.stacktrace.Print(u)
+	}
+	return err
 }
 
 func (u *Usercorn) Loader() models.Loader {
@@ -243,6 +251,9 @@ func (u *Usercorn) addHooks() error {
 			} else {
 				fmt.Fprintln(os.Stderr, blockLine)
 			}
+			if sp, err := u.RegRead(u.arch.SP); err == nil {
+				u.stacktrace.Update(addr, sp)
+			}
 			u.lastBlock = addr
 		})
 	}
@@ -299,7 +310,6 @@ func (u *Usercorn) addHooks() error {
 			fmt.Fprintf(os.Stderr, "invalid read")
 		}
 		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x\n", addr, size, value)
-		u.status.Changes().Print(true, false)
 		return false
 	})
 	u.HookAdd(uc.HOOK_INTR, func(_ uc.Unicorn, intno uint32) {

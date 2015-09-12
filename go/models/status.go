@@ -33,6 +33,7 @@ type ChangeMask struct {
 
 type Change struct {
 	Old, New uint64
+	Enum     int
 	Name     string
 }
 
@@ -158,6 +159,15 @@ func (cs *Changes) Count() int {
 		}
 	}
 	return ret
+}
+
+func (cs *Changes) Find(enum int) *Change {
+	for _, c := range cs.Changes {
+		if c.Enum == enum {
+			return c
+		}
+	}
+	return nil
 }
 
 func (s *StatusDiff) Changes() *Changes {

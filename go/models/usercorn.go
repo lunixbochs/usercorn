@@ -12,6 +12,7 @@ type Usercorn interface {
 	Bits() uint
 	ByteOrder() binary.ByteOrder
 	Disas(addr, size uint64) (string, error)
+	Symbolicate(addr uint64) (string, error)
 
 	Brk(addr uint64) (uint64, error)
 	Mmap(addr, size uint64) (uint64, error)
@@ -34,6 +35,7 @@ type Usercorn interface {
 	Base() uint64
 	Entry() uint64
 	BinEntry() uint64
+
 	PrefixPath(s string, force bool) string
 	PosixInit(args, env []string, auxv []byte) error
 	Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error)
