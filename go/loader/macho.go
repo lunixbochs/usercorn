@@ -161,3 +161,11 @@ func (m *MachOLoader) getSymbols() ([]models.Symbol, error) {
 	}
 	return symbols, nil
 }
+
+func (m *MachOLoader) Symbols() ([]models.Symbol, error) {
+	var err error
+	if m.symCache == nil {
+		m.symCache, err = m.getSymbols()
+	}
+	return m.symCache, err
+}

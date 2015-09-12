@@ -145,3 +145,11 @@ func (e *ElfLoader) getSymbols() ([]models.Symbol, error) {
 	}
 	return symbols, nil
 }
+
+func (e *ElfLoader) Symbols() ([]models.Symbol, error) {
+	var err error
+	if e.symCache == nil {
+		e.symCache, err = e.getSymbols()
+	}
+	return e.symCache, err
+}
