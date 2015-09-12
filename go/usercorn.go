@@ -130,7 +130,7 @@ func (u *Usercorn) Entry() uint64 {
 
 func (u *Usercorn) BinEntry() uint64 {
 	// points to binary entry, even if an interpreter is used
-	return u.entry
+	return u.binEntry
 }
 
 func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {

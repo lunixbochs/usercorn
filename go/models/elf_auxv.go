@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	ELF_AT_NULL = 0
+	ELF_AT_NULL = iota
 	ELF_AT_IGNORE
 	ELF_AT_EXECFD
 	ELF_AT_PHDR
