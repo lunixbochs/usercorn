@@ -119,7 +119,7 @@ func (e *ElfLoader) Segments() ([]models.SegmentData, error) {
 	return ret, nil
 }
 
-func (e *ElfLoader) Symbols() ([]models.Symbol, error) {
+func (e *ElfLoader) getSymbols() ([]models.Symbol, error) {
 	syms, err := e.file.Symbols()
 	if err != nil {
 		return nil, err

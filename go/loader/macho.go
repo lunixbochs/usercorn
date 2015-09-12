@@ -139,7 +139,7 @@ func (m *MachOLoader) Segments() ([]models.SegmentData, error) {
 	return ret, nil
 }
 
-func (m *MachOLoader) Symbols() ([]models.Symbol, error) {
+func (m *MachOLoader) getSymbols() ([]models.Symbol, error) {
 	var symbols []models.Symbol
 	if m.file.Symtab == nil {
 		return nil, errors.New("no symbol table found")
