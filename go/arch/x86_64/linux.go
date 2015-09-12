@@ -32,6 +32,7 @@ var linuxSyscalls = map[int]string{
 	79:  "getcwd",
 	80:  "chdir",
 	158: "arch_prctl",
+	218: "set_tid_address",
 	231: "exit_group",
 }
 
@@ -58,6 +59,7 @@ func LinuxSyscall(u models.Usercorn) {
 		StaticUname.Pad(64)
 		syscalls.Uname(u, addr, &StaticUname)
 	case "arch_prctl":
+	case "set_tid_address":
 	default:
 		ret, _ = u.Syscall(int(rax), name, syscalls.RegArgs(u, AbiRegs))
 	}
