@@ -11,8 +11,10 @@ type Stacktrace struct {
 }
 
 func (s *Stacktrace) Print(u Usercorn) {
-	for i := len(s.Stack) - 1; i >= 0; i-- {
-		addr := s.Stack[i]
+	pc, _ := u.RegRead(u.Arch().PC)
+	stack := append(s.Stack, pc)
+	for i := len(stack) - 1; i >= 0; i-- {
+		addr := stack[i]
 		sym, _ := u.Symbolicate(addr)
 		fmt.Fprintf(os.Stderr, "  0x%x %s\n", addr, sym)
 	}
