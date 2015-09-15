@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
@@ -97,7 +96,8 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		if err := u.MemReadInto(buf, sp); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "[stack @ 0x%x] %s\n", sp, hex.EncodeToString(buf[:]))
+		fmt.Fprintf(os.Stderr, "[stack @ 0x%x]\n", sp)
+		fmt.Fprintf(os.Stderr, "%s\n", HexDump(sp, buf[:], u.arch))
 	}
 	if u.Verbose || u.TraceReg {
 		u.status.Changes().Print(true, false)
