@@ -5,39 +5,55 @@ import (
 	"os"
 )
 
+type stackFrame struct {
+	PC, SP uint64
+}
+
 type Stacktrace struct {
-	Stack []uint64
-	oldSP uint64
+	Stack []stackFrame
 }
 
 func (s *Stacktrace) Print(u Usercorn) {
 	pc, _ := u.RegRead(u.Arch().PC)
-	stack := append(s.Stack, pc)
+	sp, _ := u.RegRead(u.Arch().SP)
+	stack := append(s.Stack, stackFrame{pc, sp})
 	for i := len(stack) - 1; i >= 0; i-- {
-		addr := stack[i]
-		sym, _ := u.Symbolicate(addr)
-		fmt.Fprintf(os.Stderr, "  0x%x %s\n", addr, sym)
+		frame := stack[i]
+		sym, _ := u.Symbolicate(frame.PC)
+		fmt.Fprintf(os.Stderr, "  0x%x %s\n", frame.PC, sym)
 	}
 }
 
-func (s *Stacktrace) Push(addr uint64) {
-	s.Stack = append(s.Stack, addr)
+func (s *Stacktrace) Push(pc, sp uint64) {
+	s.Stack = append(s.Stack, stackFrame{pc, sp})
 }
 
-func (s *Stacktrace) Pop() uint64 {
-	if len(s.Stack) == 0 {
-		return 0
+func (s *Stacktrace) Empty() bool {
+	return len(s.Stack) == 0
+}
+
+func (s *Stacktrace) Peek() stackFrame {
+	if s.Empty() {
+		return stackFrame{}
 	}
-	ret := s.Stack[len(s.Stack)-1]
-	s.Stack = s.Stack[len(s.Stack)-1:]
+	return s.Stack[len(s.Stack)-1]
+}
+
+func (s *Stacktrace) Pop() stackFrame {
+	if s.Empty() {
+		return stackFrame{}
+	}
+	ret := s.Peek()
+	s.Stack = s.Stack[:len(s.Stack)-1]
 	return ret
 }
 
-func (s *Stacktrace) Update(addr, sp uint64) {
-	if sp < s.oldSP {
-		s.Push(addr)
-	} else if s.oldSP < sp {
-		s.Pop()
+func (s *Stacktrace) Update(pc, sp uint64) {
+	if s.Empty() || sp < s.Peek().SP {
+		s.Push(pc, sp)
+	} else {
+		for !s.Empty() && sp > s.Peek().SP {
+			s.Pop()
+		}
 	}
-	s.oldSP = sp
 }

@@ -107,6 +107,10 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		fmt.Fprintln(os.Stderr, "==== Program output begins here. ====")
 		fmt.Fprintln(os.Stderr, "=====================================")
 	}
+	if u.TraceReg || u.TraceExec {
+		sp, _ := u.RegRead(u.arch.SP)
+		u.stacktrace.Update(u.entry, sp)
+	}
 	err := u.Unicorn.Start(u.entry, 0xffffffffffffffff)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Registers:")
