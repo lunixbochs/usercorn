@@ -208,10 +208,7 @@ func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
 		}
 		return
 	}
-	symbols, err := u.loader.Symbols()
-	if err != nil {
-		return "", err
-	}
+	symbols, _ := u.loader.Symbols()
 	var interpSym []models.Symbol
 	if u.interpLoader != nil {
 		interpSym, _ = u.interpLoader.Symbols()
