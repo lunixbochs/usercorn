@@ -17,7 +17,7 @@ var Arch = &models.Arch{
 	PC:      uc.SPARC_REG_PC,
 	SP:      uc.SPARC_REG_SP,
 	Regs: map[int]string{
-		uc.SPARC_REG_G0: "g0",
+		// uc.SPARC_REG_G0: "g0", // g0 is always zero
 		uc.SPARC_REG_G1: "g1",
 		uc.SPARC_REG_G2: "g2",
 		uc.SPARC_REG_G3: "g3",
