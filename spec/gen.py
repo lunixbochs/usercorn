@@ -3,6 +3,8 @@ import re
 
 CONFIG = [
     ('darwin_x86.h',   'Darwin_x86',   'darwin_x86_sys.go'),
+    ('linux_arm.h',    'Linux_arm',    'linux_arm_sys.go'),
+    ('linux_mips.h',    'Linux_mips',  'linux_mips_sys.go'),
     ('linux_x86.h',    'Linux_x86',    'linux_x86_sys.go'),
     ('linux_x86_64.h', 'Linux_x86_64', 'linux_x86_64_sys.go'),
 ]
@@ -19,7 +21,8 @@ var %(cls)s = map[int]string{
 
 LINE_TEMPLATE = '%(num)s "%(name)s",'
 
-sys_re = re.compile(r'^#define\s+(SYS|__NR)_(?P<name>[^ ]+)\s+(?P<num>\d+)$')
+define_re = re.compile(r'^#define\s+(?P<name>\w+)\s*\(?\s*(?P<value>\d+)\s*\)?$')
+sys_re = re.compile(r'^#define\s+(SYS|__NR)_(?P<name>[a-z0-9_]+)\s*(?P<value>\(\s*[\w\+\s]+\s*\)|\d+)$')
 
 base = os.path.dirname(__file__)
 if base:
@@ -29,12 +32,22 @@ for header, cls, target in CONFIG:
     header = os.path.join(SRC, header)
     target = os.path.join(TARGET, target)
     syscalls = []
+    defines = {}
     with open(header) as f:
         for line in f:
             line = line.strip()
             match = sys_re.match(line)
             if match:
-                syscalls.append((match.group('name'), match.group('num')))
+                value = match.group('value')
+                if not value.isdigit():
+                    for k, v in defines.items():
+                        value = value.replace(k, v)
+                    value = eval(value)
+                syscalls.append((match.group('name'), value))
+            else:
+                match = define_re.match(line)
+                if match:
+                    defines[match.group('name')] = match.group('value')
 
     num_len = max(len(str(num)) for name, num in syscalls) + 1
     lines = []

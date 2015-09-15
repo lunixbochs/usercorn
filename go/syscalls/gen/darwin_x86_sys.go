@@ -390,5 +390,4 @@ var Darwin_x86 = map[int]string{
 	487: "guarded_writev_np",
 	488: "rename_ext",
 	489: "mremap_encrypted",
-	490: "MAXSYSCALL",
 }
