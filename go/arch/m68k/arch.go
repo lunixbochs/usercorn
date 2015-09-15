@@ -33,7 +33,7 @@ var Arch = &models.Arch{
 		uc.M68K_REG_A4: "a4",
 		uc.M68K_REG_A5: "a5",
 		uc.M68K_REG_A6: "a6",
-		uc.M68K_REG_A7: "sp",
-		uc.M68K_REG_PC: "pc",
+		// uc.M68K_REG_A7: "sp",
+		// uc.M68K_REG_PC: "pc",
 	},
 }

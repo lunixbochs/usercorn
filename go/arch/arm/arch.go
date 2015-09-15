@@ -30,8 +30,8 @@ var Arch = &models.Arch{
 		uc.ARM_REG_R10: "r10",
 		uc.ARM_REG_R11: "r11",
 		uc.ARM_REG_R12: "r12",
-		uc.ARM_REG_SP:  "sp",
-		uc.ARM_REG_LR:  "lr",
-		uc.ARM_REG_PC:  "pc",
+		// uc.ARM_REG_LR:  "lr",
+		// uc.ARM_REG_SP:  "sp",
+		// uc.ARM_REG_PC:  "pc",
 	},
 }

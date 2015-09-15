@@ -24,7 +24,7 @@ var Arch = &models.Arch{
 		uc.X86_REG_RSI: "rsi",
 		uc.X86_REG_RDI: "rdi",
 		uc.X86_REG_RBP: "rbp",
-		uc.X86_REG_RSP: "rsp",
+		// uc.X86_REG_RSP: "rsp",
 		uc.X86_REG_R8:  "r8",
 		uc.X86_REG_R9:  "r9",
 		uc.X86_REG_R10: "r10",

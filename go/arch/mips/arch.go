@@ -46,7 +46,7 @@ var Arch = &models.Arch{
 		uc.MIPS_REG_K0: "k0",
 		uc.MIPS_REG_K1: "k1",
 		uc.MIPS_REG_GP: "gp",
-		uc.MIPS_REG_SP: "sp",
+		// uc.MIPS_REG_SP: "sp",
 		uc.MIPS_REG_RA: "ra",
 	},
 }

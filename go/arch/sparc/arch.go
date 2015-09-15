@@ -50,7 +50,7 @@ var Arch = &models.Arch{
 		// uc.SPARC_REG_I6: "i6", // fp
 		uc.SPARC_REG_I7: "i7",
 
-		uc.SPARC_REG_SP: "sp",
-		uc.SPARC_REG_FP: "fp",
+		// uc.SPARC_REG_SP: "sp",
+		// uc.SPARC_REG_FP: "fp",
 	},
 }

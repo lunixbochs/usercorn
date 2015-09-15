@@ -45,9 +45,9 @@ var Arch = &models.Arch{
 		uc.ARM64_REG_X26: "x26",
 		uc.ARM64_REG_X27: "x27",
 		uc.ARM64_REG_X28: "x28",
-		uc.ARM64_REG_FP:  "fp",
-		uc.ARM64_REG_LR:  "lr",
-		uc.ARM64_REG_SP:  "sp",
-		uc.ARM64_REG_PC:  "pc",
+		// uc.ARM64_REG_FP:  "fp",
+		// uc.ARM64_REG_LR:  "lr",
+		// uc.ARM64_REG_SP:  "sp",
+		// uc.ARM64_REG_PC:  "pc",
 	},
 }
