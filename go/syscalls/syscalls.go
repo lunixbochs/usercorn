@@ -178,6 +178,7 @@ var syscalls = map[string]Syscall{
 	"close":    {_close, A{FD}, INT},
 	"lseek":    {lseek, A{FD, OFF, INT}, INT},
 	"mmap":     {mmap, A{PTR, LEN, INT, INT, FD, OFF}, PTR},
+	"mmap2":    {mmap, A{PTR, LEN, INT, INT, FD, OFF}, PTR},
 	"munmap":   {munmap, A{PTR, LEN}, INT},
 	"mprotect": {mprotect, A{PTR, LEN, INT}, INT},
 	"brk":      {brk, A{PTR}, PTR},
