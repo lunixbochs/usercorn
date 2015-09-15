@@ -366,17 +366,18 @@ outer:
 	}
 	// write segment memory
 	for _, seg := range segments {
-		if err := u.MemWrite(loadBias+seg.Addr, seg.Data); err != nil {
-			return 0, 0, 0, 0, err
+		if err = u.MemWrite(loadBias+seg.Addr, seg.Data); err != nil {
+			return
 		}
 	}
 	entry = loadBias + l.Entry()
 	// load interpreter if present
 	interp := l.Interp()
 	if interp != "" {
-		bin, err := loader.LoadFile(u.PrefixPath(interp, true))
+		var bin models.Loader
+		bin, err = loader.LoadFile(u.PrefixPath(interp, true))
 		if err != nil {
-			return 0, 0, 0, 0, err
+			return
 		}
 		u.interpLoader = bin
 		_, _, interpBias, interpEntry, err := u.mapBinary(bin)
