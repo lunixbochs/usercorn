@@ -81,7 +81,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		}
 	}
 	if u.Verbose {
-		fmt.Fprintf(os.Stderr, "[entry point @ 0x%x]\n", u.entry)
+		fmt.Fprintf(os.Stderr, "[entry @ 0x%x]\n", u.entry)
 		dis, err := u.Disas(u.entry, 64)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
