@@ -295,7 +295,7 @@ func (u *Usercorn) addHooks() error {
 		})
 	}
 	if u.TraceMem {
-		u.HookAdd(uc.HOOK_MEM_READ_WRITE, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) {
+		u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) {
 			if access == uc.MEM_WRITE {
 				fmt.Fprintf(os.Stderr, "MEM_WRITE")
 			} else {
@@ -304,11 +304,17 @@ func (u *Usercorn) addHooks() error {
 			fmt.Fprintf(os.Stderr, " 0x%x %d 0x%x\n", addr, size, value)
 		})
 	}
-	u.HookAdd(uc.HOOK_MEM_INVALID, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) bool {
-		if access == uc.MEM_WRITE {
+	invalid := uc.HOOK_MEM_READ_INVALID | uc.HOOK_MEM_WRITE_INVALID | uc.HOOK_MEM_FETCH_INVALID
+	u.HookAdd(invalid, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) bool {
+		switch access {
+		case uc.MEM_WRITE_INVALID:
 			fmt.Fprintf(os.Stderr, "invalid write")
-		} else {
-			fmt.Fprintf(os.Stderr, "invalid read")
+		case uc.MEM_READ_INVALID:
+			fmt.Fprintf(os.Stderr, "invalid prot")
+		case uc.MEM_FETCH_INVALID:
+			fmt.Fprintf(os.Stderr, "invalid fetch")
+		default:
+			fmt.Fprintf(os.Stderr, "unknown memory error")
 		}
 		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x\n", addr, size, value)
 		return false
