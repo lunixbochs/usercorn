@@ -17,7 +17,7 @@ package gen
 var %(cls)s = map[int]string{
 \t%(lines)s
 }
-'''
+'''.lstrip()
 
 LINE_TEMPLATE = '%(num)s "%(name)s",'
 

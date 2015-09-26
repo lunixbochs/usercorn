@@ -1,4 +1,3 @@
-
 package gen
 
 var Darwin_x86 = map[int]string{

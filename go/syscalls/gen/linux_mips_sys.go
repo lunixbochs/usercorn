@@ -1,4 +1,3 @@
-
 package gen
 
 var Linux_mips = map[int]string{

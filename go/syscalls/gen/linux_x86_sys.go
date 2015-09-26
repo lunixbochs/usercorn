@@ -1,4 +1,3 @@
-
 package gen
 
 var Linux_x86 = map[int]string{
