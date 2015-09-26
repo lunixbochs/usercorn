@@ -1,11 +1,11 @@
 package x86_64
 
 import (
+	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"../../models"
 	"../../syscalls"
-	"../../syscalls/gen"
 )
 
 var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86_64"}
@@ -23,7 +23,7 @@ func LinuxInit(u models.Usercorn, args, env []string) error {
 
 func LinuxSyscall(u models.Usercorn) {
 	rax, _ := u.RegRead(uc.X86_REG_RAX)
-	name, _ := gen.Linux_x86_64[int(rax)]
+	name, _ := num.Linux_x86_64[int(rax)]
 	var ret uint64
 	switch name {
 	case "uname":

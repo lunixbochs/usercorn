@@ -1,11 +1,11 @@
 package x86
 
 import (
+	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"../../models"
 	"../../syscalls"
-	"../../syscalls/gen"
 )
 
 var LinuxRegs = []int{uc.X86_REG_EBX, uc.X86_REG_ECX, uc.X86_REG_EDX, uc.X86_REG_ESI, uc.X86_REG_EDI, uc.X86_REG_EBP}
@@ -18,7 +18,7 @@ func LinuxInit(u models.Usercorn, args, env []string) error {
 func LinuxSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
 	eax, _ := u.RegRead(uc.X86_REG_EAX)
-	name, _ := gen.Linux_x86[int(eax)]
+	name, _ := num.Linux_x86[int(eax)]
 	var ret uint64
 	switch name {
 	case "uname":

@@ -2,11 +2,11 @@ package arm
 
 import (
 	"fmt"
+	sysnum "github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"../../models"
 	"../../syscalls"
-	"../../syscalls/gen"
 )
 
 var LinuxRegs = []int{uc.ARM_REG_R0, uc.ARM_REG_R1, uc.ARM_REG_R2, uc.ARM_REG_R3, uc.ARM_REG_R4, uc.ARM_REG_R5, uc.ARM_REG_R6}
@@ -24,7 +24,7 @@ func LinuxSyscall(u models.Usercorn) {
 	if num > 0x900000 {
 		num -= 0x900000
 	}
-	name, _ := gen.Linux_arm[int(num)]
+	name, _ := sysnum.Linux_arm[int(num)]
 	var ret uint64
 	switch name {
 	case "uname":

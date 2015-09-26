@@ -1,11 +1,11 @@
 package x86
 
 import (
+	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"../../models"
 	"../../syscalls"
-	"../../syscalls/gen"
 )
 
 func DarwinInit(u models.Usercorn, args, env []string) error {
@@ -16,7 +16,7 @@ func DarwinSyscall(u models.Usercorn) {
 	esp, _ := u.RegRead(uc.X86_REG_ESP)
 	eax, _ := u.RegRead(uc.X86_REG_EAX)
 	getArgs := syscalls.StackArgs(u)
-	name, _ := gen.Darwin_x86[int(eax)]
+	name, _ := num.Darwin_x86[int(eax)]
 	ret, _ := u.Syscall(int(eax), name, getArgs)
 	u.RegWrite(uc.X86_REG_EAX, ret)
 	u.RegWrite(uc.X86_REG_ESP, esp)
