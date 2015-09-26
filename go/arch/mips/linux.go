@@ -28,7 +28,12 @@ func LinuxSyscall(u models.Usercorn) {
 	u.RegWrite(uc.MIPS_REG_V0, ret)
 }
 
-func LinuxInterrupt(u models.Usercorn, intno uint32) {
+func LinuxInterrupt(u models.Usercorn, cause uint32) {
+	intno := (cause >> 1) & 15
+	if intno == 8 {
+		LinuxSyscall(u)
+		return
+	}
 	panic(fmt.Sprintf("unhandled MIPS interrupt %d", intno))
 }
 
