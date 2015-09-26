@@ -2,8 +2,8 @@ package models
 
 import (
 	"encoding/binary"
+	"github.com/lunixbochs/ghostrace/ghost/memio"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
-	"io"
 )
 
 type Usercorn interface {
@@ -17,9 +17,7 @@ type Usercorn interface {
 	Brk(addr uint64) (uint64, error)
 	Mmap(addr, size uint64) (uint64, error)
 	MmapWrite(addr uint64, p []byte) (uint64, error)
-	MemReadStr(addr uint64) (string, error)
-	MemReader(addr uint64) io.Reader
-	MemWriter(addr uint64) io.Writer
+	Mem() memio.MemIO
 
 	PackAddr(buf []byte, n uint64) error
 	UnpackAddr(buf []byte) uint64

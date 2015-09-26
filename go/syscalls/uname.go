@@ -14,7 +14,7 @@ func trunc(s string, length int) string {
 }
 
 func Uname(u models.Usercorn, addr uint64, un *models.Uname) uint64 {
-	struc.Pack(u.MemWriter(addr), un)
+	struc.Pack(u.Mem().StreamAt(addr), un)
 	/*
 		var utsname syscall.Utsname
 		if err := syscall.Uname(utsname); err != nil {

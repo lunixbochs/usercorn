@@ -1,11 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
+	"github.com/lunixbochs/ghostrace/ghost/memio"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
-	"io"
 
 	"./models"
 )
@@ -18,6 +17,7 @@ type Unicorn struct {
 	Bsz    int
 	order  binary.ByteOrder
 	memory []mmap
+	memio  memio.MemIO
 }
 
 func NewUnicorn(arch *models.Arch, os *models.OS, order binary.ByteOrder) (*Unicorn, error) {
@@ -32,6 +32,22 @@ func NewUnicorn(arch *models.Arch, os *models.OS, order binary.ByteOrder) (*Unic
 		bits:    arch.Bits,
 		Bsz:     arch.Bits / 8,
 		order:   order,
+		memio: memio.NewMemIO(
+			// ReadAt() callback
+			func(p []byte, addr uint64) (int, error) {
+				if err := Uc.MemReadInto(p, addr); err != nil {
+					return 0, err
+				}
+				return len(p), nil
+			},
+			// WriteAt() callback
+			func(p []byte, addr uint64) (int, error) {
+				if err := Uc.MemWrite(addr, p); err != nil {
+					return 0, err
+				}
+				return len(p), nil
+			},
+		),
 	}, nil
 }
 
@@ -110,25 +126,8 @@ func (u *Unicorn) MmapWrite(addr uint64, p []byte) (uint64, error) {
 	return addr, u.MemWrite(addr, p)
 }
 
-func (u *Unicorn) MemReadStr(addr uint64) (string, error) {
-	var tmp = [4]byte{1, 1, 1, 1}
-	var ret []byte
-	nul := []byte{0}
-	for !bytes.Contains(tmp[:], nul) {
-		u.MemReadInto(tmp[:], addr)
-		addr += 4
-		ret = append(ret, tmp[:]...)
-	}
-	split := bytes.Index(ret, nul)
-	return string(ret[:split]), nil
-}
-
-func (u *Unicorn) MemReader(addr uint64) io.Reader {
-	return &models.MemReader{u, addr}
-}
-
-func (u *Unicorn) MemWriter(addr uint64) io.Writer {
-	return &models.MemWriter{u, addr}
+func (u *Unicorn) Mem() memio.MemIO {
+	return u.memio
 }
 
 func (u *Unicorn) PackAddr(buf []byte, n uint64) error {

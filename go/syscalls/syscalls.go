@@ -47,7 +47,7 @@ func write(u U, a []uint64) uint64 {
 }
 
 func open(u U, a []uint64) uint64 {
-	path, _ := u.MemReadStr(a[0])
+	path, _ := u.Mem().ReadStrAt(a[0])
 	if strings.Contains(path, "/lib/") {
 		path = u.PrefixPath(path, false)
 	}
@@ -104,14 +104,14 @@ func fstat(u U, a []uint64) uint64 {
 	if err := syscall.Fstat(fd, &stat); err != nil {
 		return errno(err)
 	}
-	if err := struc.Pack(u.MemWriter(buf), &stat); err != nil {
+	if err := struc.Pack(u.Mem().StreamAt(buf), &stat); err != nil {
 		panic(err)
 	}
 	return 0
 }
 
 func stat(u U, a []uint64) uint64 {
-	path, _ := u.MemReadStr(a[0])
+	path, _ := u.Mem().ReadStrAt(a[0])
 	if strings.Contains(path, "/lib/") {
 		path = u.PrefixPath(path, false)
 	}
@@ -120,7 +120,7 @@ func stat(u U, a []uint64) uint64 {
 	if err := syscall.Stat(path, &stat); err != nil {
 		return errno(err)
 	}
-	if err := struc.Pack(u.MemWriter(buf), &stat); err != nil {
+	if err := struc.Pack(u.Mem().StreamAt(buf), &stat); err != nil {
 		panic(err)
 	}
 	return 0
@@ -138,7 +138,7 @@ func getcwd(u U, a []uint64) uint64 {
 
 func access(u U, a []uint64) uint64 {
 	// TODO: portability
-	path, _ := u.MemReadStr(a[0])
+	path, _ := u.Mem().ReadStrAt(a[0])
 	amode := uint32(a[1])
 	err := syscall.Access(path, amode)
 	return errno(err)
@@ -146,7 +146,7 @@ func access(u U, a []uint64) uint64 {
 
 func readv(u U, a []uint64) uint64 {
 	fd, iov, count := int(a[0]), a[1], a[2]
-	for vec := range iovecIter(u.MemReader(iov), count, int(u.Bits()), u.ByteOrder()) {
+	for vec := range iovecIter(u.Mem().StreamAt(iov), count, int(u.Bits()), u.ByteOrder()) {
 		tmp := make([]byte, vec.Len)
 		n, _ := syscall.Read(fd, tmp)
 		if n <= 0 {
@@ -159,7 +159,7 @@ func readv(u U, a []uint64) uint64 {
 
 func writev(u U, a []uint64) uint64 {
 	fd, iov, count := int(a[0]), a[1], a[2]
-	for vec := range iovecIter(u.MemReader(iov), count, int(u.Bits()), u.ByteOrder()) {
+	for vec := range iovecIter(u.Mem().StreamAt(iov), count, int(u.Bits()), u.ByteOrder()) {
 		data, _ := u.MemRead(vec.Base, vec.Len)
 		syscall.Write(fd, data)
 	}

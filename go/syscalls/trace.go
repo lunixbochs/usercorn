@@ -24,7 +24,7 @@ func traceBasicArg(u models.Usercorn, name string, arg uint64, t int) string {
 	case INT, FD:
 		return fmt.Sprintf("%d", int32(arg))
 	case STR:
-		s, _ := u.MemReadStr(arg)
+		s, _ := u.Mem().ReadStrAt(arg)
 		return fmt.Sprintf("%#v", s)
 	default:
 		return fmt.Sprintf("0x%x", arg)
