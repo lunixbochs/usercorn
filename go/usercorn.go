@@ -6,6 +6,7 @@ import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"./arch"
 	"./loader"
@@ -100,7 +101,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		fmt.Fprintf(os.Stderr, "%s\n", HexDump(sp, buf[:], u.arch))
 	}
 	if u.Verbose || u.TraceReg {
-		u.status.Changes().Print(true, false)
+		u.status.Changes().Print("", true, false)
 	}
 	if u.Verbose {
 		fmt.Fprintln(os.Stderr, "=====================================")
@@ -114,7 +115,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	err := u.Unicorn.Start(u.entry, 0xffffffffffffffff)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Registers:")
-		u.status.Changes().Print(true, false)
+		u.status.Changes().Print("", true, false)
 		fmt.Fprintln(os.Stderr, "Stacktrace:")
 		u.stacktrace.Print(u)
 	}
@@ -238,44 +239,55 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 func (u *Usercorn) addHooks() error {
 	if u.TraceExec || u.TraceReg {
 		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
+			if sp, err := u.RegRead(u.arch.SP); err == nil {
+				u.stacktrace.Update(addr, sp)
+			}
+			indent := strings.Repeat("  ", u.stacktrace.Len())
+			blockIndent := indent[:len(indent)-2]
 			sym, _ := u.Symbolicate(addr)
 			if sym != "" {
 				sym = " (" + sym + ")"
 			}
-			blockLine := fmt.Sprintf("| block%s @0x%x", sym, addr)
+			blockLine := fmt.Sprintf("\n"+blockIndent+"+ block%s @0x%x", sym, addr)
 			if !u.TraceExec && u.TraceReg && u.deadlock == 0 {
 				changes := u.status.Changes()
 				if changes.Count() > 0 {
 					fmt.Fprintln(os.Stderr, blockLine)
-					changes.Print(true, true)
+					changes.Print(indent, true, true)
 				}
 			} else {
 				fmt.Fprintln(os.Stderr, blockLine)
-			}
-			if sp, err := u.RegRead(u.arch.SP); err == nil {
-				u.stacktrace.Update(addr, sp)
 			}
 			u.lastBlock = addr
 		})
 	}
 	if u.TraceExec {
 		u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+			indent := strings.Repeat("  ", u.stacktrace.Len())
 			var changes *models.Changes
 			if addr == u.lastCode || u.TraceReg && u.TraceExec {
 				changes = u.status.Changes()
 			}
 			if u.TraceExec {
-				if u.TraceReg {
-					changes.Print(true, true)
-				}
 				dis, _ := u.Disas(addr, uint64(size))
-				fmt.Fprintln(os.Stderr, dis)
+				fmt.Fprintf(os.Stderr, "%s", indent+dis)
+				if !u.TraceReg || changes.Count() == 0 {
+					fmt.Fprintln(os.Stderr)
+				} else {
+					dindent := ""
+					// TODO: I can count the max dis length in the block and reuse it here
+					pad := 40 - len(dis)
+					if pad > 0 {
+						dindent = strings.Repeat(" ", pad)
+					}
+					changes.Print(dindent, true, true)
+				}
 			}
 			if addr == u.lastCode {
 				u.deadlock++
 				if changes.Count() > 0 {
 					if u.TraceReg {
-						changes.Print(true, true)
+						changes.Print(indent, true, true)
 					}
 					u.deadlock = 0
 				}
@@ -285,7 +297,7 @@ func (u *Usercorn) addHooks() error {
 						sym = " (" + sym + ")"
 					}
 					fmt.Fprintf(os.Stderr, "FATAL: deadlock detected at 0x%x%s\n", addr, sym)
-					changes.Print(true, false)
+					changes.Print(indent, true, false)
 					u.Stop()
 				}
 			} else {
@@ -439,6 +451,9 @@ func (u *Usercorn) pushAddrs(addrs []uint64) error {
 func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
 	if name == "" {
 		panic(fmt.Sprintf("Syscall missing: %d", num))
+	}
+	if u.TraceSys && (u.TraceExec || u.TraceReg) {
+		fmt.Fprintf(os.Stderr, strings.Repeat("  ", u.stacktrace.Len()-1)+"s ")
 	}
 	return syscalls.Call(u, num, name, getArgs, u.TraceSys)
 }
