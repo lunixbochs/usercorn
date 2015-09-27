@@ -307,13 +307,17 @@ func (u *Usercorn) addHooks() error {
 		})
 	}
 	if u.TraceMem {
+		hexFmt := fmt.Sprintf("0x%%0%dx", u.Bsz*2)
+		memFmt := fmt.Sprintf("%%s %s %%d %s\n", hexFmt, hexFmt)
 		u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) {
+			indent := strings.Repeat("  ", u.stacktrace.Len()-1)
+			var letter string
 			if access == uc.MEM_WRITE {
-				fmt.Fprintf(os.Stderr, "MEM_WRITE")
+				letter = "W"
 			} else {
-				fmt.Fprintf(os.Stderr, "MEM_READ")
+				letter = "R"
 			}
-			fmt.Fprintf(os.Stderr, " 0x%x %d 0x%x\n", addr, size, value)
+			fmt.Fprintf(os.Stderr, indent+memFmt, letter, addr, size, value)
 		})
 	}
 	invalid := uc.HOOK_MEM_READ_INVALID | uc.HOOK_MEM_WRITE_INVALID | uc.HOOK_MEM_FETCH_INVALID
