@@ -266,7 +266,7 @@ func (u *Usercorn) addHooks() error {
 			if sym != "" {
 				sym = " (" + sym + ")"
 			}
-			blockLine := fmt.Sprintf("\n"+blockIndent+"+ block%s @0x%x", sym, addr)
+			blockLine := fmt.Sprintf("\n%s+ block%s @0x%x", blockIndent, sym, addr)
 			if !u.TraceExec && u.TraceReg && u.deadlock == 0 {
 				changes := u.status.Changes()
 				if changes.Count() > 0 {
@@ -346,12 +346,12 @@ func (u *Usercorn) addHooks() error {
 				}
 			}
 			if u.TraceMem {
-				memFmt := fmt.Sprintf("%%s 0x%%0%dx 0x%%0%dx\n", u.Bsz*2, size*2)
+				memFmt := fmt.Sprintf("%%s%%s 0x%%0%dx 0x%%0%dx\n", u.Bsz*2, size*2)
 				indent := ""
 				if u.stacktrace.Len() > 0 {
 					indent = strings.Repeat("  ", u.stacktrace.Len()-1)
 				}
-				fmt.Fprintf(os.Stderr, indent+memFmt, letter, addr, value)
+				fmt.Fprintf(os.Stderr, memFmt, indent, letter, addr, value)
 			}
 			if u.TraceMemBatch {
 				write := (letter == "W")
