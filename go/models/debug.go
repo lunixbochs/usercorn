@@ -1,15 +1,13 @@
-package main
+package models
 
 import (
 	"encoding/hex"
 	"fmt"
 	"github.com/bnagy/gapstone"
 	"strings"
-
-	"./models"
 )
 
-func Disas(mem []byte, addr uint64, arch *models.Arch, pad ...int) (string, error) {
+func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
 	if len(mem) == 0 {
 		return "", nil
 	}
@@ -40,7 +38,7 @@ func Disas(mem []byte, addr uint64, arch *models.Arch, pad ...int) (string, erro
 	return strings.Join(out, "\n"), nil
 }
 
-func HexDump(base uint64, mem []byte, arch *models.Arch) string {
+func HexDump(base uint64, mem []byte, bits int) []string {
 	var clean = func(p []byte) string {
 		o := make([]byte, len(p))
 		for i, c := range p {
@@ -52,9 +50,8 @@ func HexDump(base uint64, mem []byte, arch *models.Arch) string {
 		}
 		return string(o)
 	}
-	bsz := arch.Bits / 8
-	hexLen := len(fmt.Sprintf("%x", (uint64(len(mem)) + base)))
-	hexFmt := fmt.Sprintf("0x%%0%dx:", hexLen)
+	bsz := bits / 8
+	hexFmt := fmt.Sprintf("0x%%0%dx:", bsz*2)
 	padBlock := strings.Repeat(" ", bsz*2)
 	padTail := strings.Repeat(" ", bsz)
 
@@ -82,5 +79,5 @@ func HexDump(base uint64, mem []byte, arch *models.Arch) string {
 		line = append(line, fmt.Sprintf("[%s]", strings.Join(tail, " ")))
 		out = append(out, strings.Join(line, " "))
 	}
-	return strings.Join(out, "\n")
+	return out
 }

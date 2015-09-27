@@ -26,14 +26,18 @@ type Usercorn struct {
 
 	StackBase   uint64
 	DataSegment models.Segment
-	Verbose     bool
-	TraceSys    bool
-	TraceMem    bool
-	TraceExec   bool
-	TraceReg    bool
-	LoadPrefix  string
-	status      models.StatusDiff
-	stacktrace  models.Stacktrace
+
+	Verbose       bool
+	TraceSys      bool
+	TraceMem      bool
+	TraceMemBatch bool
+	TraceExec     bool
+	TraceReg      bool
+
+	LoadPrefix string
+	status     models.StatusDiff
+	stacktrace models.Stacktrace
+	memlog     models.MemLog
 
 	// deadlock detection
 	lastBlock uint64
@@ -98,7 +102,9 @@ func (u *Usercorn) Run(args []string, env []string) error {
 			return err
 		}
 		fmt.Fprintf(os.Stderr, "[stack @ 0x%x]\n", sp)
-		fmt.Fprintf(os.Stderr, "%s\n", HexDump(sp, buf[:], u.arch))
+		for _, line := range models.HexDump(sp, buf[:], u.arch.Bits) {
+			fmt.Fprintf(os.Stderr, "%s\n", line)
+		}
 	}
 	if u.Verbose || u.TraceReg {
 		u.status.Changes().Print("", true, false)
@@ -112,7 +118,14 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		sp, _ := u.RegRead(u.arch.SP)
 		u.stacktrace.Update(u.entry, sp)
 	}
+	if u.TraceMemBatch {
+		u.memlog = *models.NewMemLog(u.ByteOrder())
+	}
 	err := u.Unicorn.Start(u.entry, 0xffffffffffffffff)
+	if u.TraceMemBatch && !u.memlog.Empty() {
+		u.memlog.Print("", u.arch.Bits)
+		u.memlog.Reset()
+	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Registers:")
 		u.status.Changes().Print("", true, false)
@@ -239,6 +252,11 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 func (u *Usercorn) addHooks() error {
 	if u.TraceExec || u.TraceReg {
 		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
+			if u.TraceMemBatch {
+				indent := strings.Repeat("  ", u.stacktrace.Len()-1)
+				u.memlog.Print(indent, u.arch.Bits)
+				u.memlog.Reset()
+			}
 			if sp, err := u.RegRead(u.arch.SP); err == nil {
 				u.stacktrace.Update(addr, sp)
 			}
@@ -306,13 +324,8 @@ func (u *Usercorn) addHooks() error {
 			u.lastCode = addr
 		})
 	}
-	if u.TraceMem {
+	if u.TraceMem || u.TraceMemBatch {
 		u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) {
-			memFmt := fmt.Sprintf("%%s 0x%%0%dx 0x%%0%dx\n", u.Bsz*2, size*2)
-			indent := ""
-			if u.stacktrace.Len() > 0 {
-				indent = strings.Repeat("  ", u.stacktrace.Len()-1)
-			}
 			var letter string
 			if access == uc.MEM_WRITE {
 				letter = "W"
@@ -332,7 +345,22 @@ func (u *Usercorn) addHooks() error {
 					}
 				}
 			}
-			fmt.Fprintf(os.Stderr, indent+memFmt, letter, addr, value)
+			if u.TraceMem {
+				memFmt := fmt.Sprintf("%%s 0x%%0%dx 0x%%0%dx\n", u.Bsz*2, size*2)
+				indent := ""
+				if u.stacktrace.Len() > 0 {
+					indent = strings.Repeat("  ", u.stacktrace.Len()-1)
+				}
+				fmt.Fprintf(os.Stderr, indent+memFmt, letter, addr, value)
+			}
+			if u.TraceMemBatch {
+				write := (letter == "W")
+				if !(u.TraceExec || u.TraceReg) && !u.memlog.Adjacent(addr, write) {
+					u.memlog.Print("", u.arch.Bits)
+					u.memlog.Reset()
+				}
+				u.memlog.Update(addr, size, value, letter == "W")
+			}
 		})
 	}
 	invalid := uc.HOOK_MEM_READ_INVALID | uc.HOOK_MEM_WRITE_INVALID | uc.HOOK_MEM_FETCH_INVALID
