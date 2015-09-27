@@ -307,17 +307,32 @@ func (u *Usercorn) addHooks() error {
 		})
 	}
 	if u.TraceMem {
-		hexFmt := fmt.Sprintf("0x%%0%dx", u.Bsz*2)
-		memFmt := fmt.Sprintf("%%s %s %%d %s\n", hexFmt, hexFmt)
 		u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) {
-			indent := strings.Repeat("  ", u.stacktrace.Len()-1)
+			memFmt := fmt.Sprintf("%%s 0x%%0%dx 0x%%0%dx\n", u.Bsz*2, size*2)
+			indent := ""
+			if u.stacktrace.Len() > 0 {
+				indent = strings.Repeat("  ", u.stacktrace.Len()-1)
+			}
 			var letter string
 			if access == uc.MEM_WRITE {
 				letter = "W"
 			} else {
 				letter = "R"
+				if data, err := u.MemRead(addr, uint64(size)); err == nil {
+					e := u.ByteOrder()
+					switch size {
+					case 1:
+						value = int64(data[0])
+					case 2:
+						value = int64(e.Uint16(data))
+					case 4:
+						value = int64(e.Uint32(data))
+					case 8:
+						value = int64(e.Uint64(data))
+					}
+				}
 			}
-			fmt.Fprintf(os.Stderr, indent+memFmt, letter, addr, size, value)
+			fmt.Fprintf(os.Stderr, indent+memFmt, letter, addr, value)
 		})
 	}
 	invalid := uc.HOOK_MEM_READ_INVALID | uc.HOOK_MEM_WRITE_INVALID | uc.HOOK_MEM_FETCH_INVALID
@@ -456,7 +471,7 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 	if name == "" {
 		panic(fmt.Sprintf("Syscall missing: %d", num))
 	}
-	if u.TraceSys && (u.TraceExec || u.TraceReg) {
+	if u.TraceSys && u.stacktrace.Len() > 0 {
 		fmt.Fprintf(os.Stderr, strings.Repeat("  ", u.stacktrace.Len()-1)+"s ")
 	}
 	return syscalls.Call(u, num, name, getArgs, u.TraceSys)
