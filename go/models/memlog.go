@@ -10,6 +10,7 @@ type memDelta struct {
 	addr  uint64
 	data  []byte
 	write bool
+	tag   byte
 }
 
 type MemLog struct {
@@ -33,26 +34,52 @@ func (m *MemLog) Reset() {
 	m.write = nil
 }
 
-func (m *MemLog) Adjacent(addr uint64, write bool) bool {
+func (m *MemLog) Adjacent(addr uint64, size int, write bool) bool {
 	if m.Empty() {
 		return false
 	}
+	if write && m.write == nil || !write && m.read == nil {
+		return false
+	}
 	if write {
-		return !(m.write == nil) && addr == m.write.addr+uint64(len(m.write.data))
+		return addr == m.write.addr+uint64(len(m.write.data)) || addr == m.write.addr-uint64(size)
 	} else {
-		return !(m.read == nil) && addr == m.read.addr+uint64(len(m.read.data))
+		return addr == m.read.addr+uint64(len(m.read.data)) || addr == m.read.addr-uint64(size)
 	}
 }
 
 func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
-	if !m.Adjacent(addr, write) {
-		delta := &memDelta{addr, nil, write}
+	var delta *memDelta
+	before := false
+	if !m.Adjacent(addr, size, write) {
+		delta = &memDelta{addr, nil, write, ' '}
 		if write {
 			m.write = delta
 		} else {
 			m.read = delta
 		}
 		m.log = append(m.log, delta)
+	} else {
+		if write {
+			delta = m.write
+		} else {
+			delta = m.read
+		}
+		if addr < delta.addr {
+			delta.addr -= uint64(size)
+			before = true
+		}
+		var tag byte
+		if before {
+			tag = '<'
+		} else {
+			tag = '>'
+		}
+		if delta.tag == ' ' {
+			delta.tag = tag
+		} else if delta.tag != tag {
+			delta.tag = '~'
+		}
 	}
 	var tmp [8]byte
 	switch size {
@@ -65,10 +92,12 @@ func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
 	case 8:
 		m.order.PutUint64(tmp[:], uint64(value))
 	}
-	if write {
-		m.write.data = append(m.write.data, tmp[:size]...)
+	if before {
+		data := make([]byte, size, size+len(delta.data))
+		copy(data, tmp[:size])
+		delta.data = append(data, delta.data...)
 	} else {
-		m.read.data = append(m.read.data, tmp[:size]...)
+		delta.data = append(delta.data, tmp[:size]...)
 	}
 }
 
@@ -80,7 +109,7 @@ func (m *MemLog) Print(indent string, bits int) {
 		}
 		for i, line := range HexDump(d.addr, d.data, bits) {
 			if i == 0 {
-				fmt.Fprintf(os.Stderr, "%s%s %s\n", indent, t, line)
+				fmt.Fprintf(os.Stderr, "%s%s%c%s %s%c\n", indent, t, d.tag, line, t, d.tag)
 			} else {
 				fmt.Fprintf(os.Stderr, "%s  %s\n", indent, line)
 			}

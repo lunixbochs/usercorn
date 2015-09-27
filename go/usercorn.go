@@ -355,7 +355,7 @@ func (u *Usercorn) addHooks() error {
 			}
 			if u.TraceMemBatch {
 				write := (letter == "W")
-				if !(u.TraceExec || u.TraceReg) && !u.memlog.Adjacent(addr, write) {
+				if !(u.TraceExec || u.TraceReg) && !u.memlog.Adjacent(addr, size, write) {
 					u.memlog.Print("", u.arch.Bits)
 					u.memlog.Reset()
 				}

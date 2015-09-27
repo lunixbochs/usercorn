@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"github.com/bnagy/gapstone"
@@ -66,7 +67,14 @@ func HexDump(base uint64, mem []byte, bits int) []string {
 		memLine := mem[i:]
 		for j := 0; j < blockCount; j++ {
 			if j*bsz < len(memLine) {
-				block := memLine[j*bsz : (j+1)*bsz]
+				end := (j + 1) * bsz
+				var block []byte
+				if end > len(memLine) {
+					pad := bytes.Repeat([]byte{0}, end-len(memLine))
+					block = append(memLine[j*bsz:], pad...)
+				} else {
+					block = memLine[j*bsz : end]
+				}
 				blocks[j] = hex.EncodeToString(block)
 				tail[j] = clean(block)
 			} else {
