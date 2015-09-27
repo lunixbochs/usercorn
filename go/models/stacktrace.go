@@ -13,6 +13,10 @@ type Stacktrace struct {
 	Stack []stackFrame
 }
 
+func (s *Stacktrace) Len() int {
+	return len(s.Stack)
+}
+
 func (s *Stacktrace) Print(u Usercorn) {
 	pc, _ := u.RegRead(u.Arch().PC)
 	sp, _ := u.RegRead(u.Arch().SP)
@@ -29,14 +33,14 @@ func (s *Stacktrace) Push(pc, sp uint64) {
 }
 
 func (s *Stacktrace) Empty() bool {
-	return len(s.Stack) == 0
+	return s.Len() == 0
 }
 
 func (s *Stacktrace) Peek() stackFrame {
 	if s.Empty() {
 		return stackFrame{}
 	}
-	return s.Stack[len(s.Stack)-1]
+	return s.Stack[s.Len()-1]
 }
 
 func (s *Stacktrace) Pop() stackFrame {
@@ -44,7 +48,7 @@ func (s *Stacktrace) Pop() stackFrame {
 		return stackFrame{}
 	}
 	ret := s.Peek()
-	s.Stack = s.Stack[:len(s.Stack)-1]
+	s.Stack = s.Stack[:s.Len()-1]
 	return ret
 }
 
