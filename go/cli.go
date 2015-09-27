@@ -18,7 +18,7 @@ func main() {
 	rtrace := fs.Bool("rtrace", false, "trace register modification")
 	prefix := fs.String("prefix", "", "library load prefix")
 	fs.Usage = func() {
-		fmt.Printf("Usage: %s [options] <exe> [args...]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [options] <exe> [args...]\n", os.Args[0])
 		fs.PrintDefaults()
 	}
 	fs.Parse(os.Args[1:])
