@@ -27,6 +27,7 @@ func LinuxSyscall(u models.Usercorn) {
 	name, _ := sysnum.Linux_arm[int(num)]
 	var ret uint64
 	switch name {
+	case "set_tls":
 	case "uname":
 		StaticUname.Pad(64)
 		addr, _ := u.RegRead(LinuxRegs[0])
