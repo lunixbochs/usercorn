@@ -72,15 +72,15 @@ func (e *ElfLoader) Interp() string {
 	return ""
 }
 
-func (e *ElfLoader) Header() ([]byte, int) {
+func (e *ElfLoader) Header() (uint64, []byte, int) {
 	for _, prog := range e.file.Progs {
 		if prog.Type == elf.PT_PHDR {
 			data := make([]byte, prog.Memsz)
 			prog.Open().Read(data)
-			return data, len(e.file.Progs)
+			return prog.Off, data, len(e.file.Progs)
 		}
 	}
-	return nil, 0
+	return 0, nil, 0
 }
 
 func (e *ElfLoader) Type() int {
@@ -111,6 +111,7 @@ func (e *ElfLoader) Segments() ([]models.SegmentData, error) {
 		data := make([]byte, prog.Memsz)
 		prog.Open().Read(data)
 		ret = append(ret, models.SegmentData{
+			Off:  prog.Off,
 			Addr: prog.Vaddr,
 			Size: prog.Memsz,
 			Data: data,

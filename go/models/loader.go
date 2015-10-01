@@ -18,7 +18,7 @@ type Loader interface {
 	Entry() uint64
 	Type() int
 	Interp() string
-	Header() ([]byte, int)
+	Header() (uint64, []byte, int)
 	Symbols() ([]Symbol, error)
 	Segments() ([]SegmentData, error)
 	DataSegment() (uint64, uint64)

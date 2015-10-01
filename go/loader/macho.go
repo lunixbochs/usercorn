@@ -102,8 +102,8 @@ func (m *MachOLoader) Interp() string {
 	return ""
 }
 
-func (m *MachOLoader) Header() ([]byte, int) {
-	return nil, 0
+func (m *MachOLoader) Header() (uint64, []byte, int) {
+	return 0, nil, 0
 }
 
 func (m *MachOLoader) Type() int {
@@ -129,6 +129,7 @@ func (m *MachOLoader) Segments() ([]models.SegmentData, error) {
 					return nil, err
 				}
 				ret = append(ret, models.SegmentData{
+					Off:  s.Offset,
 					Addr: s.Addr,
 					Size: s.Memsz,
 					Data: data,

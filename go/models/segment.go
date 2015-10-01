@@ -1,8 +1,17 @@
 package models
 
 type SegmentData struct {
+	Off        uint64
 	Addr, Size uint64
 	Data       []byte
+}
+
+func (s *SegmentData) ContainsPhys(addr uint64) bool {
+	return s.Off <= addr && addr < s.Off+s.Size
+}
+
+func (s *SegmentData) ContainsVirt(addr uint64) bool {
+	return s.Addr <= addr && addr < s.Addr+s.Size
 }
 
 type Segment struct {

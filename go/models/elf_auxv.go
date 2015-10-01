@@ -39,25 +39,29 @@ func add(auxv []Elf64Auxv, t, val uint64) []Elf64Auxv {
 }
 
 func setupElfAuxv(u Usercorn) ([]Elf64Auxv, error) {
-	auxv := make([]Elf64Auxv, 0, 20)
-	phdr, phdrCount := u.Loader().Header()
-	phdrAddr, err := u.MmapWrite(0, phdr)
-	if err != nil {
-		return nil, err
+	phdrOff, _, phdrCount := u.Loader().Header()
+	segments, _ := u.Loader().Segments()
+	for _, s := range segments {
+		if s.ContainsPhys(phdrOff) {
+			phdrOff += s.Addr
+			break
+		}
 	}
-	auxv = add(auxv, ELF_AT_PHDR, phdrAddr)
-	auxv = add(auxv, ELF_AT_PHENT, uint64(u.Bits()*8*2))
-	auxv = add(auxv, ELF_AT_PHNUM, uint64(phdrCount))
-	auxv = add(auxv, ELF_AT_ENTRY, uint64(u.BinEntry()))
-	// TODO: set/track a page size somewhere - on Arch.OS?
-	auxv = add(auxv, ELF_AT_PAGESZ, 0x1000)
-	auxv = add(auxv, ELF_AT_BASE, u.InterpBase())
-	// TODO: set proper uid/gid (portable?)
-	auxv = add(auxv, ELF_AT_UID, 0)
-	auxv = add(auxv, ELF_AT_EUID, 0)
-	auxv = add(auxv, ELF_AT_GID, 0)
-	auxv = add(auxv, ELF_AT_EGID, 0)
-	auxv = add(auxv, ELF_AT_NULL, 0)
+	auxv := []Elf64Auxv{
+		{ELF_AT_PHDR, u.Base() + phdrOff},
+		{ELF_AT_PHENT, uint64(u.Bits() * 8 * 2)},
+		{ELF_AT_PHNUM, uint64(phdrCount)},
+		{ELF_AT_ENTRY, uint64(u.BinEntry())},
+		// TODO: set/track a page size somewhere - on Arch.OS?
+		{ELF_AT_PAGESZ, 0x1000},
+		{ELF_AT_BASE, u.InterpBase()},
+		// TODO: set proper uid/gid (portable?)
+		{ELF_AT_UID, 0},
+		{ELF_AT_EUID, 0},
+		{ELF_AT_GID, 0},
+		{ELF_AT_EGID, 0},
+		{ELF_AT_NULL, 0},
+	}
 	return auxv, nil
 }
 
