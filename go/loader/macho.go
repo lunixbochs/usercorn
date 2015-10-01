@@ -124,15 +124,13 @@ func (m *MachOLoader) Segments() ([]models.SegmentData, error) {
 		if s, ok := l.(*macho.Segment); ok {
 			switch s.Cmd {
 			case macho.LoadCmdSegment, macho.LoadCmdSegment64:
-				data, err := s.Data()
-				if err != nil {
-					return nil, err
-				}
 				ret = append(ret, models.SegmentData{
 					Off:  s.Offset,
 					Addr: s.Addr,
 					Size: s.Memsz,
-					Data: data,
+					DataFunc: func() ([]byte, error) {
+						return s.Data()
+					},
 				})
 			}
 		}

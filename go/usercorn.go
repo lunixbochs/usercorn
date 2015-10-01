@@ -427,8 +427,12 @@ outer:
 		}
 	}
 	// write segment memory
+	var data []byte
 	for _, seg := range segments {
-		if err = u.MemWrite(loadBias+seg.Addr, seg.Data); err != nil {
+		if data, err = seg.Data(); err != nil {
+			return
+		}
+		if err = u.MemWrite(loadBias+seg.Addr, data); err != nil {
 			return
 		}
 	}

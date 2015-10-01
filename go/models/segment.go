@@ -3,7 +3,11 @@ package models
 type SegmentData struct {
 	Off        uint64
 	Addr, Size uint64
-	Data       []byte
+	DataFunc   func() ([]byte, error)
+}
+
+func (s *SegmentData) Data() ([]byte, error) {
+	return s.DataFunc()
 }
 
 func (s *SegmentData) ContainsPhys(addr uint64) bool {

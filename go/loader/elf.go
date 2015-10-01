@@ -108,13 +108,17 @@ func (e *ElfLoader) Segments() ([]models.SegmentData, error) {
 		if prog.Type != elf.PT_LOAD {
 			continue
 		}
-		data := make([]byte, prog.Memsz)
-		prog.Open().Read(data)
+		filesz := prog.Filesz
+		stream := prog.Open()
 		ret = append(ret, models.SegmentData{
 			Off:  prog.Off,
 			Addr: prog.Vaddr,
 			Size: prog.Memsz,
-			Data: data,
+			DataFunc: func() ([]byte, error) {
+				data := make([]byte, filesz)
+				_, err := stream.Read(data)
+				return data, err
+			},
 		})
 	}
 	return ret, nil
