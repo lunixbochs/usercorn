@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"github.com/lunixbochs/struc"
+	"os"
 )
 
 const (
@@ -68,15 +69,16 @@ func setupElfAuxv(u Usercorn) ([]Elf64Auxv, error) {
 		{ELF_AT_PHDR, u.Base() + phdrOff},
 		{ELF_AT_PHENT, uint64(u.Bits() * 8 * 2)},
 		{ELF_AT_PHNUM, uint64(phdrCount)},
-		{ELF_AT_ENTRY, uint64(u.BinEntry())},
 		// TODO: set/track a page size somewhere - on Arch.OS?
-		{ELF_AT_PAGESZ, 0x1000},
+		{ELF_AT_PAGESZ, uint64(os.Getpagesize())},
 		{ELF_AT_BASE, u.InterpBase()},
-		// TODO: set proper uid/gid (portable?)
-		{ELF_AT_UID, 0},
-		{ELF_AT_EUID, 0},
-		{ELF_AT_GID, 0},
-		{ELF_AT_EGID, 0},
+		{ELF_AT_FLAGS, 0},
+		{ELF_AT_ENTRY, uint64(u.BinEntry())},
+		{ELF_AT_UID, uint64(os.Getuid())},
+		{ELF_AT_EUID, uint64(os.Geteuid())},
+		{ELF_AT_GID, uint64(os.Getgid())},
+		{ELF_AT_EGID, uint64(os.Getegid())},
+		{ELF_AT_CLKTCK, 100}, // 100hz, totally fake
 		{ELF_AT_RANDOM, randAddr},
 		{ELF_AT_NULL, 0},
 	}
