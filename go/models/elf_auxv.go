@@ -2,6 +2,7 @@ package models
 
 import (
 	"bytes"
+	"crypto/rand"
 	"github.com/lunixbochs/struc"
 )
 
@@ -22,6 +23,7 @@ const (
 	ELF_AT_GID
 	ELF_AT_EGID
 	ELF_AT_CLKTCK       = 17
+	ELF_AT_RANDOM       = 25
 	ELF_AT_SYSINFO      = 32
 	ELF_AT_SYSINFO_EHDR = 33
 )
@@ -39,6 +41,7 @@ func add(auxv []Elf64Auxv, t, val uint64) []Elf64Auxv {
 }
 
 func setupElfAuxv(u Usercorn) ([]Elf64Auxv, error) {
+	// calc phdr offset
 	phdrOff, _, phdrCount := u.Loader().Header()
 	segments, _ := u.Loader().Segments()
 	for _, s := range segments {
@@ -47,6 +50,20 @@ func setupElfAuxv(u Usercorn) ([]Elf64Auxv, error) {
 			break
 		}
 	}
+
+	// set up AT_RANDOM
+	randAddr, err := u.Mmap(0, 16)
+	if err != nil {
+		return nil, err
+	}
+	var tmp [16]byte
+	if _, err := rand.Read(tmp[:]); err != nil {
+		return nil, err
+	}
+	if err := u.MemWrite(randAddr, tmp[:]); err != nil {
+		return nil, err
+	}
+
 	auxv := []Elf64Auxv{
 		{ELF_AT_PHDR, u.Base() + phdrOff},
 		{ELF_AT_PHENT, uint64(u.Bits() * 8 * 2)},
@@ -60,6 +77,7 @@ func setupElfAuxv(u Usercorn) ([]Elf64Auxv, error) {
 		{ELF_AT_EUID, 0},
 		{ELF_AT_GID, 0},
 		{ELF_AT_EGID, 0},
+		{ELF_AT_RANDOM, randAddr},
 		{ELF_AT_NULL, 0},
 	}
 	return auxv, nil
