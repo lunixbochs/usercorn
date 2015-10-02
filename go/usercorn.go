@@ -369,7 +369,7 @@ func (u *Usercorn) addHooks() error {
 		case uc.MEM_WRITE_INVALID:
 			fmt.Fprintf(os.Stderr, "invalid write")
 		case uc.MEM_READ_INVALID:
-			fmt.Fprintf(os.Stderr, "invalid prot")
+			fmt.Fprintf(os.Stderr, "invalid read")
 		case uc.MEM_FETCH_INVALID:
 			fmt.Fprintf(os.Stderr, "invalid fetch")
 		default:
