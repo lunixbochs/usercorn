@@ -39,6 +39,8 @@ type Usercorn struct {
 	stacktrace models.Stacktrace
 	memlog     models.MemLog
 
+	exitStatus error
+
 	// deadlock detection
 	lastBlock uint64
 	lastCode  uint64
@@ -131,6 +133,9 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		u.status.Changes().Print("", true, false)
 		fmt.Fprintln(os.Stderr, "Stacktrace:")
 		u.stacktrace.Print(u)
+	}
+	if err == nil && u.exitStatus != nil {
+		err = u.exitStatus
 	}
 	return err
 }
@@ -507,4 +512,9 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 		fmt.Fprintf(os.Stderr, strings.Repeat("  ", u.stacktrace.Len()-1)+"s ")
 	}
 	return syscalls.Call(u, num, name, getArgs, u.TraceSys)
+}
+
+func (u *Usercorn) Exit(status int) {
+	u.exitStatus = models.ExitStatus(status)
+	u.Stop()
 }

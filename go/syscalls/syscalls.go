@@ -27,7 +27,7 @@ type Syscall struct {
 
 func exit(u U, a []uint64) uint64 {
 	code := int(a[0])
-	syscall.Exit(code)
+	u.Exit(code)
 	return 0
 }
 

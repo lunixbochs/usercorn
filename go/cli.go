@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"./models"
 )
 
 func main() {
@@ -47,6 +49,10 @@ func main() {
 	corn.TraceExec = *etrace
 	err = corn.Run(args, os.Environ())
 	if err != nil {
-		log.Fatal(err)
+		if e, ok := err.(models.ExitStatus); ok {
+			os.Exit(int(e))
+		} else {
+			log.Fatal(err)
+		}
 	}
 }
