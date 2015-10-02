@@ -8,6 +8,7 @@ import (
 
 type memDelta struct {
 	addr  uint64
+	value int64
 	data  []byte
 	write bool
 	tag   byte
@@ -34,36 +35,35 @@ func (m *MemLog) Reset() {
 	m.write = nil
 }
 
-func (m *MemLog) Adjacent(addr uint64, size int, write bool) bool {
-	if m.Empty() {
-		return false
-	}
-	if write && m.write == nil || !write && m.read == nil {
-		return false
-	}
+func (m *MemLog) Adjacent(addr uint64, value int64, size int, write bool) bool {
+	var delta *memDelta
 	if write {
-		return addr == m.write.addr+uint64(len(m.write.data)) || addr == m.write.addr-uint64(size)
+		delta = m.write
 	} else {
-		return addr == m.read.addr+uint64(len(m.read.data)) || addr == m.read.addr-uint64(size)
+		delta = m.read
 	}
+	if delta == nil || addr == delta.addr && value == delta.value {
+		return true
+	}
+	return addr == delta.addr+uint64(len(delta.data)) || addr == delta.addr-uint64(size)
 }
 
 func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
-	var delta *memDelta
+	var deltap **memDelta
+	if write {
+		deltap = &m.write
+	} else {
+		deltap = &m.read
+	}
+	delta := *deltap
 	before := false
-	if !m.Adjacent(addr, size, write) {
-		delta = &memDelta{addr, nil, write, ' '}
-		if write {
-			m.write = delta
-		} else {
-			m.read = delta
-		}
+	if delta == nil || !m.Adjacent(addr, value, size, write) {
+		*deltap = &memDelta{addr, value, nil, write, ' '}
+		delta = *deltap
 		m.log = append(m.log, delta)
 	} else {
-		if write {
-			delta = m.write
-		} else {
-			delta = m.read
+		if addr == delta.addr && value == delta.value {
+			return
 		}
 		if addr < delta.addr {
 			delta.addr -= uint64(size)
@@ -99,6 +99,7 @@ func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
 	} else {
 		delta.data = append(delta.data, tmp[:size]...)
 	}
+	delta.value = value
 }
 
 func (m *MemLog) Print(indent string, bits int) {
