@@ -6,11 +6,15 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"./models"
 )
 
 func main() {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	fs := flag.NewFlagSet("cli", flag.ExitOnError)
 	verbose := fs.Bool("v", false, "verbose output")
 	strace := fs.Bool("strace", false, "trace syscalls")
