@@ -62,17 +62,28 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
-	ds, de := l.DataSegment()
 	u := &Usercorn{
-		Unicorn:     unicorn,
-		loader:      l,
-		LoadPrefix:  prefix,
-		DataSegment: models.Segment{ds, de, 0},
+		Unicorn:    unicorn,
+		loader:     l,
+		LoadPrefix: prefix,
 	}
+	// map binary (and interp) into memory
 	u.status = models.StatusDiff{U: u, Color: true}
 	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(u.loader, false)
 	if err != nil {
 		return nil, err
+	}
+	// find data segment for brk
+	segments, err := l.Segments()
+	if err != nil {
+		return nil, err
+	}
+	mask := uc.PROT_READ | uc.PROT_WRITE
+	for _, seg := range segments {
+		if seg.Prot&mask == mask {
+			start := u.base + seg.Addr
+			u.DataSegment = models.Segment{start, seg.Size, seg.Prot}
+		}
 	}
 	return u, nil
 }
@@ -250,7 +261,7 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 	// TODO: this is linux specific
 	s := u.DataSegment
 	if addr > 0 {
-		err := u.MemMap(s.End, addr-s.End)
+		err := u.MemMapProt(s.End, addr-s.End, s.Prot)
 		if err != nil {
 			return s.End, err
 		}

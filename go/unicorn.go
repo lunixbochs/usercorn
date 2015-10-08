@@ -83,7 +83,7 @@ func (u *Unicorn) Disas(addr, size uint64) (string, error) {
 	return models.Disas(mem, addr, u.arch, u.Bsz)
 }
 
-func (u *Unicorn) MemMap(addr, size uint64) error {
+func (u *Unicorn) MemMapProt(addr, size uint64, prot int) error {
 	m := u.mapping(addr, size)
 	for m != nil {
 		a, b := m.Start, m.Start+m.Size
@@ -101,6 +101,10 @@ func (u *Unicorn) MemMap(addr, size uint64) error {
 	u.memory = append(u.memory, mmap{addr, size})
 	addr, size = align(addr, size, true)
 	return u.Unicorn.MemMap(addr, size)
+}
+
+func (u *Unicorn) MemMap(addr, size uint64) error {
+	return u.MemMapProt(addr, size, uc.PROT_ALL)
 }
 
 func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
