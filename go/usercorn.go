@@ -248,7 +248,10 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 	// TODO: this is linux specific
 	s := u.DataSegment
 	if addr > 0 {
-		u.MemMap(s.End, addr)
+		err := u.MemMap(s.End, addr-s.End)
+		if err != nil {
+			return s.End, err
+		}
 		s.End = addr
 	}
 	return s.End, nil
