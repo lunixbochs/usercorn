@@ -22,9 +22,9 @@ type Usercorn interface {
 	PackAddr(buf []byte, n uint64) error
 	UnpackAddr(buf []byte) uint64
 	PopBytes(p []byte) error
-	PushBytes(p []byte) error
+	PushBytes(p []byte) (uint64, error)
 	Pop() (uint64, error)
-	Push(n uint64) error
+	Push(n uint64) (uint64, error)
 	ReadRegs(reg []int) ([]uint64, error)
 	RegDump() ([]RegVal, error)
 

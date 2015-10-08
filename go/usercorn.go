@@ -179,11 +179,11 @@ func (u *Usercorn) BinEntry() uint64 {
 
 func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
 	// end marker
-	if err := u.Push(0); err != nil {
+	if _, err := u.Push(0); err != nil {
 		return err
 	}
 	// auxv
-	if err := u.PushBytes(auxv); err != nil {
+	if _, err := u.PushBytes(auxv); err != nil {
 		return err
 	}
 	// envp
@@ -203,7 +203,8 @@ func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
 		return err
 	}
 	// argc
-	return u.Push(uint64(len(args)))
+	_, err = u.Push(uint64(len(args)))
+	return err
 }
 
 func (u *Usercorn) PrefixPath(path string, force bool) string {
@@ -516,11 +517,11 @@ func (u *Usercorn) pushStrings(args ...string) ([]uint64, error) {
 }
 
 func (u *Usercorn) pushAddrs(addrs []uint64) error {
-	if err := u.Push(0); err != nil {
+	if _, err := u.Push(0); err != nil {
 		return err
 	}
 	for _, v := range addrs {
-		if err := u.Push(v); err != nil {
+		if _, err := u.Push(v); err != nil {
 			return err
 		}
 	}

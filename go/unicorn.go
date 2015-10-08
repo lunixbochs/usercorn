@@ -165,18 +165,18 @@ func (u *Unicorn) PopBytes(p []byte) error {
 	return u.RegWrite(u.arch.SP, sp+uint64(len(p)))
 }
 
-func (u *Unicorn) PushBytes(p []byte) error {
+func (u *Unicorn) PushBytes(p []byte) (uint64, error) {
 	sp, err := u.RegRead(u.arch.SP)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if err := u.RegWrite(u.arch.SP, sp-uint64(len(p))); err != nil {
-		return err
+		return 0, err
 	}
-	return u.MemWrite(sp-uint64(len(p)), p)
+	return sp, u.MemWrite(sp-uint64(len(p)), p)
 }
 
-func (u *Unicorn) Push(n uint64) error {
+func (u *Unicorn) Push(n uint64) (uint64, error) {
 	var buf [8]byte
 	u.PackAddr(buf[:u.Bsz], n)
 	return u.PushBytes(buf[:u.Bsz])
