@@ -65,7 +65,7 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 		Unicorn:     unicorn,
 		loader:      l,
 		LoadPrefix:  prefix,
-		DataSegment: models.Segment{ds, de},
+		DataSegment: models.Segment{ds, de, 0},
 	}
 	u.status = models.StatusDiff{U: u, Color: true}
 	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(u.loader)
@@ -412,7 +412,7 @@ func (u *Usercorn) mapBinary(l models.Loader) (interpBase, entry, base, realEntr
 outer:
 	for _, seg := range segments {
 		addr, size := align(seg.Addr, seg.Size, true)
-		s := &models.Segment{addr, addr + size}
+		s := &models.Segment{addr, addr + size, seg.Prot}
 		for _, s2 := range merged {
 			if s2.Overlaps(s) {
 				s2.Merge(s)
@@ -428,7 +428,11 @@ outer:
 		if dynamic && seg.Start == 0 && loadBias == 0 {
 			loadBias, err = u.Mmap(0x1000000, size)
 		} else {
-			err = u.MemMap(loadBias+seg.Start, seg.End-seg.Start)
+			prot := seg.Prot
+			if prot == 0 {
+				prot = uc.PROT_ALL
+			}
+			err = u.MemMapProt(loadBias+seg.Start, seg.End-seg.Start, prot)
 		}
 		if err != nil {
 			return

@@ -3,6 +3,7 @@ package models
 type SegmentData struct {
 	Off        uint64
 	Addr, Size uint64
+	Prot       int
 	DataFunc   func() ([]byte, error)
 }
 
@@ -20,6 +21,7 @@ func (s *SegmentData) ContainsVirt(addr uint64) bool {
 
 type Segment struct {
 	Start, End uint64
+	Prot       int
 }
 
 func (s *Segment) Overlaps(o *Segment) bool {

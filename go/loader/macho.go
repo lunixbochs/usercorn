@@ -128,6 +128,7 @@ func (m *MachOLoader) Segments() ([]models.SegmentData, error) {
 					Off:  s.Offset,
 					Addr: s.Addr,
 					Size: s.Memsz,
+					Prot: int(s.Flag) & 7,
 					DataFunc: func() ([]byte, error) {
 						return s.Data()
 					},

@@ -110,10 +110,21 @@ func (e *ElfLoader) Segments() ([]models.SegmentData, error) {
 		}
 		filesz := prog.Filesz
 		stream := prog.Open()
+		prot := 0
+		if prog.Flags&elf.PF_R != 0 {
+			prot |= 1
+		}
+		if prog.Flags&elf.PF_W != 0 {
+			prot |= 2
+		}
+		if prog.Flags&elf.PF_X != 0 {
+			prot |= 4
+		}
 		ret = append(ret, models.SegmentData{
 			Off:  prog.Off,
 			Addr: prog.Vaddr,
 			Size: prog.Memsz,
+			Prot: prot,
 			DataFunc: func() ([]byte, error) {
 				data := make([]byte, filesz)
 				_, err := stream.Read(data)
