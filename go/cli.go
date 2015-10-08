@@ -23,6 +23,9 @@ func main() {
 	etrace := fs.Bool("etrace", false, "trace execution")
 	rtrace := fs.Bool("rtrace", false, "trace register modification")
 	prefix := fs.String("prefix", "", "library load prefix")
+	base := fs.Uint64("base", 0, "force executable base address")
+	ibase := fs.Uint64("ibase", 0, "force interpreter base address")
+
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options] <exe> [args...]\n", os.Args[0])
 		fs.PrintDefaults()
@@ -51,6 +54,9 @@ func main() {
 	corn.TraceMemBatch = *mtrace2
 	corn.TraceReg = *rtrace
 	corn.TraceExec = *etrace
+	corn.ForceBase = *base
+	corn.ForceInterpBase = *ibase
+
 	err = corn.Run(args, os.Environ())
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {

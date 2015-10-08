@@ -27,12 +27,14 @@ type Usercorn struct {
 	StackBase   uint64
 	DataSegment models.Segment
 
-	Verbose       bool
-	TraceSys      bool
-	TraceMem      bool
-	TraceMemBatch bool
-	TraceExec     bool
-	TraceReg      bool
+	Verbose         bool
+	TraceSys        bool
+	TraceMem        bool
+	TraceMemBatch   bool
+	TraceExec       bool
+	TraceReg        bool
+	ForceBase       uint64
+	ForceInterpBase uint64
 
 	LoadPrefix string
 	status     models.StatusDiff
@@ -68,7 +70,7 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 		DataSegment: models.Segment{ds, de, 0},
 	}
 	u.status = models.StatusDiff{U: u, Color: true}
-	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(u.loader)
+	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(u.loader, false)
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +394,7 @@ func (u *Usercorn) addHooks() error {
 	return nil
 }
 
-func (u *Usercorn) mapBinary(l models.Loader) (interpBase, entry, base, realEntry uint64, err error) {
+func (u *Usercorn) mapBinary(l models.Loader, isInterp bool) (interpBase, entry, base, realEntry uint64, err error) {
 	var dynamic bool
 	switch l.Type() {
 	case loader.EXEC:
@@ -422,7 +424,10 @@ outer:
 		merged = append(merged, s)
 	}
 	// map merged segments
-	var loadBias uint64
+	loadBias := u.ForceBase
+	if isInterp {
+		loadBias = u.ForceInterpBase
+	}
 	for _, seg := range merged {
 		size := seg.End - seg.Start
 		if dynamic && seg.Start == 0 && loadBias == 0 {
@@ -451,14 +456,14 @@ outer:
 	entry = loadBias + l.Entry()
 	// load interpreter if present
 	interp := l.Interp()
-	if interp != "" {
+	if interp != "" && !isInterp {
 		var bin models.Loader
 		bin, err = loader.LoadFile(u.PrefixPath(interp, true))
 		if err != nil {
 			return
 		}
 		u.interpLoader = bin
-		_, _, interpBias, interpEntry, err := u.mapBinary(bin)
+		_, _, interpBias, interpEntry, err := u.mapBinary(bin, true)
 		return interpBias, interpEntry, loadBias, entry, err
 	} else {
 		return 0, entry, loadBias, entry, nil
