@@ -178,6 +178,15 @@ func (u *Usercorn) BinEntry() uint64 {
 }
 
 func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
+	// push argv and envp strings
+	envp, err := u.pushStrings(env...)
+	if err != nil {
+		return err
+	}
+	argv, err := u.pushStrings(args...)
+	if err != nil {
+		return err
+	}
 	// end marker
 	if _, err := u.Push(0); err != nil {
 		return err
@@ -187,18 +196,10 @@ func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
 		return err
 	}
 	// envp
-	envp, err := u.pushStrings(env...)
-	if err != nil {
-		return err
-	}
 	if err := u.pushAddrs(envp); err != nil {
 		return err
 	}
 	// argv
-	argv, err := u.pushStrings(args...)
-	if err != nil {
-		return err
-	}
 	if err := u.pushAddrs(argv); err != nil {
 		return err
 	}
@@ -495,24 +496,15 @@ func (u *Usercorn) setupStack() error {
 }
 
 func (u *Usercorn) pushStrings(args ...string) ([]uint64, error) {
-	// TODO: does anything case if these are actually on the stack?
-	argvSize := 0
-	for _, v := range args {
-		argvSize += len(v) + 1
-	}
-	argvAddr, err := u.Mmap(0, uint64(argvSize))
-	if err != nil {
-		return nil, err
-	}
-	buf := make([]byte, argvSize)
 	addrs := make([]uint64, 0, len(args)+1)
-	var pos uint64
-	for i := len(args) - 1; i >= 0; i-- {
-		copy(buf[pos:], []byte(args[i]))
-		addrs = append(addrs, argvAddr+pos)
-		pos += uint64(len(args[i]) + 1)
+	for _, arg := range args {
+		var addr uint64
+		var err error
+		if addr, err = u.PushBytes([]byte(arg + "\x00")); err != nil {
+			return nil, err
+		}
+		addrs = append(addrs, addr)
 	}
-	u.MemWrite(argvAddr, buf)
 	return addrs, nil
 }
 

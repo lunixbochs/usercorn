@@ -53,15 +53,13 @@ func setupElfAuxv(u Usercorn) ([]Elf64Auxv, error) {
 	}
 
 	// set up AT_RANDOM
-	randAddr, err := u.Mmap(0, 16)
-	if err != nil {
-		return nil, err
-	}
 	var tmp [16]byte
 	if _, err := rand.Read(tmp[:]); err != nil {
 		return nil, err
 	}
-	if err := u.MemWrite(randAddr, tmp[:]); err != nil {
+	var randAddr uint64
+	var err error
+	if randAddr, err = u.PushBytes(tmp[:]); err != nil {
 		return nil, err
 	}
 
