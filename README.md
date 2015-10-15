@@ -1,7 +1,7 @@
 usercorn
 ----
 
-You need [Unicorn](http://www.unicorn-engine.org/) installed to use this. It is currently in private beta, so stay tuned.
+You need [Unicorn](http://www.unicorn-engine.org/) installed to use this.
 
 Usercorn has two implementations: Go and Python. The Go variant is more advanced, faster (+10x), and more stable, but harder to script.
 
