@@ -1,0 +1,30 @@
+language: go
+sudo: true
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-5
+
+before_install:
+  - date
+  - export CC='gcc-5'
+  - mkdir /tmp/build && pushd /tmp/build
+  - git clone https://github.com/aquynh/capstone.git
+  - cd capstone && git pull && make && sudo make install && cd ..
+  - git clone https://github.com/unicorn-engine/unicorn.git
+  - cd unicorn && git pull && make && sudo make install && cd ..
+  - popd
+  - go get -t ./...
+
+script: 'make test'
+
+go:
+  - 1.1
+  - 1.2
+  - 1.3
+  - 1.4
+  - 1.5
+  - tip
