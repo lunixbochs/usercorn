@@ -34,7 +34,7 @@ func (r regList) Less(i, j int) bool {
 	} else if jnum == -1 && inum != -1 {
 		return false
 	} else {
-		return strings.Compare(r[i].Name, r[j].Name) == -1
+		return r[i].Name < r[j].Name
 	}
 }
 
