@@ -4,7 +4,7 @@ import (
 	cs "github.com/bnagy/gapstone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
-	"../../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 var Arch = &models.Arch{

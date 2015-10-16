@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 func LoadFile(path string) (models.Loader, error) {

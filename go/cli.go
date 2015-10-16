@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"./models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 func main() {

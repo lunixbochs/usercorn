@@ -3,14 +3,14 @@ package arch
 import (
 	"fmt"
 
-	"../models"
-	"./arm"
-	"./arm64"
-	"./m68k"
-	"./mips"
-	"./sparc"
-	"./x86"
-	"./x86_64"
+	"github.com/lunixbochs/usercorn/go/arch/arm"
+	"github.com/lunixbochs/usercorn/go/arch/arm64"
+	"github.com/lunixbochs/usercorn/go/arch/m68k"
+	"github.com/lunixbochs/usercorn/go/arch/mips"
+	"github.com/lunixbochs/usercorn/go/arch/sparc"
+	"github.com/lunixbochs/usercorn/go/arch/x86"
+	"github.com/lunixbochs/usercorn/go/arch/x86_64"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 var archMap = map[string]*models.Arch{

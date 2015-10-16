@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	"../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 var machoCpuMap = map[macho.Cpu]string{

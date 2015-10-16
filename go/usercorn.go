@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"./arch"
-	"./loader"
-	"./models"
-	"./syscalls"
+	"github.com/lunixbochs/usercorn/go/arch"
+	"github.com/lunixbochs/usercorn/go/loader"
+	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/syscalls"
 )
 
 type Usercorn struct {

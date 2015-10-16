@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 const (

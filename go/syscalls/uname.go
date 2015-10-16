@@ -2,8 +2,7 @@ package syscalls
 
 import (
 	"github.com/lunixbochs/struc"
-
-	"../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 func trunc(s string, length int) string {

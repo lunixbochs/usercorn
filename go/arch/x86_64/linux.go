@@ -4,8 +4,8 @@ import (
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
-	"../../models"
-	"../../syscalls"
+	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/syscalls"
 )
 
 var StaticUname = models.Uname{"Linux", "usercorn", "3.13.0-24-generic", "normal copy of Linux minding my business", "x86_64"}

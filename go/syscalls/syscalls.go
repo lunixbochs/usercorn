@@ -7,7 +7,7 @@ import (
 	"strings"
 	"syscall"
 
-	"../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 func errno(err error) uint64 {

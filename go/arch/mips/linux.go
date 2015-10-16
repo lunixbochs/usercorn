@@ -5,8 +5,8 @@ import (
 	sysnum "github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
-	"../../models"
-	"../../syscalls"
+	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/syscalls"
 )
 
 var LinuxRegs = []int{uc.MIPS_REG_A0, uc.MIPS_REG_A1, uc.MIPS_REG_A2, uc.MIPS_REG_A3}

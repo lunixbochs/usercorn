@@ -4,8 +4,8 @@ import (
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
-	"../../models"
-	"../../syscalls"
+	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/syscalls"
 )
 
 var LinuxRegs = []int{uc.X86_REG_EBX, uc.X86_REG_ECX, uc.X86_REG_EDX, uc.X86_REG_ESI, uc.X86_REG_EDI, uc.X86_REG_EBP}

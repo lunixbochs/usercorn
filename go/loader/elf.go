@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 var machineMap = map[elf.Machine]string{

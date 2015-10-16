@@ -3,7 +3,7 @@ package loader
 import (
 	"encoding/binary"
 
-	"../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type LoaderHeader struct {

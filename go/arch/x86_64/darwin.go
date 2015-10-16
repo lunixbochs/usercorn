@@ -3,8 +3,8 @@ package x86_64
 import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
-	"../../models"
-	"../../syscalls"
+	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/syscalls"
 )
 
 var darwinSyscalls = map[int]string{

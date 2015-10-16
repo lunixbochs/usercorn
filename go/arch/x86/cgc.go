@@ -5,7 +5,7 @@ import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"syscall"
 
-	"../../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 func writeAddr(u models.Usercorn, addr, val uint64) {

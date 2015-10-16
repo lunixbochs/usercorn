@@ -6,7 +6,7 @@ import (
 	"github.com/lunixbochs/ghostrace/ghost/memio"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
-	"./models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type Unicorn struct {

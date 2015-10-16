@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io"
 
-	"../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 var cgcMagic = []byte{0x7f, 0x43, 0x47, 0x43}

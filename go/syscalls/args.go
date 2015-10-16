@@ -1,7 +1,7 @@
 package syscalls
 
 import (
-	"../models"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 func StackArgs(u models.Usercorn) func(n int) ([]uint64, error) {
