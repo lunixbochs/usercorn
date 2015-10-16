@@ -7,6 +7,10 @@ Usercorn has two implementations: Go and Python. The Go variant is more advanced
 
 *Go Instructions*
 
+    # preconditions:
+    # make sure you are using go1.5
+    # you will also need capstone development headers
+
     # not windows:
     make
 
