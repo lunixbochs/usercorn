@@ -17,6 +17,10 @@ func errno(err error) uint64 {
 	return 0
 }
 
+const (
+	UINT64_MAX = 0xFFFFFFFFFFFFFFFF
+)
+
 type U models.Usercorn
 
 type Syscall struct {
@@ -178,6 +182,20 @@ func dup2(u U, a []uint64) uint64 {
 	return errno(syscall.Dup2(int(a[0]), int(a[1])))
 }
 
+func readlink(u U, a []uint64) uint64 {
+	path, _ := u.Mem().ReadStrAt(a[0])
+	bufsz := a[2]
+	name, err := os.Readlink(path)
+	if err != nil {
+		return UINT64_MAX
+	}
+	if len(name) > int(bufsz)-1 {
+		name = name[:bufsz-1]
+	}
+	u.Mem().WriteAt([]byte(name+"\x00"), a[1])
+	return uint64(len(name))
+}
+
 func stub(u U, a []uint64) uint64 {
 	return 0
 }
@@ -207,6 +225,7 @@ var syscalls = map[string]Syscall{
 	"getuid":   {getuid, A{}, INT},
 	"getgid":   {getgid, A{}, INT},
 	"dup2":     {dup2, A{INT, INT}, INT},
+	"readlink": {readlink, A{STR, STR, INT}, INT},
 
 	// stubs
 	"ioctl":          {stub, A{}, INT},
