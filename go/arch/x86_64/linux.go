@@ -21,16 +21,44 @@ func LinuxInit(u models.Usercorn, args, env []string) error {
 	return AbiInit(u, args, env, auxv, LinuxSyscall)
 }
 
+// TODO: put these somewhere. ghostrace maybe.
+const (
+	ARCH_SET_GS = 0x1001
+	ARCH_SET_FS = 0x1002
+	ARCH_GET_FS = 0x1003
+	ARCH_GET_GS = 0x1004
+)
+
 func LinuxSyscall(u models.Usercorn) {
 	rax, _ := u.RegRead(uc.X86_REG_RAX)
 	name, _ := num.Linux_x86_64[int(rax)]
 	var ret uint64
 	switch name {
 	case "uname":
+		// TODO: strace these
 		addr, _ := u.RegRead(AbiRegs[0])
 		StaticUname.Pad(64)
 		syscalls.Uname(u, addr, &StaticUname)
 	case "arch_prctl":
+		code, _ := u.RegRead(AbiRegs[0])
+		addr, _ := u.RegRead(AbiRegs[1])
+		var tmp [8]byte
+		bsz := u.Bits() / 8
+		// TODO: make set check for valid mapped memory
+		switch code {
+		case ARCH_SET_FS:
+			u.RegWrite(uc.X86_REG_FS, addr)
+		case ARCH_SET_GS:
+			u.RegWrite(uc.X86_REG_GS, addr)
+		case ARCH_GET_FS:
+			val, _ := u.RegRead(uc.X86_REG_FS)
+			u.PackAddr(tmp[:bsz], val)
+			u.MemWrite(addr, tmp[:bsz])
+		case ARCH_GET_GS:
+			val, _ := u.RegRead(uc.X86_REG_GS)
+			u.PackAddr(tmp[:bsz], val)
+			u.MemWrite(addr, tmp[:bsz])
+		}
 	case "set_tid_address":
 	default:
 		ret, _ = u.Syscall(int(rax), name, syscalls.RegArgs(u, AbiRegs))

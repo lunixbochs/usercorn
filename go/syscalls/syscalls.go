@@ -166,6 +166,22 @@ func writev(u U, a []uint64) uint64 {
 	return 0
 }
 
+func getuid(u U, a []uint64) uint64 {
+	return uint64(os.Getuid())
+}
+
+func getgid(u U, a []uint64) uint64 {
+	return uint64(os.Getgid())
+}
+
+func dup2(u U, a []uint64) uint64 {
+	return errno(syscall.Dup2(int(a[0]), int(a[1])))
+}
+
+func stub(u U, a []uint64) uint64 {
+	return 0
+}
+
 type A []int
 
 var syscalls = map[string]Syscall{
@@ -188,6 +204,13 @@ var syscalls = map[string]Syscall{
 	"access":   {access, A{STR, INT}, INT},
 	"readv":    {readv, A{FD, PTR, INT}, INT},
 	"writev":   {writev, A{FD, PTR, INT}, INT},
+	"getuid":   {getuid, A{}, INT},
+	"getgid":   {getgid, A{}, INT},
+	"dup2":     {dup2, A{INT, INT}, INT},
+
+	// stubs
+	"ioctl":          {stub, A{}, INT},
+	"rt_sigprocmask": {stub, A{}, INT},
 }
 
 func Call(u models.Usercorn, num int, name string, getArgs func(n int) ([]uint64, error), strace bool) (uint64, error) {
