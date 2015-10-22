@@ -170,10 +170,11 @@ func (u *Unicorn) PushBytes(p []byte) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if err := u.RegWrite(u.arch.SP, sp-uint64(len(p))); err != nil {
+	sp -= uint64(len(p))
+	if err := u.RegWrite(u.arch.SP, sp); err != nil {
 		return 0, err
 	}
-	return sp, u.MemWrite(sp-uint64(len(p)), p)
+	return sp, u.MemWrite(sp, p)
 }
 
 func (u *Unicorn) Push(n uint64) (uint64, error) {

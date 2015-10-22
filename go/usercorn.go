@@ -501,12 +501,11 @@ func (u *Usercorn) setupStack() error {
 func (u *Usercorn) pushStrings(args ...string) ([]uint64, error) {
 	addrs := make([]uint64, 0, len(args)+1)
 	for _, arg := range args {
-		var addr uint64
-		var err error
-		if addr, err = u.PushBytes([]byte(arg + "\x00")); err != nil {
+		if addr, err := u.PushBytes([]byte(arg + "\x00")); err != nil {
 			return nil, err
+		} else {
+			addrs = append(addrs, addr)
 		}
-		addrs = append(addrs, addr)
 	}
 	return addrs, nil
 }
@@ -515,8 +514,8 @@ func (u *Usercorn) pushAddrs(addrs []uint64) error {
 	if _, err := u.Push(0); err != nil {
 		return err
 	}
-	for _, v := range addrs {
-		if _, err := u.Push(v); err != nil {
+	for i, _ := range addrs {
+		if _, err := u.Push(addrs[len(addrs)-i-1]); err != nil {
 			return err
 		}
 	}
