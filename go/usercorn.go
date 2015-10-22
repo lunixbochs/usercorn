@@ -187,6 +187,9 @@ func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
 	if err != nil {
 		return err
 	}
+	// align stack pointer
+	sp, _ := u.RegRead(u.arch.SP)
+	u.RegWrite(u.arch.SP, (sp & ^uint64(15)))
 	// end marker
 	if _, err := u.Push(0); err != nil {
 		return err
