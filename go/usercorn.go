@@ -433,7 +433,7 @@ func (u *Usercorn) addHooks() error {
 		default:
 			fmt.Fprintf(os.Stderr, "unknown memory error")
 		}
-		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x\n", addr, size, value)
+		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x\n", addr, size, uint64(value))
 		return false
 	})
 	u.HookAdd(uc.HOOK_INTR, func(_ uc.Unicorn, intno uint32) {
