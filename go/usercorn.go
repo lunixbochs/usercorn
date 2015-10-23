@@ -82,7 +82,7 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 	}
 	for _, seg := range segments {
 		if seg.Prot&uc.PROT_WRITE != 0 {
-			addr := u.base + seg.Addr
+			addr := u.base + seg.Addr + seg.Size
 			if addr > u.brk {
 				u.brk = addr
 			}
