@@ -8,16 +8,23 @@ import (
 	"strings"
 )
 
+var discache = make(map[string]string)
+
 func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
+	cacheKey := string(mem)
 	if len(mem) == 0 {
 		return "", nil
+	}
+	var asm []gapstone.Instruction
+	if cached, ok := discache[cacheKey]; ok {
+		return cached, nil
 	}
 	engine, err := gapstone.New(arch.CS_ARCH, arch.CS_MODE)
 	if err != nil {
 		return "", err
 	}
 	defer engine.Close()
-	asm, err := engine.Disasm(mem, addr, 0)
+	asm, err = engine.Disasm(mem, addr, 0)
 	if err != nil {
 		return "", err
 	}
@@ -36,7 +43,9 @@ func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
 		data := pad + hex.EncodeToString(insn.Bytes)
 		out = append(out, fmt.Sprintf("0x%x: %s %s %s", insn.Address, data, insn.Mnemonic, insn.OpStr))
 	}
-	return strings.Join(out, "\n"), nil
+	ret := strings.Join(out, "\n")
+	discache[cacheKey] = ret
+	return ret, nil
 }
 
 func HexDump(base uint64, mem []byte, bits int) []string {
