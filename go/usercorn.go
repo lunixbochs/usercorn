@@ -424,11 +424,11 @@ func (u *Usercorn) addHooks() error {
 	invalid := uc.HOOK_MEM_READ_INVALID | uc.HOOK_MEM_WRITE_INVALID | uc.HOOK_MEM_FETCH_INVALID
 	u.HookAdd(invalid, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) bool {
 		switch access {
-		case uc.MEM_WRITE_UNMAPPED | uc.MEM_WRITE_PROT:
+		case uc.MEM_WRITE_UNMAPPED, uc.MEM_WRITE_PROT:
 			fmt.Fprintf(os.Stderr, "invalid write")
-		case uc.MEM_READ_UNMAPPED | uc.MEM_READ_PROT:
+		case uc.MEM_READ_UNMAPPED, uc.MEM_READ_PROT:
 			fmt.Fprintf(os.Stderr, "invalid read")
-		case uc.MEM_FETCH_UNMAPPED | uc.MEM_FETCH_PROT:
+		case uc.MEM_FETCH_UNMAPPED, uc.MEM_FETCH_PROT:
 			fmt.Fprintf(os.Stderr, "invalid fetch")
 		default:
 			fmt.Fprintf(os.Stderr, "unknown memory error")
