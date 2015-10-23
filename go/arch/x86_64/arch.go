@@ -33,5 +33,7 @@ var Arch = &models.Arch{
 		uc.X86_REG_R13: "r13",
 		uc.X86_REG_R14: "r14",
 		uc.X86_REG_R15: "r15",
+		uc.X86_REG_FS:  "fs",
+		uc.X86_REG_GS:  "gs",
 	},
 }
