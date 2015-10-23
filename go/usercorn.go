@@ -303,7 +303,7 @@ func (u *Usercorn) addHooks() error {
 				} else if count > 0 {
 					// TODO: maybe print a message when we start collapsing loops
 					// with the symbols or even all disassembly involved encapsulated
-					fmt.Fprintf(os.Stderr, indent+"- (%d) loops. blocks: [", count+1)
+					fmt.Fprintf(os.Stderr, indent+"- (%d) loops over [", count+1)
 					for i, v := range loop {
 						sym, _ := u.Symbolicate(v)
 						if sym != "" {
