@@ -88,6 +88,9 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 			}
 		}
 	}
+	// TODO: have a "host page size", maybe arch.Align()
+	mask := uint64(4096 - 1)
+	u.Brk((u.brk + mask) & ^mask)
 	return u, nil
 }
 
