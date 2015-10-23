@@ -17,11 +17,13 @@ func main() {
 
 	fs := flag.NewFlagSet("cli", flag.ExitOnError)
 	verbose := fs.Bool("v", false, "verbose output")
+	trace := fs.Bool("trace", false, "recommended tracing options: -loop 8 -strace -mtrace2 -etrace -rtrace")
 	strace := fs.Bool("strace", false, "trace syscalls")
 	mtrace := fs.Bool("mtrace", false, "trace memory access (single)")
 	mtrace2 := fs.Bool("mtrace2", false, "trace memory access (batched)")
 	etrace := fs.Bool("etrace", false, "trace execution")
 	rtrace := fs.Bool("rtrace", false, "trace register modification")
+	looproll := fs.Int("loop", 0, "collapse loop blocks of this depth")
 	prefix := fs.String("prefix", "", "library load prefix")
 	base := fs.Uint64("base", 0, "force executable base address")
 	ibase := fs.Uint64("ibase", 0, "force interpreter base address")
@@ -49,11 +51,15 @@ func main() {
 		log.Fatal(err)
 	}
 	corn.Verbose = *verbose
-	corn.TraceSys = *strace
+	corn.TraceSys = *strace || *trace
 	corn.TraceMem = *mtrace
-	corn.TraceMemBatch = *mtrace2
-	corn.TraceReg = *rtrace
-	corn.TraceExec = *etrace
+	corn.TraceMemBatch = *mtrace2 || *trace
+	corn.TraceReg = *rtrace || *trace
+	corn.TraceExec = *etrace || *trace
+	if *looproll == 0 && *trace {
+		*looproll = 8
+	}
+	corn.LoopCollapse = *looproll
 	corn.ForceBase = *base
 	corn.ForceInterpBase = *ibase
 

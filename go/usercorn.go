@@ -35,10 +35,12 @@ type Usercorn struct {
 	TraceReg        bool
 	ForceBase       uint64
 	ForceInterpBase uint64
+	LoopCollapse    int
 
 	LoadPrefix string
 	status     models.StatusDiff
 	stacktrace models.Stacktrace
+	loopdetect *models.LoopDetect
 	memlog     models.MemLog
 
 	exitStatus error
@@ -89,6 +91,9 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 }
 
 func (u *Usercorn) Run(args []string, env []string) error {
+	if u.LoopCollapse > 0 {
+		u.loopdetect = models.NewLoopDetect(u.LoopCollapse)
+	}
 	if err := u.addHooks(); err != nil {
 		return err
 	}
@@ -231,6 +236,9 @@ func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
 		nearest := make(map[uint64][]models.Symbol)
 		var min int64 = -1
 		for _, sym := range symbols {
+			if sym.Start == 0 {
+				continue
+			}
 			dist := int64(addr - sym.Start)
 			if dist > 0 && (sym.Start+uint64(dist) <= sym.End || sym.End == 0) && sym.Name != "" {
 				if dist < min || min == -1 {
@@ -278,6 +286,27 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 func (u *Usercorn) addHooks() error {
 	if u.TraceExec || u.TraceReg {
 		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
+			if u.loopdetect != nil {
+				indent := strings.Repeat("  ", u.stacktrace.Len()-1)
+				if looped, loop, count := u.loopdetect.Update(addr); looped {
+					return
+				} else if count > 0 {
+					// TODO: maybe print a message when we start collapsing loops
+					// with the symbols or even all disassembly involved encapsulated
+					fmt.Fprintf(os.Stderr, indent+"- (%d) loops. blocks: [", count+1)
+					for i, v := range loop {
+						sym, _ := u.Symbolicate(v)
+						if sym != "" {
+							sym = " (" + sym + ")"
+						}
+						fmt.Fprintf(os.Stderr, "0x%x%s", v, sym)
+						if i < len(loop)-1 {
+							fmt.Fprintf(os.Stderr, ", ")
+						}
+					}
+					fmt.Fprintf(os.Stderr, "]\n")
+				}
+			}
 			if u.TraceMemBatch {
 				indent := strings.Repeat("  ", u.stacktrace.Len()-1)
 				u.memlog.Print(indent, u.arch.Bits)
@@ -287,7 +316,10 @@ func (u *Usercorn) addHooks() error {
 				u.stacktrace.Update(addr, sp)
 			}
 			indent := strings.Repeat("  ", u.stacktrace.Len())
-			blockIndent := indent[:len(indent)-2]
+			blockIndent := indent
+			if len(indent) >= 2 {
+				blockIndent = indent[:len(indent)-2]
+			}
 			sym, _ := u.Symbolicate(addr)
 			if sym != "" {
 				sym = " (" + sym + ")"
@@ -312,7 +344,7 @@ func (u *Usercorn) addHooks() error {
 			if addr == u.lastCode || u.TraceReg && u.TraceExec {
 				changes = u.status.Changes()
 			}
-			if u.TraceExec {
+			if u.TraceExec && u.loopdetect == nil || u.loopdetect.Loops == 0 {
 				dis, _ := u.Disas(addr, uint64(size))
 				fmt.Fprintf(os.Stderr, "%s", indent+dis)
 				if !u.TraceReg || changes.Count() == 0 {
