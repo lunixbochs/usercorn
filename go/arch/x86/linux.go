@@ -15,19 +15,23 @@ func LinuxInit(u models.Usercorn, args, env []string) error {
 	return u.PosixInit(args, env, nil)
 }
 
+func linux_uname(u syscalls.U, args []uint64) uint64 {
+	addr, _ := u.RegRead(LinuxRegs[0])
+	StaticUname.Pad(64)
+	syscalls.Uname(u, addr, &StaticUname)
+	return 0
+}
+
+var overrides = map[string]*syscalls.Syscall{
+	"uname": {linux_uname, A{PTR}, INT},
+}
+
 func LinuxSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
 	eax, _ := u.RegRead(uc.X86_REG_EAX)
 	name, _ := num.Linux_x86[int(eax)]
-	var ret uint64
-	switch name {
-	case "uname":
-		StaticUname.Pad(64)
-		addr, _ := u.RegRead(LinuxRegs[0])
-		syscalls.Uname(u, addr, &StaticUname)
-	default:
-		ret, _ = u.Syscall(int(eax), name, syscalls.RegArgs(u, LinuxRegs), nil)
-	}
+	override, _ := overrides[name]
+	ret, _ := u.Syscall(int(eax), name, syscalls.RegArgs(u, LinuxRegs), override)
 	u.RegWrite(uc.X86_REG_EAX, ret)
 }
 

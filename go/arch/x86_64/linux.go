@@ -29,14 +29,6 @@ const (
 	ARCH_GET_GS = 0x1004
 )
 
-type A syscalls.A
-
-const (
-	INT  = syscalls.INT
-	ENUM = syscalls.ENUM
-	PTR  = syscalls.PTR
-)
-
 func linux_arch_prctl(u syscalls.U, args []uint64) uint64 {
 	code, _ := u.RegRead(AbiRegs[0])
 	addr, _ := u.RegRead(AbiRegs[1])

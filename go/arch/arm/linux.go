@@ -16,6 +16,18 @@ func LinuxInit(u models.Usercorn, args, env []string) error {
 	return u.PosixInit(args, env, nil)
 }
 
+func linux_uname(u syscalls.U, args []uint64) uint64 {
+	addr, _ := u.RegRead(LinuxRegs[0])
+	StaticUname.Pad(64)
+	syscalls.Uname(u, addr, &StaticUname)
+	return 0
+}
+
+var overrides = map[string]*syscalls.Syscall{
+	"set_tls": {syscalls.Stub, A{PTR}, INT},
+	"uname":   {linux_uname, A{PTR}, INT},
+}
+
 func LinuxSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
 	num, _ := u.RegRead(uc.ARM_REG_R7)
@@ -25,16 +37,8 @@ func LinuxSyscall(u models.Usercorn) {
 		num -= 0x900000
 	}
 	name, _ := sysnum.Linux_arm[int(num)]
-	var ret uint64
-	switch name {
-	case "set_tls":
-	case "uname":
-		StaticUname.Pad(64)
-		addr, _ := u.RegRead(LinuxRegs[0])
-		syscalls.Uname(u, addr, &StaticUname)
-	default:
-		ret, _ = u.Syscall(int(num), name, syscalls.RegArgs(u, LinuxRegs), nil)
-	}
+	override, _ := overrides[name]
+	ret, _ := u.Syscall(int(num), name, syscalls.RegArgs(u, LinuxRegs), override)
 	u.RegWrite(uc.ARM_REG_R0, ret)
 }
 
