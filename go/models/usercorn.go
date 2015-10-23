@@ -9,6 +9,7 @@ import (
 type Usercorn interface {
 	uc.Unicorn
 	Arch() *Arch
+	OS() string
 	Bits() uint
 	ByteOrder() binary.ByteOrder
 	Disas(addr, size uint64) (string, error)
@@ -28,6 +29,7 @@ type Usercorn interface {
 	ReadRegs(reg []int) ([]uint64, error)
 	RegDump() ([]RegVal, error)
 
+	Exe() string
 	Loader() Loader
 	InterpBase() uint64
 	Base() uint64

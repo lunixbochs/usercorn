@@ -16,6 +16,7 @@ import (
 
 type Usercorn struct {
 	*Unicorn
+	exe          string
 	loader       models.Loader
 	interpLoader models.Loader
 
@@ -64,8 +65,10 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
+	exe, _ = filepath.Abs(exe)
 	u := &Usercorn{
 		Unicorn:    unicorn,
+		exe:        exe,
 		loader:     l,
 		LoadPrefix: prefix,
 	}
@@ -104,8 +107,8 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	if err := u.setupStack(); err != nil {
 		return err
 	}
-	if u.OS.Init != nil {
-		if err := u.OS.Init(u, args, env); err != nil {
+	if u.os.Init != nil {
+		if err := u.os.Init(u, args, env); err != nil {
 			return err
 		}
 	}
@@ -160,6 +163,10 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		err = u.exitStatus
 	}
 	return err
+}
+
+func (u *Usercorn) Exe() string {
+	return u.exe
 }
 
 func (u *Usercorn) Loader() models.Loader {
@@ -440,7 +447,7 @@ func (u *Usercorn) addHooks() error {
 		return false
 	})
 	u.HookAdd(uc.HOOK_INTR, func(_ uc.Unicorn, intno uint32) {
-		u.OS.Interrupt(u, intno)
+		u.os.Interrupt(u, intno)
 	})
 	return nil
 }

@@ -12,7 +12,7 @@ import (
 type Unicorn struct {
 	uc.Unicorn
 	arch   *models.Arch
-	OS     *models.OS
+	os     *models.OS
 	bits   int
 	Bsz    int
 	order  binary.ByteOrder
@@ -28,7 +28,7 @@ func NewUnicorn(arch *models.Arch, os *models.OS, order binary.ByteOrder) (*Unic
 	return &Unicorn{
 		Unicorn: Uc,
 		arch:    arch,
-		OS:      os,
+		os:      os,
 		bits:    arch.Bits,
 		Bsz:     arch.Bits / 8,
 		order:   order,
@@ -53,6 +53,10 @@ func NewUnicorn(arch *models.Arch, os *models.OS, order binary.ByteOrder) (*Unic
 
 func (u *Unicorn) Arch() *models.Arch {
 	return u.arch
+}
+
+func (u *Unicorn) OS() string {
+	return u.os.Name
 }
 
 func (u *Unicorn) Bits() uint {

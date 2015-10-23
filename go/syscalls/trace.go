@@ -46,8 +46,7 @@ func (s Syscall) traceArgs(u models.Usercorn, args []uint64) string {
 	types := s.Args
 	ret := make([]string, 0, len(types))
 	for i, t := range types {
-		s := traceArg(u, args[i:], t)
-		ret = append(ret, s)
+		ret = append(ret, traceArg(u, args[i:], t))
 	}
 	return strings.Join(ret, ", ")
 }

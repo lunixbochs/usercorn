@@ -184,10 +184,19 @@ func dup2(u U, a []uint64) uint64 {
 
 func readlink(u U, a []uint64) uint64 {
 	path, _ := u.Mem().ReadStrAt(a[0])
+	// TODO: full proc emulation layer
+	// maybe have a syscall pre-hook for this after ghostrace makes it generic
+	// or specifically have path hooks and use that to implement prefix as well
 	bufsz := a[2]
-	name, err := os.Readlink(path)
-	if err != nil {
-		return UINT64_MAX
+	var name string
+	var err error
+	if path == "/proc/self/exe" && u.OS() == "linux" {
+		name = u.Exe()
+	} else {
+		name, err = os.Readlink(path)
+		if err != nil {
+			return UINT64_MAX
+		}
 	}
 	if len(name) > int(bufsz)-1 {
 		name = name[:bufsz-1]
@@ -225,7 +234,7 @@ var syscalls = map[string]Syscall{
 	"getuid":   {getuid, A{}, INT},
 	"getgid":   {getgid, A{}, INT},
 	"dup2":     {dup2, A{INT, INT}, INT},
-	"readlink": {readlink, A{STR, STR, INT}, INT},
+	"readlink": {readlink, A{STR, OBUF, INT}, LEN},
 
 	// stubs
 	"ioctl":          {Stub, A{}, INT},
