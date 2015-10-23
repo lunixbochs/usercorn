@@ -24,8 +24,8 @@ type Usercorn struct {
 	entry      uint64
 	binEntry   uint64
 
-	StackBase   uint64
-	DataSegment models.Segment
+	StackBase uint64
+	brk       uint64
 
 	Verbose         bool
 	TraceSys        bool
@@ -80,11 +80,12 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
-	mask := uc.PROT_READ | uc.PROT_WRITE
 	for _, seg := range segments {
-		if seg.Prot&mask == mask {
-			start := u.base + seg.Addr
-			u.DataSegment = models.Segment{start, seg.Size, seg.Prot}
+		if seg.Prot&uc.PROT_WRITE != 0 {
+			addr := u.base + seg.Addr
+			if addr > u.brk {
+				u.brk = addr
+			}
 		}
 	}
 	return u, nil
@@ -272,15 +273,14 @@ func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
 
 func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 	// TODO: this is linux specific
-	s := u.DataSegment
 	if addr > 0 {
-		err := u.MemMapProt(s.End, addr-s.End, s.Prot)
+		err := u.MemMapProt(u.brk, addr-u.brk, uc.PROT_READ|uc.PROT_WRITE)
 		if err != nil {
-			return s.End, err
+			return u.brk, err
 		}
-		s.End = addr
+		u.brk = addr
 	}
-	return s.End, nil
+	return u.brk, nil
 }
 
 func (u *Usercorn) addHooks() error {
