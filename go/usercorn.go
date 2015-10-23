@@ -554,14 +554,14 @@ func (u *Usercorn) pushAddrs(addrs []uint64) error {
 	return nil
 }
 
-func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
+func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error), override interface{}) (uint64, error) {
 	if name == "" {
 		panic(fmt.Sprintf("Syscall missing: %d", num))
 	}
 	if u.TraceSys && u.stacktrace.Len() > 0 {
 		fmt.Fprintf(os.Stderr, strings.Repeat("  ", u.stacktrace.Len()-1)+"s ")
 	}
-	return syscalls.Call(u, num, name, getArgs, u.TraceSys)
+	return syscalls.Call(u, num, name, getArgs, u.TraceSys, override)
 }
 
 func (u *Usercorn) Exit(status int) {

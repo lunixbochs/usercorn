@@ -26,7 +26,7 @@ func LinuxSyscall(u models.Usercorn) {
 		addr, _ := u.RegRead(LinuxRegs[0])
 		syscalls.Uname(u, addr, &StaticUname)
 	default:
-		ret, _ = u.Syscall(int(eax), name, syscalls.RegArgs(u, LinuxRegs))
+		ret, _ = u.Syscall(int(eax), name, syscalls.RegArgs(u, LinuxRegs), nil)
 	}
 	u.RegWrite(uc.X86_REG_EAX, ret)
 }

@@ -30,7 +30,7 @@ func DarwinSyscall(u models.Usercorn) {
 	rax, _ := u.RegRead(uc.X86_REG_RAX)
 	num := int(rax - 0x2000000)
 	name, _ := darwinSyscalls[num]
-	ret, _ := u.Syscall(num, name, syscalls.RegArgs(u, AbiRegs))
+	ret, _ := u.Syscall(num, name, syscalls.RegArgs(u, AbiRegs), nil)
 	u.RegWrite(uc.X86_REG_RAX, ret)
 }
 

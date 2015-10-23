@@ -10,6 +10,7 @@ import (
 
 const (
 	INT = iota
+	ENUM
 	FD
 	STR
 	BUF
@@ -19,7 +20,7 @@ const (
 	PTR
 )
 
-func traceBasicArg(u models.Usercorn, name string, arg uint64, t int) string {
+func traceBasicArg(u models.Usercorn, arg uint64, t int) string {
 	switch t {
 	case INT, FD:
 		return fmt.Sprintf("%d", int32(arg))
@@ -31,31 +32,31 @@ func traceBasicArg(u models.Usercorn, name string, arg uint64, t int) string {
 	}
 }
 
-func traceArg(u models.Usercorn, name string, args []uint64, t int) string {
+func traceArg(u models.Usercorn, args []uint64, t int) string {
 	switch t {
 	case BUF:
 		mem, _ := u.MemRead(args[0], args[1])
 		return fmt.Sprintf("%#v", string(mem))
 	default:
-		return traceBasicArg(u, name, args[0], t)
+		return traceBasicArg(u, args[0], t)
 	}
 }
 
-func traceArgs(u models.Usercorn, name string, args []uint64) string {
-	types := syscalls[name].Args
+func (s Syscall) traceArgs(u models.Usercorn, args []uint64) string {
+	types := s.Args
 	ret := make([]string, 0, len(types))
 	for i, t := range types {
-		s := traceArg(u, name, args[i:], t)
+		s := traceArg(u, args[i:], t)
 		ret = append(ret, s)
 	}
 	return strings.Join(ret, ", ")
 }
 
-func Trace(u models.Usercorn, name string, args []uint64) {
-	fmt.Fprintf(os.Stderr, "%s(%s)", name, traceArgs(u, name, args))
+func (s Syscall) Trace(u models.Usercorn, name string, args []uint64) {
+	fmt.Fprintf(os.Stderr, "%s(%s)", name, s.traceArgs(u, args))
 }
 
-func TraceRet(u models.Usercorn, name string, args []uint64, ret uint64) {
+func (s Syscall) TraceRet(u models.Usercorn, name string, args []uint64, ret uint64) {
 	types := syscalls[name].Args
 	var out []string
 	for i, t := range types {
@@ -67,6 +68,6 @@ func TraceRet(u models.Usercorn, name string, args []uint64, ret uint64) {
 			}
 		}
 	}
-	out = append(out, traceBasicArg(u, name, ret, syscalls[name].Ret))
+	out = append(out, traceBasicArg(u, ret, s.Ret))
 	fmt.Fprintf(os.Stderr, " = %s\n", strings.Join(out, ", "))
 }

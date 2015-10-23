@@ -196,7 +196,7 @@ func readlink(u U, a []uint64) uint64 {
 	return uint64(len(name))
 }
 
-func stub(u U, a []uint64) uint64 {
+func Stub(u U, a []uint64) uint64 {
 	return 0
 }
 
@@ -228,13 +228,17 @@ var syscalls = map[string]Syscall{
 	"readlink": {readlink, A{STR, STR, INT}, INT},
 
 	// stubs
-	"ioctl":          {stub, A{}, INT},
-	"rt_sigprocmask": {stub, A{}, INT},
+	"ioctl":          {Stub, A{}, INT},
+	"rt_sigprocmask": {Stub, A{}, INT},
 }
 
-func Call(u models.Usercorn, num int, name string, getArgs func(n int) ([]uint64, error), strace bool) (uint64, error) {
+type argFunc func(n int) ([]uint64, error)
+
+func Call(u models.Usercorn, num int, name string, getArgs argFunc, strace bool, override interface{}) (uint64, error) {
 	s, ok := syscalls[name]
-	if !ok {
+	if override != nil && override.(*Syscall) != nil {
+		s = *override.(*Syscall)
+	} else if !ok {
 		panic(fmt.Errorf("Unknown syscall: %s", name))
 	}
 	args, err := getArgs(len(s.Args))
@@ -242,11 +246,11 @@ func Call(u models.Usercorn, num int, name string, getArgs func(n int) ([]uint64
 		return 0, err
 	}
 	if strace {
-		Trace(u, name, args)
+		s.Trace(u, name, args)
 	}
 	ret := s.Func(u, args)
 	if strace {
-		TraceRet(u, name, args, ret)
+		s.TraceRet(u, name, args, ret)
 	}
 	return ret, nil
 }

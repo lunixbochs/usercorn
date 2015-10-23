@@ -29,40 +29,55 @@ const (
 	ARCH_GET_GS = 0x1004
 )
 
+type A syscalls.A
+
+const (
+	INT  = syscalls.INT
+	ENUM = syscalls.ENUM
+	PTR  = syscalls.PTR
+)
+
+func linux_arch_prctl(u syscalls.U, args []uint64) uint64 {
+	code, _ := u.RegRead(AbiRegs[0])
+	addr, _ := u.RegRead(AbiRegs[1])
+	var tmp [8]byte
+	bsz := u.Bits() / 8
+	// TODO: make set check for valid mapped memory
+	switch code {
+	case ARCH_SET_FS:
+		u.RegWrite(uc.X86_REG_FS, addr)
+	case ARCH_SET_GS:
+		u.RegWrite(uc.X86_REG_GS, addr)
+	case ARCH_GET_FS:
+		val, _ := u.RegRead(uc.X86_REG_FS)
+		u.PackAddr(tmp[:bsz], val)
+		u.MemWrite(addr, tmp[:bsz])
+	case ARCH_GET_GS:
+		val, _ := u.RegRead(uc.X86_REG_GS)
+		u.PackAddr(tmp[:bsz], val)
+		u.MemWrite(addr, tmp[:bsz])
+	}
+	return 0
+}
+
+func linux_uname(u syscalls.U, args []uint64) uint64 {
+	addr, _ := u.RegRead(AbiRegs[0])
+	StaticUname.Pad(64)
+	syscalls.Uname(u, addr, &StaticUname)
+	return 0
+}
+
+var overrides = map[string]*syscalls.Syscall{
+	"arch_prctl":      {linux_arch_prctl, A{ENUM, PTR}, INT},
+	"uname":           {linux_uname, A{PTR}, INT},
+	"set_tid_address": {syscalls.Stub, A{PTR}, INT},
+}
+
 func LinuxSyscall(u models.Usercorn) {
 	rax, _ := u.RegRead(uc.X86_REG_RAX)
 	name, _ := num.Linux_x86_64[int(rax)]
-	var ret uint64
-	switch name {
-	case "uname":
-		// TODO: strace these
-		addr, _ := u.RegRead(AbiRegs[0])
-		StaticUname.Pad(64)
-		syscalls.Uname(u, addr, &StaticUname)
-	case "arch_prctl":
-		code, _ := u.RegRead(AbiRegs[0])
-		addr, _ := u.RegRead(AbiRegs[1])
-		var tmp [8]byte
-		bsz := u.Bits() / 8
-		// TODO: make set check for valid mapped memory
-		switch code {
-		case ARCH_SET_FS:
-			u.RegWrite(uc.X86_REG_FS, addr)
-		case ARCH_SET_GS:
-			u.RegWrite(uc.X86_REG_GS, addr)
-		case ARCH_GET_FS:
-			val, _ := u.RegRead(uc.X86_REG_FS)
-			u.PackAddr(tmp[:bsz], val)
-			u.MemWrite(addr, tmp[:bsz])
-		case ARCH_GET_GS:
-			val, _ := u.RegRead(uc.X86_REG_GS)
-			u.PackAddr(tmp[:bsz], val)
-			u.MemWrite(addr, tmp[:bsz])
-		}
-	case "set_tid_address":
-	default:
-		ret, _ = u.Syscall(int(rax), name, syscalls.RegArgs(u, AbiRegs))
-	}
+	override, _ := overrides[name]
+	ret, _ := u.Syscall(int(rax), name, syscalls.RegArgs(u, AbiRegs), override)
 	u.RegWrite(uc.X86_REG_RAX, ret)
 }
 
