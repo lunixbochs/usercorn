@@ -1,5 +1,9 @@
 package models
 
+import (
+	"fmt"
+)
+
 type Loop struct {
 	Loop          []uint64
 	Index, Filled int
@@ -112,4 +116,29 @@ func (l *LoopDetect) Detect() *Loop {
 		}
 	}
 	return nil
+}
+
+func (l *LoopDetect) String(u Usercorn, loop []uint64) string {
+	out := "["
+	for i, addr := range loop {
+		sym := ""
+		if u != nil {
+			sym, _ = u.Symbolicate(addr)
+			if sym != "" {
+				sym = " (" + sym + ")"
+			}
+		}
+		out += fmt.Sprintf("0x%x%s", addr, sym)
+		if i < len(loop)-1 {
+			out += fmt.Sprintf(", ")
+		}
+	}
+	return out + "]"
+}
+
+func (l *LoopDetect) Reset() {
+	l.Loop = nil
+	l.Loops = 0
+	l.History.Index = 0
+	l.History.Filled = 0
 }

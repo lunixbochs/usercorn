@@ -41,7 +41,8 @@ type Usercorn struct {
 	LoadPrefix string
 	status     models.StatusDiff
 	stacktrace models.Stacktrace
-	loopdetect *models.LoopDetect
+	blockloop  *models.LoopDetect
+	codeloop   *models.LoopDetect
 	memlog     models.MemLog
 
 	exitStatus error
@@ -99,7 +100,8 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 
 func (u *Usercorn) Run(args []string, env []string) error {
 	if u.LoopCollapse > 0 {
-		u.loopdetect = models.NewLoopDetect(u.LoopCollapse)
+		u.blockloop = models.NewLoopDetect(u.LoopCollapse)
+		u.codeloop = models.NewLoopDetect(u.LoopCollapse)
 	}
 	if err := u.addHooks(); err != nil {
 		return err
@@ -296,25 +298,20 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 func (u *Usercorn) addHooks() error {
 	if u.TraceExec || u.TraceReg {
 		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
-			if u.loopdetect != nil {
-				indent := strings.Repeat("  ", u.stacktrace.Len()-1)
-				if looped, loop, count := u.loopdetect.Update(addr); looped {
+			indent := strings.Repeat("  ", u.stacktrace.Len()-1)
+			if u.codeloop != nil && u.codeloop.Loop != nil {
+				chain := u.codeloop.String(nil, u.codeloop.Loop.Loop)
+				fmt.Fprintf(os.Stderr, indent+"- (%d) loops (sub-block) over %s\n", u.codeloop.Loops, chain)
+				u.codeloop.Reset()
+			}
+			if u.blockloop != nil {
+				if looped, loop, count := u.blockloop.Update(addr); looped {
 					return
 				} else if count > 0 {
 					// TODO: maybe print a message when we start collapsing loops
 					// with the symbols or even all disassembly involved encapsulated
-					fmt.Fprintf(os.Stderr, indent+"- (%d) loops over [", count+1)
-					for i, v := range loop {
-						sym, _ := u.Symbolicate(v)
-						if sym != "" {
-							sym = " (" + sym + ")"
-						}
-						fmt.Fprintf(os.Stderr, "0x%x%s", v, sym)
-						if i < len(loop)-1 {
-							fmt.Fprintf(os.Stderr, ", ")
-						}
-					}
-					fmt.Fprintf(os.Stderr, "]\n")
+					chain := u.blockloop.String(u, loop)
+					fmt.Fprintf(os.Stderr, indent+"- (%d) loops over %s\n", count, chain)
 				}
 			}
 			if u.TraceMemBatch {
@@ -325,7 +322,7 @@ func (u *Usercorn) addHooks() error {
 			if sp, err := u.RegRead(u.arch.SP); err == nil {
 				u.stacktrace.Update(addr, sp)
 			}
-			indent := strings.Repeat("  ", u.stacktrace.Len())
+			indent = strings.Repeat("  ", u.stacktrace.Len())
 			blockIndent := indent
 			if len(indent) >= 2 {
 				blockIndent = indent[:len(indent)-2]
@@ -350,11 +347,19 @@ func (u *Usercorn) addHooks() error {
 	if u.TraceExec {
 		u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
 			indent := strings.Repeat("  ", u.stacktrace.Len())
+			if u.codeloop != nil && (u.blockloop == nil || u.blockloop.Loops == 0) {
+				if looped, loop, count := u.codeloop.Update(addr); looped {
+					return
+				} else if count > 0 {
+					chain := u.codeloop.String(nil, loop)
+					fmt.Fprintf(os.Stderr, indent+"- (%d) loops (sub-block) over %s\n", count, chain)
+				}
+			}
 			var changes *models.Changes
 			if addr == u.lastCode || u.TraceReg && u.TraceExec {
 				changes = u.status.Changes()
 			}
-			if u.TraceExec && u.loopdetect == nil || u.loopdetect.Loops == 0 {
+			if u.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 {
 				dis, _ := u.Disas(addr, uint64(size))
 				fmt.Fprintf(os.Stderr, "%s", indent+dis)
 				if !u.TraceReg || changes.Count() == 0 {
