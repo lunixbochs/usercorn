@@ -1,2 +1,0 @@
-import cli
-cli.run()

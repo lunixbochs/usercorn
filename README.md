@@ -5,8 +5,6 @@ usercorn
 
 You need [Unicorn](http://www.unicorn-engine.org/) installed to use this.
 
-Usercorn has two implementations: Go and Python. The Go variant is more advanced, faster (+10x), and more stable, but harder to script.
-
 *Go Instructions*
 
 *The latest stable version of Go is recommended for performance and compatibility reasons.*
@@ -24,21 +22,6 @@ Usercorn has two implementations: Go and Python. The Go variant is more advanced
     ./usercorn bins/x86_64.darwin.macho
     ./usercorn bins/x86.linux.cgc
     ./usercorn bins/mipsel.linux.elf
-
-*Python Instructions (DEPRECATED)*
-
-(*The Python frontend has been deprecated and will eventually be replaced with a native module*)
-
-Install the Unicorn Python bindings (`cd bindings/python; make install`)
-
-    pip install -r py/requirements.txt
-
-    # test executables
-    python py/run.py bins/x86.linux.elf
-    python py/run.py bins/x86_64.linux.elf
-    python py/run.py bins/x86.darwin.macho
-    python py/run.py bins/x86_64.darwin.macho
-    python py/run.py bins/x86.linux.cgc
 
 What.
 ----

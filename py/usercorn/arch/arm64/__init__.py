@@ -1,1 +1,0 @@
-from info import *
