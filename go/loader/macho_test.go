@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"log"
 	"testing"
 )
 
@@ -13,7 +12,7 @@ var machoFile io.ReaderAt
 func init() {
 	p, err := ioutil.ReadFile("../../bins/x86.darwin.macho")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	machoFile = bytes.NewReader(p)
 }

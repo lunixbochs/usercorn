@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -43,12 +42,12 @@ func main() {
 	if *prefix != "" {
 		absPrefix, err = filepath.Abs(*prefix)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	}
 	corn, err := NewUsercorn(args[0], absPrefix)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	corn.Verbose = *verbose
 	corn.TraceSys = *strace || *trace
@@ -68,7 +67,7 @@ func main() {
 		if e, ok := err.(models.ExitStatus); ok {
 			os.Exit(int(e))
 		} else {
-			log.Fatal(err)
+			panic(err)
 		}
 	}
 }

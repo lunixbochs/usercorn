@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"log"
 	"testing"
 )
 
@@ -13,7 +12,7 @@ var cgcFile io.ReaderAt
 func init() {
 	p, err := ioutil.ReadFile("../../bins/x86.linux.cgc")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	cgcFile = bytes.NewReader(p)
 }
