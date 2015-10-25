@@ -9,6 +9,8 @@ Usercorn has two implementations: Go and Python. The Go variant is more advanced
 
 *Go Instructions*
 
+*The latest stable version of Go is recommended for performance and compatibility reasons.*
+
     # not windows:
     make
 
