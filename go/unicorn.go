@@ -1,4 +1,4 @@
-package main
+package usercorn
 
 import (
 	"encoding/binary"

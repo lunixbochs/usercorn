@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	usercorn "github.com/lunixbochs/usercorn/go"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
@@ -45,7 +46,7 @@ func main() {
 			panic(err)
 		}
 	}
-	corn, err := NewUsercorn(args[0], absPrefix)
+	corn, err := usercorn.NewUsercorn(args[0], absPrefix)
 	if err != nil {
 		panic(err)
 	}

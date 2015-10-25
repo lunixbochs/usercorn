@@ -1,4 +1,4 @@
-package main
+package usercorn
 
 const (
 	BASE         = 1024 * 1024

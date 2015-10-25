@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := go
 
 go:
-	go build -i -o usercorn ./go
+	go build -i -o usercorn ./go/usercorn
 
 get:
 	go get ./go
