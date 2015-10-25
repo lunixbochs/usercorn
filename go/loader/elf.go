@@ -135,28 +135,19 @@ func (e *ElfLoader) Segments() ([]models.SegmentData, error) {
 	return ret, nil
 }
 
-func (e *ElfLoader) getSymbols() ([]models.Symbol, error) {
+func (e *ElfLoader) getSymbolsCommon() ([]models.Symbol, error) {
 	syms, err := e.file.Symbols()
 	if err != nil {
 		return nil, err
 	}
 	// don't care about missing dyn symtab
-	dyn, _ := e.file.DynamicSymbols()
-	symbols := make([]models.Symbol, 0, len(syms)+len(dyn))
+	symbols := make([]models.Symbol, 0, len(syms))
 	for _, s := range syms {
 		symbols = append(symbols, models.Symbol{
 			Name:    s.Name,
 			Start:   s.Value,
 			End:     s.Value + s.Size,
 			Dynamic: false,
-		})
-	}
-	for _, s := range dyn {
-		symbols = append(symbols, models.Symbol{
-			Name:    s.Name,
-			Start:   s.Value,
-			End:     s.Value + s.Size,
-			Dynamic: true,
 		})
 	}
 	return symbols, nil
