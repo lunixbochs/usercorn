@@ -3,19 +3,20 @@ usercorn
 
 [![Build Status](https://travis-ci.org/lunixbochs/usercorn.svg?branch=master)](https://travis-ci.org/lunixbochs/usercorn)
 
-You need [Unicorn](http://www.unicorn-engine.org/) installed to use this.
+Building
+---
 
-*Go Instructions*
+- You need [Unicorn](http://www.unicorn-engine.org/) installed to use this.
+- The latest stable version of Go is recommended for performance and compatibility reasons.
+- Make sure you have the GOPATH environment variable pointed at a directory like `$HOME/go`, and `$GOPATH/bin` is in your PATH.
 
-*The latest stable version of Go is recommended for performance and compatibility reasons.*
+Simply `go get github.com/lunixbochs/usercorn/go/usercorn`.
 
-    # not windows:
-    make
+To do a source build, you can also run `make` or `go build -i -o usercorn ./go/usercorn`
 
-    # windows:
-    go build -i -o usercorn ./go
+Examples
+---
 
-    # test executables
     ./usercorn bins/x86.linux.elf
     ./usercorn bins/x86_64.linux.elf
     ./usercorn bins/x86.darwin.macho
