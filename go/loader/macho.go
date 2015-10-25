@@ -12,11 +12,11 @@ import (
 )
 
 var machoCpuMap = map[macho.Cpu]string{
-	macho.Cpu386:   "x86",
-	macho.CpuAmd64: "x86_64",
-	macho.CpuArm:   "arm",
-	macho.CpuPpc:   "ppc",
-	macho.CpuPpc64: "ppc64",
+	machoCpu386:   "x86",
+	machoCpuAmd64: "x86_64",
+	machoCpuArm:   "arm",
+	machoCpuPpc:   "ppc",
+	machoCpuPpc64: "ppc64",
 }
 
 var machoMagics = [][]byte{
