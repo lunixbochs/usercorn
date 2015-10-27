@@ -178,6 +178,14 @@ func getgid(u U, a []uint64) uint64 {
 	return uint64(os.Getgid())
 }
 
+func geteuid(u U, a []uint64) uint64 {
+	return uint64(os.Geteuid())
+}
+
+func getegid(u U, a []uint64) uint64 {
+	return uint64(os.Getegid())
+}
+
 func dup2(u U, a []uint64) uint64 {
 	return errno(syscall.Dup2(int(a[0]), int(a[1])))
 }
@@ -233,6 +241,8 @@ var syscalls = map[string]Syscall{
 	"writev":   {writev, A{FD, PTR, INT}, INT},
 	"getuid":   {getuid, A{}, INT},
 	"getgid":   {getgid, A{}, INT},
+	"geteuid":  {geteuid, A{}, INT},
+	"getegid":  {getegid, A{}, INT},
 	"dup2":     {dup2, A{INT, INT}, INT},
 	"readlink": {readlink, A{STR, OBUF, INT}, LEN},
 
