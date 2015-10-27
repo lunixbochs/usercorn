@@ -251,7 +251,7 @@ func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
 				continue
 			}
 			dist := int64(addr - sym.Start)
-			if dist > 0 && (sym.Start+uint64(dist) <= sym.End || sym.End == 0) && sym.Name != "" {
+			if dist >= 0 && (sym.Start+uint64(dist) <= sym.End || sym.End == 0) && sym.Name != "" {
 				if dist < min || min == -1 {
 					min = dist
 				}
