@@ -211,8 +211,10 @@ func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
 		return err
 	}
 	// auxv
-	if _, err := u.PushBytes(auxv); err != nil {
-		return err
+	if len(auxv) > 0 {
+		if _, err := u.PushBytes(auxv); err != nil {
+			return err
+		}
 	}
 	// envp
 	if err := u.pushAddrs(envp); err != nil {

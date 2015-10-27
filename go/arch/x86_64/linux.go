@@ -15,9 +15,6 @@ func LinuxInit(u models.Usercorn, args, env []string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := u.PushBytes(auxv); err != nil {
-		return err
-	}
 	return AbiInit(u, args, env, auxv, LinuxSyscall)
 }
 
