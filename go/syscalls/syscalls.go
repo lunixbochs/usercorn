@@ -213,6 +213,14 @@ func readlink(u U, a []uint64) uint64 {
 	return uint64(len(name))
 }
 
+func openat(u U, a []uint64) uint64 {
+	dirfd := int(a[0])
+	path, _ := u.Mem().ReadStrAt(a[1])
+	// TODO: flags might be different per arch
+	flags, mode := int(a[2]), uint32(a[3])
+	return openat_native(dirfd, path, flags, mode)
+}
+
 func Stub(u U, a []uint64) uint64 {
 	return 0
 }
@@ -245,6 +253,7 @@ var syscalls = map[string]Syscall{
 	"getegid":  {getegid, A{}, INT},
 	"dup2":     {dup2, A{INT, INT}, INT},
 	"readlink": {readlink, A{STR, OBUF, INT}, LEN},
+	"openat":   {openat, A{FD, STR, INT, INT}, FD},
 
 	// stubs
 	"ioctl":          {Stub, A{}, INT},
