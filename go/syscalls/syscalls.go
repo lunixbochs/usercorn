@@ -3,8 +3,10 @@ package syscalls
 import (
 	"fmt"
 	"github.com/lunixbochs/struc"
+	"io/ioutil"
 	"os"
 	"strings"
+	// TODO: syscall module is not portable
 	"syscall"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -227,6 +229,95 @@ func openat(u U, a []uint64) uint64 {
 	return openat_native(dirfd, path, flags, mode)
 }
 
+func getdents(u U, a []uint64) uint64 {
+	dirPath, err := pathFromFd(int(a[0]))
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
+	dents, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
+	count := a[2]
+	// figure out our offset
+	// TODO: maybe figure out how the kernel does this
+	in := u.Mem().StreamAt(a[1])
+	var offset, read uint64
+	// TODO: DRY? :(
+	var ent interface{}
+	if u.Bits() == 64 {
+		ent = &LinuxDirent64{}
+	} else {
+		ent = &LinuxDirent{}
+	}
+	for {
+		tmp := ent.(*LinuxDirent64)
+		if err := struc.Unpack(in, ent); err != nil {
+			break
+		}
+		size, _ := struc.Sizeof(ent)
+		if read+uint64(size) > count {
+			break
+		}
+		if tmp.Off > 0 {
+			offset = tmp.Off
+		}
+		if tmp.Len == 0 {
+			break
+		}
+	}
+	if offset >= uint64(len(dents)) {
+		return 0
+	}
+	out := u.Mem().StreamAt(a[1])
+	dents = dents[offset:]
+	written := 0
+	for i, f := range dents {
+		// TODO: syscall.Stat_t portability?
+		inode := f.Sys().(*syscall.Stat_t).Ino
+		// figure out file mode
+		mode := f.Mode()
+		fileType := DT_REG
+		if f.IsDir() {
+			fileType = DT_DIR
+		} else if mode&os.ModeNamedPipe > 0 {
+			fileType = DT_FIFO
+		} else if mode&os.ModeSymlink > 0 {
+			fileType = DT_LNK
+		} else if mode&os.ModeDevice > 0 {
+			if mode&os.ModeCharDevice > 0 {
+				fileType = DT_CHR
+			} else {
+				fileType = DT_BLK
+			}
+		} else if mode&os.ModeSocket > 0 {
+			fileType = DT_SOCK
+		}
+		// TODO: does inode get truncated? I guess there's getdents64
+		var ent interface{}
+		if u.Bits() == 64 {
+			ent = &LinuxDirent64{inode, uint64(i), 0, f.Name() + "\x00", fileType}
+		} else {
+			ent = &LinuxDirent{inode, uint64(i), 0, f.Name() + "\x00", fileType}
+		}
+		size, err := struc.Sizeof(ent)
+		if uint64(written+size) > count {
+			break
+		}
+		if u.Bits() == 64 {
+			ent.(*LinuxDirent64).Len = size
+		} else {
+			ent.(*LinuxDirent).Len = size
+		}
+		written += size
+		err = struc.PackWithOrder(out, ent, u.ByteOrder())
+		if err != nil {
+			return UINT64_MAX // FIXME
+		}
+	}
+	return uint64(written)
+}
+
 func Stub(u U, a []uint64) uint64 {
 	return 0
 }
@@ -260,6 +351,7 @@ var syscalls = map[string]Syscall{
 	"dup2":     {dup2, A{INT, INT}, INT},
 	"readlink": {readlink, A{STR, OBUF, INT}, LEN},
 	"openat":   {openat, A{FD, STR, INT, INT}, FD},
+	"getdents": {getdents, A{FD, OBUF, INT}, LEN},
 
 	// stubs
 	"ioctl":          {Stub, A{}, INT},
