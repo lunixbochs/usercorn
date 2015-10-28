@@ -1,6 +1,7 @@
 package syscalls
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/lunixbochs/struc"
 	"io/ioutil"
@@ -333,8 +334,51 @@ func getdents(u U, a []uint64) uint64 {
 	return uint64(written)
 }
 
+func getpid(u U, a []uint64) uint64 {
+	return uint64(os.Getpid())
+}
+
+func socket(u U, a []uint64) uint64 {
+	fd, err := syscall.Socket(int(a[0]), int(a[1]), int(a[2]))
+	if err != nil {
+		return errno(err)
+	}
+	return uint64(fd)
+}
+
+func connect(u U, a []uint64) uint64 {
+	fd := int(a[0])
+	sockaddrbuf, err := u.MemRead(a[1], a[2])
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
+	family := u.ByteOrder().Uint16(sockaddrbuf)
+	buf := bytes.NewReader(sockaddrbuf)
+	var sa syscall.Sockaddr
+	switch family {
+	case AF_LOCAL:
+		var addr RawSockaddrUnix
+		struc.Unpack(buf, &addr)
+		paths := bytes.SplitN([]byte(addr.Path[:]), []byte{0}, 2)
+		sa = &syscall.SockaddrUnix{Name: string(paths[0])}
+	case AF_INET:
+		var addr syscall.RawSockaddrInet4
+		struc.Unpack(buf, &addr)
+		// TODO: unfinished
+		sa = &syscall.SockaddrInet4{}
+	default:
+		return UINT64_MAX // FIXME
+	}
+	return errno(syscall.Connect(fd, sa))
+}
+
+func sendto(u U, a []uint64) uint64 {
+	// TODO: unfinished
+	return UINT64_MAX
+}
+
 func Stub(u U, a []uint64) uint64 {
-	return 0
+	return UINT64_MAX
 }
 
 type A []int
@@ -368,6 +412,10 @@ var syscalls = map[string]Syscall{
 	"readlink": {readlink, A{STR, OBUF, INT}, LEN},
 	"openat":   {openat, A{FD, STR, INT, INT}, FD},
 	"getdents": {getdents, A{FD, OBUF, INT}, LEN},
+	"getpid":   {getpid, A{}, INT},
+	"socket":   {socket, A{INT, INT, INT}, FD},
+	"connect":  {connect, A{INT, PTR, LEN}, INT},
+	"sendto":   {sendto, A{FD, PTR, INT, PTR}, INT},
 
 	// stubs
 	"ioctl":          {Stub, A{}, INT},
