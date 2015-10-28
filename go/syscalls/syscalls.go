@@ -123,12 +123,27 @@ func fstat(u U, a []uint64) uint64 {
 
 func stat(u U, a []uint64) uint64 {
 	path, _ := u.Mem().ReadStrAt(a[0])
+	// TODO: centralize path hook
 	if strings.Contains(path, "/lib/") {
 		path = u.PrefixPath(path, false)
 	}
 	buf := a[1]
 	var stat syscall.Stat_t
 	if err := syscall.Stat(path, &stat); err != nil {
+		return errno(err)
+	}
+	targetStat := NewTargetStat(&stat, u.OS(), u.Bits())
+	if err := struc.PackWithOrder(u.Mem().StreamAt(buf), targetStat, u.ByteOrder()); err != nil {
+		panic(err)
+	}
+	return 0
+}
+
+func lstat(u U, a []uint64) uint64 {
+	path, _ := u.Mem().ReadStrAt(a[0])
+	buf := a[1]
+	var stat syscall.Stat_t
+	if err := syscall.Lstat(path, &stat); err != nil {
 		return errno(err)
 	}
 	targetStat := NewTargetStat(&stat, u.OS(), u.Bits())
@@ -339,7 +354,8 @@ var syscalls = map[string]Syscall{
 	"mprotect": {mprotect, A{PTR, LEN, INT}, INT},
 	"brk":      {brk, A{PTR}, PTR},
 	"fstat":    {fstat, A{FD, PTR}, INT},
-	"stat":     {fstat, A{STR, PTR}, INT},
+	"stat":     {stat, A{STR, PTR}, INT},
+	"lstat":    {lstat, A{STR, PTR}, INT},
 	"getcwd":   {getcwd, A{PTR, LEN}, INT},
 	"access":   {access, A{STR, INT}, INT},
 	"readv":    {readv, A{FD, PTR, INT}, INT},
