@@ -9,17 +9,17 @@ func NewLinuxStat(stat *syscall.Stat_t, bits uint) interface{} {
 	if bits == 64 {
 		return &LinuxStat64{
 			Dev:     uint64(stat.Dev),
-			Ino:     stat.Ino,
+			Ino:     uint64(stat.Ino),
 			Mode:    uint32(stat.Mode),
 			Uid:     stat.Uid,
 			Gid:     stat.Gid,
 			Rdev:    uint64(stat.Rdev),
-			Size:    stat.Size,
+			Size:    int64(stat.Size),
 			Blksize: int64(stat.Blksize),
 			// Blkcnt:    stat.Blkcnt,
-			Atime: Timespec64{stat.Atimespec.Sec, stat.Atimespec.Nsec},
-			Mtime: Timespec64{stat.Mtimespec.Sec, stat.Mtimespec.Nsec},
-			Ctime: Timespec64{stat.Ctimespec.Sec, stat.Ctimespec.Nsec},
+			Atime: Timespec64{int64(stat.Atimespec.Sec), int64(stat.Atimespec.Nsec)},
+			Mtime: Timespec64{int64(stat.Mtimespec.Sec), int64(stat.Mtimespec.Nsec)},
+			Ctime: Timespec64{int64(stat.Ctimespec.Sec), int64(stat.Ctimespec.Nsec)},
 		}
 	} else {
 		return &LinuxStat{
@@ -29,12 +29,12 @@ func NewLinuxStat(stat *syscall.Stat_t, bits uint) interface{} {
 			Uid:     stat.Uid,
 			Gid:     stat.Gid,
 			Rdev:    uint64(stat.Rdev),
-			Size:    stat.Size,
+			Size:    int32(stat.Size),
 			Blksize: int32(stat.Blksize),
 			// Blkcnt:    stat.Blkcnt,
-			Atime: Timespec64{stat.Atimespec.Sec, stat.Atimespec.Nsec},
-			Mtime: Timespec64{stat.Mtimespec.Sec, stat.Mtimespec.Nsec},
-			Ctime: Timespec64{stat.Ctimespec.Sec, stat.Ctimespec.Nsec},
+			Atime: Timespec{int32(stat.Atimespec.Sec), int32(stat.Atimespec.Nsec)},
+			Mtime: Timespec{int32(stat.Mtimespec.Sec), int32(stat.Mtimespec.Nsec)},
+			Ctime: Timespec{int32(stat.Ctimespec.Sec), int32(stat.Ctimespec.Nsec)},
 		}
 	}
 }
