@@ -112,7 +112,7 @@ func fstat(u U, a []uint64) uint64 {
 	if err := syscall.Fstat(fd, &stat); err != nil {
 		return errno(err)
 	}
-	if err := struc.Pack(u.Mem().StreamAt(buf), &stat); err != nil {
+	if err := struc.PackWithOrder(u.Mem().StreamAt(buf), &stat, u.ByteOrder()); err != nil {
 		panic(err)
 	}
 	return 0
@@ -128,7 +128,7 @@ func stat(u U, a []uint64) uint64 {
 	if err := syscall.Stat(path, &stat); err != nil {
 		return errno(err)
 	}
-	if err := struc.Pack(u.Mem().StreamAt(buf), &stat); err != nil {
+	if err := struc.PackWithOrder(u.Mem().StreamAt(buf), &stat, u.ByteOrder()); err != nil {
 		panic(err)
 	}
 	return 0

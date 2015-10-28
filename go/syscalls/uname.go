@@ -13,7 +13,7 @@ func trunc(s string, length int) string {
 }
 
 func Uname(u models.Usercorn, addr uint64, un *models.Uname) uint64 {
-	struc.Pack(u.Mem().StreamAt(addr), un)
+	struc.PackWithOrder(u.Mem().StreamAt(addr), un, u.ByteOrder())
 	/*
 		var utsname syscall.Utsname
 		if err := syscall.Uname(utsname); err != nil {
