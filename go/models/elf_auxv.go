@@ -64,7 +64,7 @@ func setupElfAuxv(u Usercorn) ([]Elf64Auxv, error) {
 	}
 
 	auxv := []Elf64Auxv{
-		{ELF_AT_PHDR, u.Base() + phdrOff},
+		{ELF_AT_PHDR, u.Base()},
 		{ELF_AT_PHENT, uint64(u.Bits() * 8 * 2)},
 		{ELF_AT_PHNUM, uint64(phdrCount)},
 		// TODO: set/track a page size somewhere - on Arch.OS?
@@ -90,13 +90,11 @@ func SetupElfAuxv(u Usercorn) ([]byte, error) {
 		return nil, err
 	}
 	if u.Bits() == 32 {
-		auxv32 := make([]Elf32Auxv, len(auxv))
-		for i, v := range auxv {
-			auxv32[i].Type = uint32(v.Type)
-			auxv32[i].Val = uint32(v.Val)
-		}
-		for _, a := range auxv32 {
-			if err := struc.PackWithOrder(&buf, &a, u.ByteOrder()); err != nil {
+		var auxv32 Elf32Auxv
+		for _, a := range auxv {
+			auxv32.Type = uint32(a.Type)
+			auxv32.Val = uint32(a.Val)
+			if err := struc.PackWithOrder(&buf, &auxv32, u.ByteOrder()); err != nil {
 				return nil, err
 			}
 		}
