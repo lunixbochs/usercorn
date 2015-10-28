@@ -62,6 +62,10 @@ func open(u U, a []uint64) uint64 {
 
 func _close(u U, a []uint64) uint64 {
 	fd := int(a[0])
+	// FIXME: temporary hack to preserve output on program exit
+	if fd == 2 {
+		return 0
+	}
 	syscall.Close(fd)
 	return 0
 }
