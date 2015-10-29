@@ -9,6 +9,7 @@ import (
 	"strings"
 	// TODO: syscall module is not portable
 	"syscall"
+	"time"
 
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -377,6 +378,21 @@ func sendto(u U, a []uint64) uint64 {
 	return UINT64_MAX
 }
 
+func clock_gettime(u U, a []uint64) uint64 {
+	var err error
+	out := u.Mem().StreamAt(a[1])
+	ts := syscall.NsecToTimespec(time.Now().UnixNano())
+	if u.Bits() == 64 {
+		err = struc.Pack(out, &Timespec64{ts.Sec, ts.Nsec})
+	} else {
+		err = struc.Pack(out, &Timespec{int32(ts.Sec), int32(ts.Nsec)})
+	}
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
+	return 0
+}
+
 func Stub(u U, a []uint64) uint64 {
 	return UINT64_MAX
 }
@@ -416,6 +432,8 @@ var syscalls = map[string]Syscall{
 	"socket":   {socket, A{INT, INT, INT}, FD},
 	"connect":  {connect, A{INT, PTR, LEN}, INT},
 	"sendto":   {sendto, A{FD, PTR, INT, PTR}, INT},
+
+	"clock_gettime": {clock_gettime, A{INT, PTR}, INT},
 
 	// stubs
 	"ioctl":          {Stub, A{}, INT},

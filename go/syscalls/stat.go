@@ -14,13 +14,13 @@ func NewTargetStat(stat *syscall.Stat_t, os string, bits uint) interface{} {
 }
 
 type Timespec struct {
-	Sec  uint32
-	Nsec uint32
+	Sec  int32
+	Nsec int32
 }
 
 type Timespec64 struct {
-	Sec  uint64
-	Nsec uint64
+	Sec  int64
+	Nsec int64
 }
 
 // TODO: these might only work on x86
