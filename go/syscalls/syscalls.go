@@ -1,7 +1,6 @@
 package syscalls
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/lunixbochs/struc"
 	"io/ioutil"
@@ -353,29 +352,32 @@ func connect(u U, a []uint64) uint64 {
 	if err != nil {
 		return UINT64_MAX // FIXME
 	}
-	family := u.ByteOrder().Uint16(sockaddrbuf)
-	buf := bytes.NewReader(sockaddrbuf)
-	var sa syscall.Sockaddr
-	switch family {
-	case AF_LOCAL:
-		var addr RawSockaddrUnix
-		struc.Unpack(buf, &addr)
-		paths := bytes.SplitN([]byte(addr.Path[:]), []byte{0}, 2)
-		sa = &syscall.SockaddrUnix{Name: string(paths[0])}
-	case AF_INET:
-		var addr syscall.RawSockaddrInet4
-		struc.Unpack(buf, &addr)
-		// TODO: unfinished
-		sa = &syscall.SockaddrInet4{}
-	default:
+	sa := decodeSockaddr(u, sockaddrbuf)
+	if sa == nil {
 		return UINT64_MAX // FIXME
 	}
 	return errno(syscall.Connect(fd, sa))
 }
 
 func sendto(u U, a []uint64) uint64 {
-	// TODO: unfinished
-	return UINT64_MAX
+	fd := int(a[0])
+	msg, err := u.MemRead(a[1], a[2])
+	if err != nil {
+		return UINT64_MAX
+	}
+	flags := a[3]
+	var sa syscall.Sockaddr = &syscall.SockaddrInet4{}
+	if a[4] != 0 {
+		sockaddrbuf, err := u.MemRead(a[4], a[5])
+		if err != nil {
+			return UINT64_MAX // FIXME
+		}
+		sa = decodeSockaddr(u, sockaddrbuf)
+		if sa == nil {
+			return UINT64_MAX // FIXME
+		}
+	}
+	return errno(syscall.Sendto(fd, msg, int(flags), sa))
 }
 
 func clock_gettime(u U, a []uint64) uint64 {
@@ -431,7 +433,7 @@ var syscalls = map[string]Syscall{
 	"getpid":   {getpid, A{}, INT},
 	"socket":   {socket, A{INT, INT, INT}, FD},
 	"connect":  {connect, A{INT, PTR, LEN}, INT},
-	"sendto":   {sendto, A{FD, PTR, INT, PTR}, INT},
+	"sendto":   {sendto, A{FD, PTR, LEN, INT, PTR, LEN}, INT},
 
 	"clock_gettime": {clock_gettime, A{INT, PTR}, INT},
 
