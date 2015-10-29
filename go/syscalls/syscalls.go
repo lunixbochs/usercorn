@@ -194,20 +194,28 @@ func writev(u U, a []uint64) uint64 {
 	return 0
 }
 
-func getuid(u U, a []uint64) uint64 {
-	return uint64(os.Getuid())
-}
-
-func getgid(u U, a []uint64) uint64 {
-	return uint64(os.Getgid())
+func getegid(u U, a []uint64) uint64 {
+	return uint64(os.Getegid())
 }
 
 func geteuid(u U, a []uint64) uint64 {
 	return uint64(os.Geteuid())
 }
 
-func getegid(u U, a []uint64) uint64 {
-	return uint64(os.Getegid())
+func getgid(u U, a []uint64) uint64 {
+	return uint64(os.Getgid())
+}
+
+func getuid(u U, a []uint64) uint64 {
+	return uint64(os.Getuid())
+}
+
+func setgid(u U, a []uint64) uint64 {
+	return errno(syscall.Setgid(int(a[0])))
+}
+
+func setuid(u U, a []uint64) uint64 {
+	return errno(syscall.Setuid(int(a[0])))
 }
 
 func dup2(u U, a []uint64) uint64 {
@@ -422,10 +430,14 @@ var syscalls = map[string]Syscall{
 	"access":   {access, A{STR, INT}, INT},
 	"readv":    {readv, A{FD, PTR, INT}, INT},
 	"writev":   {writev, A{FD, PTR, INT}, INT},
-	"getuid":   {getuid, A{}, INT},
-	"getgid":   {getgid, A{}, INT},
-	"geteuid":  {geteuid, A{}, INT},
-	"getegid":  {getegid, A{}, INT},
+
+	"getegid": {getegid, A{}, INT},
+	"geteuid": {geteuid, A{}, INT},
+	"getgid":  {getgid, A{}, INT},
+	"getuid":  {getuid, A{}, INT},
+	"setgid":  {setgid, A{INT}, INT},
+	"setuid":  {setuid, A{INT}, INT},
+
 	"dup2":     {dup2, A{INT, INT}, INT},
 	"readlink": {readlink, A{STR, OBUF, INT}, LEN},
 	"openat":   {openat, A{FD, STR, INT, INT}, FD},
