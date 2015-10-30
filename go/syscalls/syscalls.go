@@ -219,7 +219,10 @@ func setuid(u U, a []uint64) uint64 {
 }
 
 func dup2(u U, a []uint64) uint64 {
-	return errno(syscall.Dup2(int(a[0]), int(a[1])))
+	if err := syscall.Dup2(int(a[0]), int(a[1])); err != nil {
+		return errno(err)
+	}
+	return a[1]
 }
 
 func readlink(u U, a []uint64) uint64 {
