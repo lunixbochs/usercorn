@@ -370,6 +370,19 @@ func connect(u U, a []uint64) uint64 {
 	return errno(syscall.Connect(fd, sa))
 }
 
+func bind(u U, a []uint64) uint64 {
+	fd := int(a[0])
+	sockaddrbuf, err := u.MemRead(a[1], a[2])
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
+	sa := decodeSockaddr(u, sockaddrbuf)
+	if sa == nil {
+		return UINT64_MAX // FIXME
+	}
+	return errno(syscall.Bind(fd, sa))
+}
+
 func sendto(u U, a []uint64) uint64 {
 	fd := int(a[0])
 	msg, err := u.MemRead(a[1], a[2])
@@ -456,6 +469,7 @@ var syscalls = map[string]Syscall{
 	"getpid":   {getpid, A{}, INT},
 	"socket":   {socket, A{INT, INT, INT}, FD},
 	"connect":  {connect, A{INT, PTR, LEN}, INT},
+	"bind":     {bind, A{INT, PTR, LEN}, INT},
 	"sendto":   {sendto, A{FD, PTR, LEN, INT, PTR, LEN}, INT},
 
 	"clock_gettime": {clock_gettime, A{INT, PTR}, INT},
