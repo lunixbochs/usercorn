@@ -406,6 +406,14 @@ func clock_gettime(u U, a []uint64) uint64 {
 	return 0
 }
 
+func chdir(u U, a []uint64) uint64 {
+	path, _ := u.Mem().ReadStrAt(a[0])
+	if err := os.Chdir(path); err != nil {
+		return UINT64_MAX // FIXME
+	}
+	return 0
+}
+
 func Stub(u U, a []uint64) uint64 {
 	return UINT64_MAX
 }
@@ -451,6 +459,7 @@ var syscalls = map[string]Syscall{
 	"sendto":   {sendto, A{FD, PTR, LEN, INT, PTR, LEN}, INT},
 
 	"clock_gettime": {clock_gettime, A{INT, PTR}, INT},
+	"chdir":         {chdir, A{STR}, INT},
 
 	// stubs
 	"ioctl":          {Stub, A{}, INT},
