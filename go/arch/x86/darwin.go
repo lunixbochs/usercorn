@@ -8,23 +8,41 @@ import (
 	"github.com/lunixbochs/usercorn/go/syscalls"
 )
 
+const (
+	dwMach = 1
+	dwUnix = 2
+	dwMdep = 3
+	dwDiag = 4
+)
+
 func DarwinInit(u models.Usercorn, args, env []string) error {
 	return u.PosixInit(args, env, nil)
 }
 
-func DarwinSyscall(u models.Usercorn) {
+func DarwinSyscall(u models.Usercorn, class int) {
+	// TODO: read args from stack without modifying reg so we don't need to restore esp
 	esp, _ := u.RegRead(uc.X86_REG_ESP)
-	eax, _ := u.RegRead(uc.X86_REG_EAX)
 	getArgs := syscalls.StackArgs(u)
-	name, _ := num.Darwin_x86[int(eax)]
-	ret, _ := u.Syscall(int(eax), name, getArgs, nil)
+
+	eax, _ := u.RegRead(uc.X86_REG_EAX)
+	nr := class<<24 | int(eax)
+	name, _ := num.Darwin_x86_mach[nr]
+
+	ret, _ := u.Syscall(nr, name, getArgs, nil)
 	u.RegWrite(uc.X86_REG_EAX, ret)
 	u.RegWrite(uc.X86_REG_ESP, esp)
 }
 
 func DarwinInterrupt(u models.Usercorn, intno uint32) {
-	if intno == 0x80 {
-		DarwinSyscall(u)
+	switch intno {
+	case 0x80:
+		DarwinSyscall(u, dwUnix)
+	case 0x81:
+		DarwinSyscall(u, dwMach)
+	case 0x82:
+		DarwinSyscall(u, dwMdep)
+	case 0x83:
+		DarwinSyscall(u, dwDiag)
 	}
 }
 
