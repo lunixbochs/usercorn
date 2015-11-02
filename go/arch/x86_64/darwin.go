@@ -30,10 +30,18 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 	return err
 }
 
+var darwinOverrides = map[string]*syscalls.Syscall{
+	"task_self_trap":                  {syscalls.Stub, A{}, INT},
+	"mach_reply_port":                 {syscalls.Stub, A{}, INT},
+	"__thread_selfid":                 {syscalls.Stub, A{}, INT},
+	"kernelrpc_mach_vm_allocate_trap": {syscalls.Stub, A{}, INT},
+}
+
 func DarwinSyscall(u models.Usercorn) {
 	rax, _ := u.RegRead(uc.X86_REG_RAX)
 	name, _ := num.Darwin_x86_mach[int(rax)]
-	ret, _ := u.Syscall(int(rax), name, syscalls.RegArgs(u, AbiRegs), nil)
+	override, _ := darwinOverrides[name]
+	ret, _ := u.Syscall(int(rax), name, syscalls.RegArgs(u, AbiRegs), override)
 	u.RegWrite(uc.X86_REG_RAX, ret)
 }
 
