@@ -508,7 +508,7 @@ outer:
 	interp := l.Interp()
 	if interp != "" && !isInterp {
 		var bin models.Loader
-		bin, err = loader.LoadFile(u.PrefixPath(interp, true))
+		bin, err = loader.LoadFileArch(u.PrefixPath(interp, true), l.Arch())
 		if err != nil {
 			return
 		}

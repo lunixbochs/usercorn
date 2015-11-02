@@ -40,7 +40,7 @@ func (c *CgcLoader) OS() string {
 	return "cgc"
 }
 
-func NewCgcLoader(r io.ReaderAt) (models.Loader, error) {
-	l, err := NewElfLoader(&FakeCgcReader{r})
+func NewCgcLoader(r io.ReaderAt, arch string) (models.Loader, error) {
+	l, err := NewElfLoader(&FakeCgcReader{r}, arch)
 	return &CgcLoader{l}, err
 }

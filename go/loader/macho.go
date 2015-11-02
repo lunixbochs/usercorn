@@ -11,6 +11,12 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+const (
+	machoLoadCmdReqDyld  = 0x80000000
+	machoLoadCmdDylinker = 0xe
+	machoLoadCmdMain     = 0x28 | machoLoadCmdReqDyld
+)
+
 var machoCpuMap = map[macho.Cpu]string{
 	machoCpu386:   "x86",
 	machoCpuAmd64: "x86_64",
@@ -19,8 +25,10 @@ var machoCpuMap = map[macho.Cpu]string{
 	machoCpuPpc64: "ppc64",
 }
 
+var fatMagic = []byte{0xca, 0xfe, 0xba, 0xbe}
+
 var machoMagics = [][]byte{
-	{0xca, 0xfe, 0xba, 0xbe},
+	fatMagic,
 	{0xfe, 0xed, 0xfa, 0xce},
 	{0xfe, 0xed, 0xfa, 0xcf},
 	{0xce, 0xfa, 0xed, 0xfe},
@@ -35,20 +43,26 @@ type MachOLoader struct {
 func findEntry(f *macho.File, bits int) (uint64, error) {
 	var entry uint64
 	for _, l := range f.Loads {
-		// TODO: LC_MAIN == 0x28?
 		var cmd macho.LoadCmd
 		data := l.Raw()
 		binary.Read(bytes.NewReader(data), f.ByteOrder, &cmd)
 		if cmd == macho.LoadCmdUnixThread {
+			// LC_UNIXTHREAD
 			if bits == 64 {
 				ip := 144
-				binary.Read(bytes.NewReader(data[ip:ip+8]), f.ByteOrder, &entry)
+				entry = f.ByteOrder.Uint64(data[ip : ip+8])
 			} else {
-				var ent32 uint32
 				ip := 56
-				binary.Read(bytes.NewReader(data[ip:ip+4]), f.ByteOrder, &ent32)
-				entry = uint64(ent32)
+				entry = uint64(f.ByteOrder.Uint32(data[ip : ip+4]))
 			}
+			return entry, nil
+		} else if cmd == machoLoadCmdMain {
+			// [8:16] == entry - __TEXT, data[16:24] == stack size
+			__TEXT := f.Segment("__TEXT")
+			if __TEXT == nil {
+				return 0, errors.New("Found LC_MAIN but did not find __TEXT segment.")
+			}
+			entry = f.ByteOrder.Uint64(data[8:16]) + __TEXT.Addr
 			return entry, nil
 		}
 	}
@@ -65,8 +79,31 @@ func MatchMachO(r io.ReaderAt) bool {
 	return false
 }
 
-func NewMachOLoader(r io.ReaderAt) (models.Loader, error) {
-	file, err := macho.NewFile(r)
+func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
+	var (
+		file    *macho.File
+		fatFile *macho.FatFile
+		err     error
+	)
+	magic := getMagic(r)
+	if bytes.Equal(magic, fatMagic) {
+		fatFile, err = macho.NewFatFile(r)
+		if fatFile != nil {
+			for _, arch := range fatFile.Arches {
+				if machineName, ok := machoCpuMap[arch.Cpu]; ok {
+					if machineName == archHint || archHint == "any" {
+						file = arch.File
+						break
+					}
+				}
+			}
+			if file == nil {
+				return nil, fmt.Errorf("Could not find Mach-O fat binary entry for arch '%s'.", archHint)
+			}
+		}
+	} else {
+		file, err = macho.NewFile(r)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -99,6 +136,16 @@ func NewMachOLoader(r io.ReaderAt) (models.Loader, error) {
 }
 
 func (m *MachOLoader) Interp() string {
+	for _, l := range m.file.Loads {
+		var cmd macho.LoadCmd
+		data := l.Raw()
+		binary.Read(bytes.NewReader(data), m.file.ByteOrder, &cmd)
+		if cmd == machoLoadCmdDylinker {
+			length := m.file.ByteOrder.Uint32(data[8:12])
+			dylinker := data[12 : 13+length]
+			return string(dylinker)
+		}
+	}
 	return ""
 }
 
@@ -145,7 +192,7 @@ func (m *MachOLoader) getSymbols() ([]models.Symbol, error) {
 		return nil, errors.New("no symbol table found")
 	} else {
 		syms := m.file.Symtab.Syms
-		symbols := make([]models.Symbol, len(syms))
+		symbols = make([]models.Symbol, len(syms))
 		for i, s := range syms {
 			symbols[i] = models.Symbol{
 				Name:  s.Name,
@@ -156,7 +203,9 @@ func (m *MachOLoader) getSymbols() ([]models.Symbol, error) {
 	}
 	if m.file.Dysymtab != nil {
 		for _, v := range m.file.Dysymtab.IndirectSyms {
-			symbols[v].Dynamic = true
+			if v < uint32(len(symbols)) {
+				symbols[v].Dynamic = true
+			}
 		}
 	}
 	return symbols, nil

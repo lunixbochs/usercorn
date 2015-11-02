@@ -32,7 +32,7 @@ func MatchElf(r io.ReaderAt) bool {
 	return bytes.Equal(getMagic(r), elfMagic)
 }
 
-func NewElfLoader(r io.ReaderAt) (models.Loader, error) {
+func NewElfLoader(r io.ReaderAt, arch string) (models.Loader, error) {
 	file, err := elf.NewFile(r)
 	if err != nil {
 		return nil, err
