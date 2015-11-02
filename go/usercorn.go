@@ -298,7 +298,10 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 func (u *Usercorn) addHooks() error {
 	if u.TraceExec || u.TraceReg {
 		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
-			indent := strings.Repeat("  ", u.stacktrace.Len()-1)
+			var indent string
+			if u.stacktrace.Len() > 2 {
+				indent = strings.Repeat("  ", u.stacktrace.Len()-1)
+			}
 			if u.blockloop != nil {
 				if looped, loop, count := u.blockloop.Update(addr); looped {
 					return
@@ -310,7 +313,6 @@ func (u *Usercorn) addHooks() error {
 				}
 			}
 			if u.TraceMemBatch {
-				indent := strings.Repeat("  ", u.stacktrace.Len()-1)
 				u.memlog.Print(indent, u.arch.Bits)
 				u.memlog.Reset()
 			}
