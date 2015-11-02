@@ -18,11 +18,11 @@ const (
 )
 
 var machoCpuMap = map[macho.Cpu]string{
-	machoCpu386:   "x86",
-	machoCpuAmd64: "x86_64",
-	machoCpuArm:   "arm",
-	machoCpuPpc:   "ppc",
-	machoCpuPpc64: "ppc64",
+	macho.Cpu386:   "x86",
+	macho.CpuAmd64: "x86_64",
+	macho.CpuArm:   "arm",
+	macho.CpuPpc:   "ppc",
+	macho.CpuPpc64: "ppc64",
 }
 
 var fatMagic = []byte{0xca, 0xfe, 0xba, 0xbe}
