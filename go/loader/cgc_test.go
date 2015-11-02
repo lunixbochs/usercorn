@@ -18,14 +18,14 @@ func init() {
 }
 
 func TestCgcLoad(t *testing.T) {
-	_, err := NewCgcLoader(cgcFile)
+	_, err := NewCgcLoader(cgcFile, "any")
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestCgcSegments(t *testing.T) {
-	elf, err := NewCgcLoader(cgcFile)
+	elf, err := NewCgcLoader(cgcFile, "any")
 	if err != nil {
 		t.Fatal(err)
 	}

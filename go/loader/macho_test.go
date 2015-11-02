@@ -18,14 +18,14 @@ func init() {
 }
 
 func TestMachOLoad(t *testing.T) {
-	_, err := NewMachOLoader(machoFile)
+	_, err := NewMachOLoader(machoFile, "any")
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestMachOSymbol(t *testing.T) {
-	macho, err := NewMachOLoader(machoFile)
+	macho, err := NewMachOLoader(machoFile, "any")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestMachOSymbol(t *testing.T) {
 }
 
 func TestMachOSegments(t *testing.T) {
-	macho, err := NewMachOLoader(machoFile)
+	macho, err := NewMachOLoader(machoFile, "any")
 	if err != nil {
 		t.Fatal(err)
 	}

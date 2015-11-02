@@ -18,14 +18,14 @@ func init() {
 }
 
 func TestElfLoad(t *testing.T) {
-	_, err := NewElfLoader(elfFile)
+	_, err := NewElfLoader(elfFile, "any")
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestElfSymbol(t *testing.T) {
-	elf, err := NewElfLoader(elfFile)
+	elf, err := NewElfLoader(elfFile, "any")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestElfSymbol(t *testing.T) {
 }
 
 func TestElfSegments(t *testing.T) {
-	elf, err := NewElfLoader(elfFile)
+	elf, err := NewElfLoader(elfFile, "any")
 	if err != nil {
 		t.Fatal(err)
 	}
