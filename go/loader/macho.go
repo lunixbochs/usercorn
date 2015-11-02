@@ -175,6 +175,9 @@ func (m *MachOLoader) Segments() ([]models.SegmentData, error) {
 		if s, ok := l.(*macho.Segment); ok {
 			switch s.Cmd {
 			case macho.LoadCmdSegment, macho.LoadCmdSegment64:
+				if s.Name == "__PAGEZERO" {
+					continue
+				}
 				ret = append(ret, models.SegmentData{
 					Off:  s.Offset,
 					Addr: s.Addr,
