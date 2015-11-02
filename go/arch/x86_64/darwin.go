@@ -9,7 +9,25 @@ import (
 )
 
 func DarwinInit(u models.Usercorn, args, env []string) error {
-	return AbiInit(u, args, env, nil, DarwinSyscall)
+	exe := u.Exe()
+	addr, err := u.PushBytes([]byte(exe + "\x00"))
+	if err != nil {
+		return err
+	}
+	var tmp [16]byte
+	_, err = u.PackAddr(tmp[8:], addr)
+	if err != nil {
+		return err
+	}
+	err = AbiInit(u, args, env, tmp[:], DarwinSyscall)
+	if err != nil {
+		return err
+	}
+	// offset to exe[0:] in guest memory
+	textOffset, _, _ := u.Loader().Header()
+	offset := u.Base() + textOffset
+	_, err = u.Push(offset)
+	return err
 }
 
 func DarwinSyscall(u models.Usercorn) {

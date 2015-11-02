@@ -150,6 +150,10 @@ func (m *MachOLoader) Interp() string {
 }
 
 func (m *MachOLoader) Header() (uint64, []byte, int) {
+	__TEXT := m.file.Segment("__TEXT")
+	if __TEXT != nil {
+		return __TEXT.Addr, nil, 0
+	}
 	return 0, nil, 0
 }
 
