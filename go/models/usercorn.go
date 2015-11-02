@@ -20,7 +20,7 @@ type Usercorn interface {
 	MmapWrite(addr uint64, p []byte) (uint64, error)
 	Mem() memio.MemIO
 
-	PackAddr(buf []byte, n uint64) error
+	PackAddr(buf []byte, n uint64) ([]byte, error)
 	UnpackAddr(buf []byte) uint64
 	PopBytes(p []byte) error
 	PushBytes(p []byte) (uint64, error)

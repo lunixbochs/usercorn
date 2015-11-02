@@ -138,16 +138,16 @@ func (u *Unicorn) Mem() memio.MemIO {
 	return u.memio
 }
 
-func (u *Unicorn) PackAddr(buf []byte, n uint64) error {
+func (u *Unicorn) PackAddr(buf []byte, n uint64) ([]byte, error) {
 	if len(buf) < u.Bsz {
-		return errors.New("Buffer too small.")
+		return nil, errors.New("Buffer too small.")
 	}
 	if u.bits == 64 {
-		u.order.PutUint64(buf, n)
+		u.order.PutUint64(buf[:u.Bsz], n)
 	} else {
-		u.order.PutUint32(buf, uint32(n))
+		u.order.PutUint32(buf[:u.Bsz], uint32(n))
 	}
-	return nil
+	return buf[:u.Bsz], nil
 }
 
 func (u *Unicorn) UnpackAddr(buf []byte) uint64 {
@@ -182,9 +182,9 @@ func (u *Unicorn) PushBytes(p []byte) (uint64, error) {
 }
 
 func (u *Unicorn) Push(n uint64) (uint64, error) {
-	var buf [8]byte
-	u.PackAddr(buf[:u.Bsz], n)
-	return u.PushBytes(buf[:u.Bsz])
+	var tmp [8]byte
+	buf, _ := u.PackAddr(tmp[:], n)
+	return u.PushBytes(buf)
 }
 
 func (u *Unicorn) Pop() (uint64, error) {

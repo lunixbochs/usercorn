@@ -30,7 +30,6 @@ func linux_arch_prctl(u syscalls.U, args []uint64) uint64 {
 	code, _ := u.RegRead(AbiRegs[0])
 	addr, _ := u.RegRead(AbiRegs[1])
 	var tmp [8]byte
-	bsz := u.Bits() / 8
 	// TODO: make set check for valid mapped memory
 	switch code {
 	case ARCH_SET_FS:
@@ -39,12 +38,12 @@ func linux_arch_prctl(u syscalls.U, args []uint64) uint64 {
 		u.RegWrite(uc.X86_REG_GS, addr)
 	case ARCH_GET_FS:
 		val, _ := u.RegRead(uc.X86_REG_FS)
-		u.PackAddr(tmp[:bsz], val)
-		u.MemWrite(addr, tmp[:bsz])
+		buf, _ := u.PackAddr(tmp[:], val)
+		u.MemWrite(addr, buf)
 	case ARCH_GET_GS:
 		val, _ := u.RegRead(uc.X86_REG_GS)
-		u.PackAddr(tmp[:bsz], val)
-		u.MemWrite(addr, tmp[:bsz])
+		buf, _ := u.PackAddr(tmp[:], val)
+		u.MemWrite(addr, buf)
 	}
 	return 0
 }
