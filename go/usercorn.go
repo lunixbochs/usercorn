@@ -277,10 +277,10 @@ func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
 		sym = isym
 		sdist = idist
 	}
-	if sym.Name != "" {
+	if sym.Name != "" && sdist > 0 {
 		return fmt.Sprintf("%s+0x%x", sym.Name, sdist), nil
 	}
-	return "", nil
+	return sym.Name, nil
 }
 
 func (u *Usercorn) Brk(addr uint64) (uint64, error) {
