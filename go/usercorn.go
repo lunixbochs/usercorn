@@ -528,10 +528,11 @@ func (u *Usercorn) setupStack() error {
 		return err
 	}
 	u.StackBase = stack
-	if err := u.RegWrite(u.arch.SP, stack+STACK_SIZE); err != nil {
+	stackEnd := stack + STACK_SIZE
+	if err := u.RegWrite(u.arch.SP, stackEnd); err != nil {
 		return err
 	}
-	return nil
+	return u.MemMapProt(stackEnd, UC_MEM_ALIGN, uc.PROT_NONE)
 }
 
 func (u *Usercorn) pushStrings(args ...string) ([]uint64, error) {
