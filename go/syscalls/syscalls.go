@@ -427,6 +427,15 @@ func chdir(u U, a []uint64) uint64 {
 	return 0
 }
 
+func kill(u U, a []uint64) uint64 {
+	// TODO: os-specific signal handling?
+	pid, sig := a[0], a[1]
+	if err := syscall.Kill(int(pid), syscall.Signal(sig)); err != nil {
+		return UINT64_MAX // FIXME
+	}
+	return 0
+}
+
 func Stub(u U, a []uint64) uint64 {
 	return UINT64_MAX
 }
@@ -474,6 +483,7 @@ var syscalls = map[string]Syscall{
 
 	"clock_gettime": {clock_gettime, A{INT, PTR}, INT},
 	"chdir":         {chdir, A{STR}, INT},
+	"kill":          {kill, A{PID, SIGNAL}, INT},
 
 	// stubs
 	"ioctl":          {Stub, A{}, INT},

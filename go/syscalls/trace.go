@@ -18,6 +18,8 @@ const (
 	LEN
 	OFF
 	PTR
+	PID
+	SIGNAL
 )
 
 func traceBasicArg(u models.Usercorn, arg uint64, t int) string {
