@@ -30,11 +30,46 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 	return err
 }
 
+func mach_vm_allocate(u syscalls.U, a []uint64) uint64 {
+	addr, err := u.Mmap(0, a[2])
+	if err != nil {
+		return syscalls.UINT64_MAX // FIXME
+	}
+	var tmp [8]byte
+	buf, _ := u.PackAddr(tmp[:], addr)
+	if err := u.MemWrite(a[1], buf); err != nil {
+		return syscalls.UINT64_MAX // FIXME
+	}
+	return 0
+}
+
+func mach_vm_deallocate(u syscalls.U, a []uint64) uint64 {
+	return 0
+}
+
+func task_self_trap(u syscalls.U, a []uint64) uint64 {
+	return 1
+}
+
+func mach_reply_port(u syscalls.U, a []uint64) uint64 {
+	return 1
+}
+
+func thread_selfid(u syscalls.U, a []uint64) uint64 {
+	return 1
+}
+
+func thread_fast_set_cthread_self(u syscalls.U, a []uint64) uint64 {
+	return 0
+}
+
 var darwinOverrides = map[string]*syscalls.Syscall{
-	"task_self_trap":                  {syscalls.Stub, A{}, INT},
-	"mach_reply_port":                 {syscalls.Stub, A{}, INT},
-	"__thread_selfid":                 {syscalls.Stub, A{}, INT},
-	"kernelrpc_mach_vm_allocate_trap": {syscalls.Stub, A{}, INT},
+	"task_self_trap":                    {task_self_trap, A{}, INT},
+	"mach_reply_port":                   {mach_reply_port, A{}, INT},
+	"__thread_selfid":                   {thread_selfid, A{}, INT},
+	"kernelrpc_mach_vm_allocate_trap":   {mach_vm_allocate, A{INT, INT, INT, INT}, INT},
+	"kernelrpc_mach_vm_deallocate_trap": {mach_vm_deallocate, A{INT, INT, INT}, INT},
+	"thread_fast_set_cthread_self":      {thread_fast_set_cthread_self, A{}, INT},
 }
 
 func DarwinSyscall(u models.Usercorn) {
