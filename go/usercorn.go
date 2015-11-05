@@ -34,6 +34,9 @@ type Usercorn struct {
 	TraceMemBatch   bool
 	TraceExec       bool
 	TraceReg        bool
+	TraceMatch      []string
+	TraceMatchDepth int
+	traceMatching   bool
 	ForceBase       uint64
 	ForceInterpBase uint64
 	LoopCollapse    int
@@ -68,10 +71,11 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 	}
 	exe, _ = filepath.Abs(exe)
 	u := &Usercorn{
-		Unicorn:    unicorn,
-		exe:        exe,
-		loader:     l,
-		LoadPrefix: prefix,
+		Unicorn:       unicorn,
+		exe:           exe,
+		loader:        l,
+		LoadPrefix:    prefix,
+		traceMatching: true,
 	}
 	// map binary (and interp) into memory
 	u.status = models.StatusDiff{U: u, Color: true}
@@ -144,7 +148,8 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	}
 	if u.TraceReg || u.TraceExec {
 		sp, _ := u.RegRead(u.arch.SP)
-		u.stacktrace.Update(u.entry, sp)
+		sym, _ := u.Symbolicate(u.entry)
+		u.stacktrace.Update(u.entry, sp, sym)
 	}
 	if u.TraceMemBatch {
 		u.memlog = *models.NewMemLog(u.ByteOrder())
@@ -301,9 +306,39 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 	return u.brk, nil
 }
 
+func (u *Usercorn) checkTraceMatch(addr uint64, sym string) bool {
+	if len(u.TraceMatch) == 0 {
+		return true
+	}
+	match := func(addr uint64, sym string, trace string) bool {
+		return sym == trace || strings.HasPrefix(sym, trace+"+") || fmt.Sprintf("0x%x", addr) == strings.ToLower(trace)
+	}
+	for _, v := range u.TraceMatch {
+		if match(addr, sym, v) {
+			return true
+		}
+	}
+	l := u.stacktrace.Len()
+	for i := 0; i < u.TraceMatchDepth && i < l; i++ {
+		frame := u.stacktrace.Stack[l-i-1]
+		for _, v := range u.TraceMatch {
+			if match(frame.PC, frame.Sym, v) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (u *Usercorn) addHooks() error {
 	if u.TraceExec || u.TraceReg {
 		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
+			sym, _ := u.Symbolicate(addr)
+			if !u.checkTraceMatch(addr, sym) {
+				u.traceMatching = false
+				return
+			}
+			u.traceMatching = true
 			var indent string
 			if u.stacktrace.Len() > 2 {
 				indent = strings.Repeat("  ", u.stacktrace.Len()-1)
@@ -323,14 +358,13 @@ func (u *Usercorn) addHooks() error {
 				u.memlog.Reset()
 			}
 			if sp, err := u.RegRead(u.arch.SP); err == nil {
-				u.stacktrace.Update(addr, sp)
+				u.stacktrace.Update(addr, sp, sym)
 			}
 			indent = strings.Repeat("  ", u.stacktrace.Len())
 			blockIndent := indent
 			if len(indent) >= 2 {
 				blockIndent = indent[:len(indent)-2]
 			}
-			sym, _ := u.Symbolicate(addr)
 			if sym != "" {
 				sym = " (" + sym + ")"
 			}
@@ -349,6 +383,9 @@ func (u *Usercorn) addHooks() error {
 	}
 	if u.TraceExec {
 		u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+			if !u.traceMatching {
+				return
+			}
 			indent := strings.Repeat("  ", u.stacktrace.Len())
 			var changes *models.Changes
 			if addr == u.lastCode || u.TraceReg && u.TraceExec {
@@ -394,6 +431,9 @@ func (u *Usercorn) addHooks() error {
 	}
 	if u.TraceMem || u.TraceMemBatch {
 		u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) {
+			if !u.traceMatching {
+				return
+			}
 			var letter string
 			if access == uc.MEM_WRITE {
 				letter = "W"

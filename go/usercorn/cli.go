@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 
 	usercorn "github.com/lunixbochs/usercorn/go"
 	"github.com/lunixbochs/usercorn/go/models"
@@ -23,6 +25,7 @@ func main() {
 	mtrace2 := fs.Bool("mtrace2", false, "trace memory access (batched)")
 	etrace := fs.Bool("etrace", false, "trace execution")
 	rtrace := fs.Bool("rtrace", false, "trace register modification")
+	match := fs.String("match", "", "trace from specific function(s) (func[,func...][+depth]")
 	looproll := fs.Int("loop", 0, "collapse loop blocks of this depth")
 	prefix := fs.String("prefix", "", "library load prefix")
 	base := fs.Uint64("base", 0, "force executable base address")
@@ -57,6 +60,13 @@ func main() {
 	corn.TraceMemBatch = *mtrace2 || *trace
 	corn.TraceReg = *rtrace || *trace
 	corn.TraceExec = *etrace || *trace
+	if *match != "" {
+		split := strings.SplitN(*match, "+", 2)
+		if len(split) > 1 {
+			corn.TraceMatchDepth, _ = strconv.Atoi(split[1])
+		}
+		corn.TraceMatch = strings.Split(split[0], ",")
+	}
 	if *looproll == 0 && *trace {
 		*looproll = 8
 	}

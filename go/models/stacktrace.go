@@ -7,6 +7,7 @@ import (
 
 type stackFrame struct {
 	PC, SP uint64
+	Sym    string
 }
 
 type Stacktrace struct {
@@ -20,16 +21,16 @@ func (s *Stacktrace) Len() int {
 func (s *Stacktrace) Print(u Usercorn) {
 	pc, _ := u.RegRead(u.Arch().PC)
 	sp, _ := u.RegRead(u.Arch().SP)
-	stack := append(s.Stack, stackFrame{pc, sp})
+	sym, _ := u.Symbolicate(pc)
+	stack := append(s.Stack, stackFrame{pc, sp, sym})
 	for i := len(stack) - 1; i >= 0; i-- {
 		frame := stack[i]
-		sym, _ := u.Symbolicate(frame.PC)
-		fmt.Fprintf(os.Stderr, "  0x%x %s\n", frame.PC, sym)
+		fmt.Fprintf(os.Stderr, "  0x%x %s\n", frame.PC, frame.Sym)
 	}
 }
 
-func (s *Stacktrace) Push(pc, sp uint64) {
-	s.Stack = append(s.Stack, stackFrame{pc, sp})
+func (s *Stacktrace) Push(pc, sp uint64, sym string) {
+	s.Stack = append(s.Stack, stackFrame{pc, sp, sym})
 }
 
 func (s *Stacktrace) Empty() bool {
@@ -52,9 +53,9 @@ func (s *Stacktrace) Pop() stackFrame {
 	return ret
 }
 
-func (s *Stacktrace) Update(pc, sp uint64) {
+func (s *Stacktrace) Update(pc, sp uint64, sym string) {
 	if s.Empty() || sp < s.Peek().SP {
-		s.Push(pc, sp)
+		s.Push(pc, sp, sym)
 	} else {
 		for !s.Empty() && sp > s.Peek().SP {
 			s.Pop()
