@@ -63,7 +63,11 @@ func main() {
 	if *match != "" {
 		split := strings.SplitN(*match, "+", 2)
 		if len(split) > 1 {
-			corn.TraceMatchDepth, _ = strconv.Atoi(split[1])
+			if split[1] == "" {
+				corn.TraceMatchDepth = 999999
+			} else {
+				corn.TraceMatchDepth, _ = strconv.Atoi(split[1])
+			}
 		}
 		corn.TraceMatch = strings.Split(split[0], ",")
 	}
