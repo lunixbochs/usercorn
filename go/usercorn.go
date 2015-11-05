@@ -37,6 +37,7 @@ type Usercorn struct {
 	ForceBase       uint64
 	ForceInterpBase uint64
 	LoopCollapse    int
+	Demangle        bool
 
 	LoadPrefix string
 	status     models.StatusDiff
@@ -277,8 +278,13 @@ func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
 		sym = isym
 		sdist = idist
 	}
-	if sym.Name != "" && sdist > 0 {
-		return fmt.Sprintf("%s+0x%x", sym.Name, sdist), nil
+	if sym.Name != "" {
+		if u.Demangle {
+			sym.Name = models.Demangle(sym.Name)
+		}
+		if sdist > 0 {
+			return fmt.Sprintf("%s+0x%x", sym.Name, sdist), nil
+		}
 	}
 	return sym.Name, nil
 }

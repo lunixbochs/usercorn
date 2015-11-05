@@ -5,8 +5,43 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/bnagy/gapstone"
+	"io/ioutil"
+	"os/exec"
+	"regexp"
 	"strings"
 )
+
+var demangleRe = regexp.MustCompile(`^[^(]+`)
+
+func Demangle(name string) string {
+	if strings.HasPrefix(name, "__Z") {
+		name = name[1:]
+	} else if !strings.HasPrefix(name, "_Z") {
+		return name
+	}
+	cmd := exec.Command("c++filt", "-n")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return name
+	}
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return name
+	}
+	if err = cmd.Start(); err != nil {
+		fmt.Println("cmd error", err)
+		return name
+	}
+	stdin.Write([]byte(name + "\n"))
+	stdin.Close()
+	out, err := ioutil.ReadAll(stdout)
+	out = bytes.Trim(out, "\t\r\n ")
+	if err != nil || len(out) == 0 {
+		return name
+	}
+	out = demangleRe.FindSubmatch(out)[0]
+	return string(out)
+}
 
 var discache = make(map[string]string)
 

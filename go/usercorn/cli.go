@@ -27,6 +27,7 @@ func main() {
 	prefix := fs.String("prefix", "", "library load prefix")
 	base := fs.Uint64("base", 0, "force executable base address")
 	ibase := fs.Uint64("ibase", 0, "force interpreter base address")
+	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options] <exe> [args...]\n", os.Args[0])
@@ -62,6 +63,7 @@ func main() {
 	corn.LoopCollapse = *looproll
 	corn.ForceBase = *base
 	corn.ForceInterpBase = *ibase
+	corn.Demangle = *demangle
 
 	err = corn.Run(args, os.Environ())
 	if err != nil {
