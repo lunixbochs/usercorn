@@ -63,6 +63,19 @@ func thread_fast_set_cthread_self(u syscalls.U, a []uint64) uint64 {
 	return 0
 }
 
+// verifies a binary signature
+func csops(u syscalls.U, a []uint64) uint64 {
+	return 0
+}
+
+func issetugid(u syscalls.U, a []uint64) uint64 {
+	return 0
+}
+
+func host_self_trap(u syscalls.U, a []uint64) uint64 {
+	return 2
+}
+
 var darwinOverrides = map[string]*syscalls.Syscall{
 	"task_self_trap":                    {task_self_trap, A{}, INT},
 	"mach_reply_port":                   {mach_reply_port, A{}, INT},
@@ -70,6 +83,9 @@ var darwinOverrides = map[string]*syscalls.Syscall{
 	"kernelrpc_mach_vm_allocate_trap":   {mach_vm_allocate, A{INT, INT, INT, INT}, INT},
 	"kernelrpc_mach_vm_deallocate_trap": {mach_vm_deallocate, A{INT, INT, INT}, INT},
 	"thread_fast_set_cthread_self":      {thread_fast_set_cthread_self, A{}, INT},
+	"csops":          {csops, A{}, INT},
+	"issetugid":      {issetugid, A{}, INT},
+	"host_self_trap": {host_self_trap, A{}, INT},
 }
 
 func DarwinSyscall(u models.Usercorn) {
