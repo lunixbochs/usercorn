@@ -14,16 +14,16 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 	if err != nil {
 		return err
 	}
-	var tmp [16]byte
-	_, err = u.PackAddr(tmp[8:], addr)
+	var tmp [8]byte
+	auxv, err := u.PackAddr(tmp[:], addr)
 	if err != nil {
 		return err
 	}
-	err = AbiInit(u, args, env, tmp[:], DarwinSyscall)
+	err = AbiInit(u, args, env, auxv, DarwinSyscall)
 	if err != nil {
 		return err
 	}
-	// offset to exe[0:] in guest memory
+	// offset to mach_header at exe[0:] in guest memory
 	textOffset, _, _ := u.Loader().Header()
 	offset := u.Base() + textOffset
 	_, err = u.Push(offset)
