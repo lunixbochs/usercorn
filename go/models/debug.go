@@ -93,7 +93,7 @@ func Repr(p []byte) string {
 			tmp[i] = fmt.Sprintf("\\x%02x", b)
 		}
 	}
-	return strings.Join(tmp, "")
+	return "\"" + strings.Join(tmp, "") + "\""
 }
 
 func HexDump(base uint64, mem []byte, bits int) []string {
