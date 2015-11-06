@@ -60,6 +60,7 @@ func thread_selfid(u syscalls.U, a []uint64) uint64 {
 }
 
 func thread_fast_set_cthread_self(u syscalls.U, a []uint64) uint64 {
+	u.RegWrite(uc.X86_REG_GS, a[0])
 	return 0
 }
 
@@ -82,7 +83,7 @@ var darwinOverrides = map[string]*syscalls.Syscall{
 	"__thread_selfid":                   {thread_selfid, A{}, INT},
 	"kernelrpc_mach_vm_allocate_trap":   {mach_vm_allocate, A{INT, INT, INT, INT}, INT},
 	"kernelrpc_mach_vm_deallocate_trap": {mach_vm_deallocate, A{INT, INT, INT}, INT},
-	"thread_fast_set_cthread_self":      {thread_fast_set_cthread_self, A{}, INT},
+	"thread_fast_set_cthread_self":      {thread_fast_set_cthread_self, A{PTR}, INT},
 	"csops":          {csops, A{}, INT},
 	"issetugid":      {issetugid, A{}, INT},
 	"host_self_trap": {host_self_trap, A{}, INT},
