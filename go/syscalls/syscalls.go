@@ -16,7 +16,7 @@ import (
 
 func errno(err error) uint64 {
 	if err != nil {
-		return uint64(err.(syscall.Errno))
+		return uint64(int64(-err.(syscall.Errno)))
 	}
 	return 0
 }
@@ -42,7 +42,10 @@ func exit(u U, a []uint64) uint64 {
 func read(u U, a []uint64) uint64 {
 	fd, buf, size := int(a[0]), a[1], a[2]
 	tmp := make([]byte, size)
-	n, _ := syscall.Read(fd, tmp)
+	n, err := syscall.Read(fd, tmp)
+	if err != nil {
+		return errno(err)
+	}
 	u.MemWrite(buf, tmp[:n])
 	return uint64(n)
 }
@@ -50,7 +53,10 @@ func read(u U, a []uint64) uint64 {
 func write(u U, a []uint64) uint64 {
 	fd, buf, size := int(a[0]), a[1], a[2]
 	mem, _ := u.MemRead(buf, size)
-	n, _ := syscall.Write(fd, mem)
+	n, err := syscall.Write(fd, mem)
+	if err != nil {
+		return errno(err)
+	}
 	return uint64(n)
 }
 
@@ -60,7 +66,10 @@ func open(u U, a []uint64) uint64 {
 		path = u.PrefixPath(path, false)
 	}
 	mode, flags := int(a[1]), uint32(a[2])
-	fd, _ := syscall.Open(path, mode, flags)
+	fd, err := syscall.Open(path, mode, flags)
+	if err != nil {
+		return errno(err)
+	}
 	return uint64(fd)
 }
 
@@ -70,13 +79,15 @@ func _close(u U, a []uint64) uint64 {
 	if fd == 2 {
 		return 0
 	}
-	syscall.Close(fd)
-	return 0
+	return errno(syscall.Close(fd))
 }
 
 func lseek(u U, a []uint64) uint64 {
 	fd, offset, whence := int(a[0]), int64(a[1]), int(a[2])
-	off, _ := syscall.Seek(fd, offset, whence)
+	off, err := syscall.Seek(fd, offset, whence)
+	if err != nil {
+		return errno(err)
+	}
 	return uint64(off)
 }
 
@@ -91,6 +102,7 @@ func mmap(u U, a []uint64) uint64 {
 		tmp := make([]byte, size)
 		n, _ := f.Read(tmp)
 		u.MemWrite(addr, tmp[:n])
+		syscall.Close(fd2)
 	}
 	return uint64(addr)
 }
@@ -178,9 +190,9 @@ func readv(u U, a []uint64) uint64 {
 	var read uint64
 	for vec := range iovecIter(u.Mem().StreamAt(iov), count, int(u.Bits()), u.ByteOrder()) {
 		tmp := make([]byte, vec.Len)
-		n, _ := syscall.Read(fd, tmp)
-		if n <= 0 {
-			break
+		n, err := syscall.Read(fd, tmp)
+		if err != nil {
+			return errno(err)
 		}
 		read += uint64(n)
 		u.MemWrite(vec.Base, tmp[:n])
@@ -193,8 +205,11 @@ func writev(u U, a []uint64) uint64 {
 	var written uint64
 	for vec := range iovecIter(u.Mem().StreamAt(iov), count, int(u.Bits()), u.ByteOrder()) {
 		data, _ := u.MemRead(vec.Base, vec.Len)
-		syscall.Write(fd, data)
-		written += uint64(len(data))
+		n, err := syscall.Write(fd, data)
+		if err != nil {
+			return errno(err)
+		}
+		written += uint64(n)
 	}
 	return written
 }
