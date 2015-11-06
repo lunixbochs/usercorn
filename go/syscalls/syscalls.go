@@ -578,6 +578,7 @@ var syscalls = map[string]Syscall{
 	// stubs
 	"ioctl":          {Stub, A{}, INT},
 	"rt_sigprocmask": {Stub, A{}, INT},
+	"rt_sigaction":   {Stub, A{}, INT},
 	"futex":          {Stub, A{}, INT},
 	"fcntl":          {Stub, A{}, INT},
 }
