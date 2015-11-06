@@ -490,10 +490,7 @@ func chroot(u U, a []uint64) uint64 {
 func kill(u U, a []uint64) uint64 {
 	// TODO: os-specific signal handling?
 	pid, sig := a[0], a[1]
-	if err := syscall.Kill(int(pid), syscall.Signal(sig)); err != nil {
-		return UINT64_MAX // FIXME
-	}
-	return 0
+	return errno(syscall.Kill(int(pid), syscall.Signal(sig)))
 }
 
 func Stub(u U, a []uint64) uint64 {
