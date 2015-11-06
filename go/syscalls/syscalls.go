@@ -237,11 +237,15 @@ func getuid(u U, a []uint64) uint64 {
 }
 
 func setgid(u U, a []uint64) uint64 {
-	return errno(syscall.Setgid(int(a[0])))
+	// TODO: these don't work on Linux
+	syscall.Setgid(int(a[0]))
+	return 0
 }
 
 func setuid(u U, a []uint64) uint64 {
-	return errno(syscall.Setuid(int(a[0])))
+	// TODO: these don't work on Linux
+	syscall.Setuid(int(a[0]))
+	return 0
 }
 
 func getgroups(u U, a []uint64) uint64 {
