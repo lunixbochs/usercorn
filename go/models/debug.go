@@ -84,6 +84,18 @@ func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
 	return ret, nil
 }
 
+func Repr(p []byte) string {
+	tmp := make([]string, len(p))
+	for i, b := range p {
+		if b >= 0x20 && b <= 0x7e {
+			tmp[i] = string(b)
+		} else {
+			tmp[i] = fmt.Sprintf("\\x%02x", b)
+		}
+	}
+	return strings.Join(tmp, "")
+}
+
 func HexDump(base uint64, mem []byte, bits int) []string {
 	var clean = func(p []byte) string {
 		o := make([]byte, len(p))

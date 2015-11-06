@@ -28,7 +28,7 @@ func traceBasicArg(u models.Usercorn, arg uint64, t int) string {
 		return fmt.Sprintf("%d", int32(arg))
 	case STR:
 		s, _ := u.Mem().ReadStrAt(arg)
-		return fmt.Sprintf("%+q", s)
+		return models.Repr([]byte(s))
 	default:
 		return fmt.Sprintf("0x%x", arg)
 	}
@@ -38,7 +38,7 @@ func traceArg(u models.Usercorn, args []uint64, t int) string {
 	switch t {
 	case BUF:
 		mem, _ := u.MemRead(args[0], args[1])
-		return fmt.Sprintf("%+q", string(mem))
+		return models.Repr(mem)
 	default:
 		return traceBasicArg(u, args[0], t)
 	}
@@ -65,7 +65,7 @@ func (s Syscall) TraceRet(u models.Usercorn, name string, args []uint64, ret uin
 			r := int(ret)
 			if uint64(r) <= args[i+1] && r >= 0 {
 				mem, _ := u.MemRead(args[i], uint64(r))
-				out = append(out, fmt.Sprintf("%+q", string(mem)))
+				out = append(out, models.Repr(mem))
 			}
 		}
 	}
