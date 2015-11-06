@@ -282,6 +282,12 @@ func symlink(u U, a []uint64) uint64 {
 	return errno(syscall.Symlink(path1, path2))
 }
 
+func link(u U, a []uint64) uint64 {
+	path1, _ := u.Mem().ReadStrAt(a[0])
+	path2, _ := u.Mem().ReadStrAt(a[1])
+	return errno(syscall.Link(path1, path2))
+}
+
 func openat(u U, a []uint64) uint64 {
 	dirfd := int(a[0])
 	path, _ := u.Mem().ReadStrAt(a[1])
@@ -509,6 +515,7 @@ var syscalls = map[string]Syscall{
 	"dup2":     {dup2, A{INT, INT}, INT},
 	"readlink": {readlink, A{STR, OBUF, INT}, LEN},
 	"symlink":  {symlink, A{STR, STR}, INT},
+	"link":     {link, A{STR, STR}, INT},
 	"openat":   {openat, A{FD, STR, INT, INT}, FD},
 	"getdents": {getdents, A{FD, OBUF, INT}, LEN},
 	"getpid":   {getpid, A{}, INT},
