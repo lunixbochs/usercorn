@@ -214,6 +214,12 @@ func writev(u U, a []uint64) uint64 {
 	return written
 }
 
+func chmod(u U, a []uint64) uint64 {
+	path, _ := u.Mem().ReadStrAt(a[0])
+	mode := uint32(a[1])
+	return errno(syscall.Chmod(path, mode))
+}
+
 func getegid(u U, a []uint64) uint64 {
 	return uint64(os.Getegid())
 }
@@ -404,6 +410,10 @@ func getpid(u U, a []uint64) uint64 {
 	return uint64(os.Getpid())
 }
 
+func getppid(u U, a []uint64) uint64 {
+	return uint64(os.Getppid())
+}
+
 func socket(u U, a []uint64) uint64 {
 	fd, err := syscall.Socket(int(a[0]), int(a[1]), int(a[2]))
 	if err != nil {
@@ -548,6 +558,7 @@ var syscalls = map[string]Syscall{
 	"access":   {access, A{STR, INT}, INT},
 	"readv":    {readv, A{FD, PTR, INT}, INT},
 	"writev":   {writev, A{FD, PTR, INT}, INT},
+	"chmod":    {chmod, A{STR, INT}, INT},
 
 	"getegid":   {getegid, A{}, INT},
 	"geteuid":   {geteuid, A{}, INT},
@@ -564,6 +575,7 @@ var syscalls = map[string]Syscall{
 	"openat":   {openat, A{FD, STR, INT, INT}, FD},
 	"getdents": {getdents, A{FD, OBUF, INT}, LEN},
 	"getpid":   {getpid, A{}, INT},
+	"getppid":  {getppid, A{}, INT},
 	"socket":   {socket, A{INT, INT, INT}, FD},
 	"connect":  {connect, A{INT, PTR, LEN}, INT},
 	"bind":     {bind, A{INT, PTR, LEN}, INT},
