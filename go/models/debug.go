@@ -39,6 +39,7 @@ func Demangle(name string) string {
 	if err != nil || len(out) == 0 {
 		return name
 	}
+	cmd.Wait()
 	out = demangleRe.FindSubmatch(out)[0]
 	return string(out)
 }
