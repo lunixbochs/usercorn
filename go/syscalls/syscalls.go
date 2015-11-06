@@ -482,6 +482,11 @@ func chdir(u U, a []uint64) uint64 {
 	return 0
 }
 
+func chroot(u U, a []uint64) uint64 {
+	path, _ := u.Mem().ReadStrAt(a[0])
+	return errno(syscall.Chroot(path))
+}
+
 func kill(u U, a []uint64) uint64 {
 	// TODO: os-specific signal handling?
 	pid, sig := a[0], a[1]
@@ -541,6 +546,7 @@ var syscalls = map[string]Syscall{
 
 	"clock_gettime": {clock_gettime, A{INT, PTR}, INT},
 	"chdir":         {chdir, A{STR}, INT},
+	"chroot":        {chroot, A{STR}, INT},
 	"kill":          {kill, A{PID, SIGNAL}, INT},
 
 	// stubs
