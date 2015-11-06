@@ -493,6 +493,34 @@ func kill(u U, a []uint64) uint64 {
 	return errno(syscall.Kill(int(pid), syscall.Signal(sig)))
 }
 
+func execve(u U, a []uint64) uint64 {
+	// TODO: put this function somewhere generic?
+	readStrArray := func(addr uint64) []string {
+		var out []string
+		stream := u.Mem().StreamAt(addr)
+		for {
+			var addr uint64
+			if u.Bits() == 64 {
+				binary.Read(stream, u.ByteOrder(), &addr)
+			} else {
+				var addr32 uint32
+				binary.Read(stream, u.ByteOrder(), &addr32)
+				addr = uint64(addr32)
+			}
+			if addr == 0 {
+				break
+			}
+			s, _ := u.Mem().ReadStrAt(addr)
+			out = append(out, s)
+		}
+		return out
+	}
+	path, _ := u.Mem().ReadStrAt(a[0])
+	argv := readStrArray(a[1])
+	envp := readStrArray(a[2])
+	return errno(syscall.Exec(path, argv, envp))
+}
+
 func Stub(u U, a []uint64) uint64 {
 	return UINT64_MAX
 }
@@ -545,6 +573,7 @@ var syscalls = map[string]Syscall{
 	"chdir":         {chdir, A{STR}, INT},
 	"chroot":        {chroot, A{STR}, INT},
 	"kill":          {kill, A{PID, SIGNAL}, INT},
+	"execve":        {execve, A{STR, PTR, PTR}, INT},
 
 	// stubs
 	"ioctl":          {Stub, A{}, INT},
