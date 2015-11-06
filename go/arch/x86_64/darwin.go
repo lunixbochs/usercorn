@@ -77,6 +77,10 @@ func host_self_trap(u syscalls.U, a []uint64) uint64 {
 	return 2
 }
 
+func mach_msg_trap(u syscalls.U, a []uint64) uint64 {
+	return 0
+}
+
 var darwinOverrides = map[string]*syscalls.Syscall{
 	"task_self_trap":                    {task_self_trap, A{}, INT},
 	"mach_reply_port":                   {mach_reply_port, A{}, INT},
@@ -87,6 +91,7 @@ var darwinOverrides = map[string]*syscalls.Syscall{
 	"csops":          {csops, A{}, INT},
 	"issetugid":      {issetugid, A{}, INT},
 	"host_self_trap": {host_self_trap, A{}, INT},
+	"mach_msg_trap":  {mach_msg_trap, A{}, INT},
 }
 
 func DarwinSyscall(u models.Usercorn) {
