@@ -174,24 +174,28 @@ func access(u U, a []uint64) uint64 {
 
 func readv(u U, a []uint64) uint64 {
 	fd, iov, count := int(a[0]), a[1], a[2]
+	var read uint64
 	for vec := range iovecIter(u.Mem().StreamAt(iov), count, int(u.Bits()), u.ByteOrder()) {
 		tmp := make([]byte, vec.Len)
 		n, _ := syscall.Read(fd, tmp)
 		if n <= 0 {
 			break
 		}
+		read += uint64(n)
 		u.MemWrite(vec.Base, tmp[:n])
 	}
-	return 0
+	return read
 }
 
 func writev(u U, a []uint64) uint64 {
 	fd, iov, count := int(a[0]), a[1], a[2]
+	var written uint64
 	for vec := range iovecIter(u.Mem().StreamAt(iov), count, int(u.Bits()), u.ByteOrder()) {
 		data, _ := u.MemRead(vec.Base, vec.Len)
 		syscall.Write(fd, data)
+		written += uint64(len(data))
 	}
-	return 0
+	return written
 }
 
 func getegid(u U, a []uint64) uint64 {
