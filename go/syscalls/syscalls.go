@@ -1,6 +1,7 @@
 package syscalls
 
 import (
+	"encoding/binary"
 	"fmt"
 	"github.com/lunixbochs/struc"
 	"io/ioutil"
@@ -220,6 +221,29 @@ func setgid(u U, a []uint64) uint64 {
 
 func setuid(u U, a []uint64) uint64 {
 	return errno(syscall.Setuid(int(a[0])))
+}
+
+func getgroups(u U, a []uint64) uint64 {
+	groups, err := syscall.Getgroups()
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
+	length := uint64(len(groups))
+	if a[0] > 0 {
+		if a[0] < uint64(len(groups)) {
+			groups = groups[:a[0]]
+		}
+		tmp := make([]uint32, len(groups))
+		for i, v := range groups {
+			tmp[i] = uint32(v)
+		}
+		out := u.Mem().StreamAt(a[1])
+		err = binary.Write(out, u.ByteOrder(), tmp)
+		if err != nil {
+			return UINT64_MAX // FIXME
+		}
+	}
+	return length
 }
 
 func dup2(u U, a []uint64) uint64 {
@@ -468,12 +492,13 @@ var syscalls = map[string]Syscall{
 	"readv":    {readv, A{FD, PTR, INT}, INT},
 	"writev":   {writev, A{FD, PTR, INT}, INT},
 
-	"getegid": {getegid, A{}, INT},
-	"geteuid": {geteuid, A{}, INT},
-	"getgid":  {getgid, A{}, INT},
-	"getuid":  {getuid, A{}, INT},
-	"setgid":  {setgid, A{INT}, INT},
-	"setuid":  {setuid, A{INT}, INT},
+	"getegid":   {getegid, A{}, INT},
+	"geteuid":   {geteuid, A{}, INT},
+	"getgid":    {getgid, A{}, INT},
+	"getuid":    {getuid, A{}, INT},
+	"setgid":    {setgid, A{INT}, INT},
+	"setuid":    {setuid, A{INT}, INT},
+	"getgroups": {getgroups, A{INT, PTR}, INT},
 
 	"dup2":     {dup2, A{INT, INT}, INT},
 	"readlink": {readlink, A{STR, OBUF, INT}, LEN},
