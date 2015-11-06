@@ -560,6 +560,10 @@ outer:
 		if err != nil {
 			return
 		}
+		if bin.Arch() != l.Arch() {
+			err = fmt.Errorf("Interpreter arch mismatch: %s != %s", l.Arch() != bin.Arch())
+			return
+		}
 		u.interpLoader = bin
 		_, _, interpBias, interpEntry, err := u.mapBinary(bin, true)
 		return interpBias, interpEntry, loadBias, entry, err
