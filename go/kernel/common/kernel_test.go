@@ -29,7 +29,7 @@ func TestKernel(t *testing.T) {
 		t.Fatal(err)
 	}
 	kernel := NewPosixKernel(u)
-	ret := kernel.UsercornCall("exit", []uint64{43})
+	ret := kernel.UsercornSyscall("exit").Call([]uint64{43})
 	if kernel.exitCode != 43 {
 		t.Fatal("Syscall failed.")
 	}

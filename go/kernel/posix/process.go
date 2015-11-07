@@ -11,6 +11,10 @@ func (k *Kernel) Exit(code int) {
 	k.U.Exit(code)
 }
 
+func (k *Kernel) ExitGroup(code int) {
+	k.Exit(code)
+}
+
 func (k *Kernel) Getpid() int {
 	return os.Getpid()
 }

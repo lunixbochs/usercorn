@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/lunixbochs/usercorn/go/arch"
+	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/loader"
 	"github.com/lunixbochs/usercorn/go/models"
-	"github.com/lunixbochs/usercorn/go/syscalls"
 )
 
 type Usercorn struct {
@@ -19,6 +19,7 @@ type Usercorn struct {
 	exe          string
 	loader       models.Loader
 	interpLoader models.Loader
+	kernels      []common.Kernel
 
 	base       uint64
 	interpBase uint64
@@ -76,6 +77,16 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 		loader:        l,
 		LoadPrefix:    prefix,
 		traceMatching: true,
+	}
+	// load kernels
+	// the array cast is a trick to work around circular imports
+	if os.Kernels != nil {
+		kernelI := os.Kernels(u)
+		kernels := make([]common.Kernel, len(kernelI))
+		for i, k := range kernelI {
+			kernels[i] = k.(common.Kernel)
+		}
+		u.kernels = kernels
 	}
 	// map binary (and interp) into memory
 	u.status = models.StatusDiff{U: u, Color: true}
@@ -609,14 +620,30 @@ func (u *Usercorn) pushAddrs(addrs []uint64) error {
 	return nil
 }
 
-func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error), override interface{}) (uint64, error) {
+func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
 	if name == "" {
 		panic(fmt.Sprintf("Syscall missing: %d", num))
 	}
 	if u.TraceSys && u.stacktrace.Len() > 0 {
 		fmt.Fprintf(os.Stderr, strings.Repeat("  ", u.stacktrace.Len()-1)+"s ")
 	}
-	return syscalls.Call(u, num, name, getArgs, u.TraceSys, override)
+	for _, k := range u.kernels {
+		if sys := k.UsercornSyscall(name); sys != nil {
+			args, err := getArgs(len(sys.In))
+			if err != nil {
+				return 0, err
+			}
+			if u.TraceSys {
+				sys.Trace(args)
+			}
+			ret := sys.Call(args)
+			if u.TraceSys {
+				sys.TraceRet(args, ret)
+			}
+			return ret, nil
+		}
+	}
+	panic(fmt.Errorf("Kernel not found for syscall '%s'", name))
 }
 
 func (u *Usercorn) Exit(status int) {

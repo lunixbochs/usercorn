@@ -12,10 +12,6 @@ import (
 
 const UINT64_MAX = 0xFFFFFFFFFFFFFFFF
 
-type Kernel struct {
-	co.KernelBase
-}
-
 // TODO: move this to the Linux kernel
 func (k *Kernel) Getdents(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
 	dirPath, err := posix.PathFromFd(int(dirfd))

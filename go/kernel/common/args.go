@@ -1,4 +1,4 @@
-package syscalls
+package common
 
 import (
 	"github.com/lunixbochs/usercorn/go/models"

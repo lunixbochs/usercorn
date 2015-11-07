@@ -7,7 +7,7 @@ import (
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
-func (k *Kernel) Mmap(addrHint, size uint64, prot int, flags int, fd co.Fd, off co.Off) uint64 {
+func (k *Kernel) Mmap(addrHint, size uint64, prot, flags int, fd co.Fd, off co.Off) uint64 {
 	addr, _ := k.U.Mmap(addrHint, size)
 	if fd > 0 {
 		fd2, _ := syscall.Dup(int(fd))
@@ -19,6 +19,10 @@ func (k *Kernel) Mmap(addrHint, size uint64, prot int, flags int, fd co.Fd, off 
 		syscall.Close(fd2)
 	}
 	return addr
+}
+
+func (k *Kernel) Mmap2(addrHint, size uint64, prot, flags int, fd co.Fd, off co.Off) uint64 {
+	return k.Mmap(addrHint, size, prot, flags, fd, off)
 }
 
 func (k *Kernel) Munmap(addr, size uint64) uint64 {

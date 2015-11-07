@@ -125,6 +125,7 @@ func (a *Arch) RegDump(u uc.Unicorn) ([]RegVal, error) {
 
 type OS struct {
 	Name      string
+	Kernels   func(Usercorn) []interface{}
 	Init      func(Usercorn, []string, []string) error
 	Interrupt func(Usercorn, uint32)
 }

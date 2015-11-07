@@ -1,7 +1,6 @@
 package common
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"unicode"
@@ -10,21 +9,31 @@ import (
 )
 
 type Syscall struct {
+	Name     string
 	Instance reflect.Value
 	Method   reflect.Method
 	In       []reflect.Type
 	Out      []reflect.Type
 }
 
+func (s Syscall) U() models.Usercorn {
+	return s.Instance.Interface().(Kernel).Usercorn()
+}
+
 type Kernel interface {
+	Usercorn() models.Usercorn
 	UsercornKernel() *KernelBase
 	UsercornInit(Kernel)
-	UsercornCall(name string, args []uint64) uint64
+	UsercornSyscall(name string) *Syscall
 }
 
 type KernelBase struct {
 	Syscalls map[string]Syscall
 	U        models.Usercorn
+}
+
+func (k *KernelBase) Usercorn() models.Usercorn {
+	return k.U
 }
 
 func (k *KernelBase) UsercornKernel() *KernelBase {
@@ -68,8 +77,12 @@ func (k *KernelBase) UsercornInit(i Kernel) {
 	instance := reflect.ValueOf(i)
 	for i := 0; i < typ.NumMethod(); i++ {
 		method := typ.Method(i)
-		if !strings.HasPrefix(method.Name, "Usercorn") {
-			name := camelToSnakeCase(method.Name)
+		name := method.Name
+		if !strings.HasPrefix(name, "Usercorn") {
+			if strings.HasPrefix(name, "Literal") {
+				name = strings.Replace(name, "Literal", "", 1)
+			}
+			name = camelToSnakeCase(name)
 			in := make([]reflect.Type, method.Type.NumIn()-1)
 			for j := 1; j < method.Type.NumIn(); j++ {
 				in[j-1] = method.Type.In(j)
@@ -78,49 +91,18 @@ func (k *KernelBase) UsercornInit(i Kernel) {
 			for j := 0; j < method.Type.NumOut(); j++ {
 				out[j] = method.Type.Out(j)
 			}
-			syscalls[name] = Syscall{Instance: instance, Method: method, In: in, Out: out}
+			syscalls[name] = Syscall{
+				Name:     name,
+				Instance: instance, Method: method,
+				In: in, Out: out,
+			}
 		}
 	}
 }
 
-// Call a syscall from the dispatch table. Will panic() if anything goes terribly wrong.
-func (k *KernelBase) UsercornCall(name string, args []uint64) uint64 {
-	sys, ok := k.Syscalls[name]
-	if !ok {
-		panic(fmt.Errorf("Unknown syscall: %s", name))
+func (k *KernelBase) UsercornSyscall(name string) *Syscall {
+	if sys, ok := k.Syscalls[name]; ok {
+		return &sys
 	}
-	in := make([]reflect.Value, len(sys.In)+1)
-	in[0] = sys.Instance
-	for i, typ := range sys.In {
-		var val reflect.Value
-		if i >= len(args) {
-			panic(fmt.Errorf("Not enough arguments to syscall '%s'. Wanted %d, got %d.", name, len(sys.In), len(args)))
-		}
-		arg := args[i]
-		argVal := reflect.ValueOf(arg)
-		switch typ {
-		case BufType, ObufType:
-			val = reflect.ValueOf(Obuf{Addr: arg, StrucStream: k.U.StrucAt(arg)}).Convert(typ)
-		case LenType, OffType, FdType, PtrType:
-			val = argVal.Convert(typ)
-		default:
-			switch val.Kind() {
-			case reflect.String:
-				s, _ := k.U.Mem().ReadStrAt(arg)
-				val = reflect.ValueOf(s)
-			default:
-				if argVal.Type().ConvertibleTo(typ) {
-					val = argVal.Convert(typ)
-				} else {
-					panic(fmt.Errorf("Unsupported syscall argument type %s(..%s..)", name, typ))
-				}
-			}
-		}
-		in[i+1] = val
-	}
-	out := sys.Method.Func.Call(in)
-	if len(out) > 0 && out[0].Type().ConvertibleTo(reflect.TypeOf(0)) {
-		return out[0].Uint()
-	}
-	return 0
+	return nil
 }
