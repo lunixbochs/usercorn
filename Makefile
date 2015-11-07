@@ -1,11 +1,15 @@
-.PHONY: go get test
-.DEFAULT_GOAL := go
+.PHONY: usercorn get test
+.DEFAULT_GOAL := build
 
-go:
+DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | xargs go list -f '{{if not .Standard}}{{.ImportPath}}{{end}}' | xargs)
+
+build: get usercorn
+
+usercorn:
 	go build -i -o usercorn ./go/usercorn
 
 get:
-	go get ./go
+	go get -u ${DEPS}
 
 test:
 	go test -v ./go/...

@@ -10,9 +10,9 @@ Building
 - The latest stable version of Go is recommended for performance and compatibility reasons.
 - Make sure you have the GOPATH environment variable pointed at a directory like `$HOME/go`, and `$GOPATH/bin` is in your PATH.
 
-Simply `go get github.com/lunixbochs/usercorn/go/usercorn`.
+Simply `go get -u github.com/lunixbochs/usercorn/go/usercorn`.
 
-To do a source build, you can also run `make` or `go build -i -o usercorn ./go/usercorn`
+To do a source tree build, you can also run `make` or `go build -i -o usercorn ./go/usercorn`
 
 Examples
 ---
