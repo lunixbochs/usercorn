@@ -2,7 +2,6 @@ package x86
 
 import (
 	"crypto/rand"
-	"encoding/binary"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"syscall"
 
@@ -86,7 +85,7 @@ func CgcSyscall(u models.Usercorn) {
 		} else {
 			numReady := int32(n)
 			if readyFds != 0 {
-				binary.Write(u.Mem().StreamAt(readyFds), u.ByteOrder(), &numReady)
+				u.StrucAt(readyFds).Pack(numReady)
 			}
 		}
 	case 7: // random

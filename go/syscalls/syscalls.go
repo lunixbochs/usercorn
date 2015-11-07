@@ -1,7 +1,6 @@
 package syscalls
 
 import (
-	"encoding/binary"
 	"fmt"
 	"github.com/lunixbochs/struc"
 	"io/ioutil"
@@ -262,8 +261,7 @@ func getgroups(u U, a []uint64) uint64 {
 		for i, v := range groups {
 			tmp[i] = uint32(v)
 		}
-		out := u.Mem().StreamAt(a[1])
-		err = binary.Write(out, u.ByteOrder(), tmp)
+		err = u.StrucAt(a[1]).Pack(tmp)
 		if err != nil {
 			return UINT64_MAX // FIXME
 		}
@@ -481,8 +479,8 @@ func getsockopt(u U, a []uint64) uint64 {
 	}
 	value32 := int32(value)
 	size := int32(4)
-	binary.Write(u.Mem().StreamAt(a[3]), u.ByteOrder(), &value32)
-	binary.Write(u.Mem().StreamAt(a[4]), u.ByteOrder(), &size)
+	u.StrucAt(a[3]).Pack(value32)
+	u.StrucAt(a[4]).Pack(size)
 	return 0
 }
 
@@ -494,7 +492,7 @@ func setsockopt(u U, a []uint64) uint64 {
 		return UINT64_MAX // FIXME
 	}
 	var value int32
-	binary.Read(u.Mem().StreamAt(a[3]), u.ByteOrder(), &value)
+	u.StrucAt(a[3]).Unpack(&value)
 	if err := syscall.SetsockoptInt(fd, level, opt, opt); err != nil {
 		return errno(err)
 	}
@@ -539,14 +537,14 @@ func execve(u U, a []uint64) uint64 {
 	// TODO: put this function somewhere generic?
 	readStrArray := func(addr uint64) []string {
 		var out []string
-		stream := u.Mem().StreamAt(addr)
+		stream := u.StrucAt(addr)
 		for {
 			var addr uint64
 			if u.Bits() == 64 {
-				binary.Read(stream, u.ByteOrder(), &addr)
+				stream.Unpack(&addr)
 			} else {
 				var addr32 uint32
-				binary.Read(stream, u.ByteOrder(), &addr32)
+				stream.Unpack(&addr32)
 				addr = uint64(addr32)
 			}
 			if addr == 0 {
