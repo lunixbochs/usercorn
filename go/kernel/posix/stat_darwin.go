@@ -1,4 +1,4 @@
-package syscalls
+package posix
 
 // TODO: use FileInfo instead of nonportable Syscall interface?
 import (

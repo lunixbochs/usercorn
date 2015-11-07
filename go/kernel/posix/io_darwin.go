@@ -1,4 +1,4 @@
-package syscalls
+package posix
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-func pathFromFd(dirfd int) (string, error) {
+func PathFromFd(dirfd int) (string, error) {
 	// FIXME? MAXPATHLEN on OS X is currently 1024
 	buf := make([]byte, 1024)
 	_, _, errn := syscall.Syscall(syscall.SYS_FCNTL, uintptr(dirfd), uintptr(syscall.F_GETPATH), uintptr(unsafe.Pointer(&buf[0])))
@@ -19,11 +19,11 @@ func pathFromFd(dirfd int) (string, error) {
 }
 
 func openat_native(dirfd int, path string, flags int, mode uint32) uint64 {
-	dirPath, _ := pathFromFd(dirfd)
+	dirPath, _ := PathFromFd(dirfd)
 	path = filepath.Join(dirPath, path)
 	fd, err := syscall.Open(path, flags, mode)
 	if err != nil {
-		return errno(err)
+		return Errno(err)
 	}
 	return uint64(fd)
 }

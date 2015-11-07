@@ -1,4 +1,4 @@
-package syscalls
+package posix
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"syscall"
 )
 
-func pathFromFd(dirfd int) (string, error) {
+func PathFromFd(dirfd int) (string, error) {
 	p, err := ioutil.ReadFile(fmt.Sprintf("/proc/self/fd/%d", dirfd))
 	return string(p), err
 }
@@ -14,7 +14,7 @@ func pathFromFd(dirfd int) (string, error) {
 func openat_native(dirfd int, path string, flags int, mode uint32) uint64 {
 	fd, err := syscall.Openat(dirfd, path, flags, mode)
 	if err != nil {
-		return errno(err)
+		return Errno(err)
 	}
 	return uint64(fd)
 }

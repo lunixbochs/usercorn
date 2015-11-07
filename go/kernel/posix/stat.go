@@ -1,4 +1,4 @@
-package syscalls
+package posix
 
 import "syscall"
 

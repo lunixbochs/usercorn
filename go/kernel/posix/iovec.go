@@ -1,7 +1,7 @@
-package syscalls
+package posix
 
 import (
-	"github.com/lunixbochs/usercorn/go/models"
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
 type Iovec32 struct {
@@ -14,7 +14,7 @@ type Iovec64 struct {
 	Len  uint64
 }
 
-func iovecIter(stream *models.StrucStream, count uint64, bits uint) <-chan Iovec64 {
+func iovecIter(stream co.Buf, count uint64, bits uint) <-chan Iovec64 {
 	ret := make(chan Iovec64)
 	go func() {
 		for i := uint64(0); i < count; i++ {

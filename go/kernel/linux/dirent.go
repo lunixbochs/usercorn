@@ -1,4 +1,4 @@
-package syscalls
+package linux
 
 const (
 	DT_UNKNOWN = 0
@@ -12,7 +12,7 @@ const (
 	DT_WHT     = 14
 )
 
-type LinuxDirent struct {
+type Dirent struct {
 	Ino  uint64 `struc:"uint32"`
 	Off  uint64 `struc:"uint32"`
 	Len  int    `struc:"uint16"`
@@ -20,7 +20,7 @@ type LinuxDirent struct {
 	Type int `struc:"uint8"`
 }
 
-type LinuxDirent64 struct {
+type Dirent64 struct {
 	Ino  uint64 `struc:"uint64"`
 	Off  uint64 `struc:"uint64"`
 	Len  int    `struc:"uint16"`
