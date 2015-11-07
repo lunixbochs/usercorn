@@ -1,9 +1,7 @@
 package syscalls
 
 import (
-	"encoding/binary"
-	"github.com/lunixbochs/struc"
-	"io"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type Iovec32 struct {
@@ -16,17 +14,17 @@ type Iovec64 struct {
 	Len  uint64
 }
 
-func iovecIter(r io.Reader, count uint64, bits int, endian binary.ByteOrder) <-chan Iovec64 {
+func iovecIter(stream *models.StrucStream, count uint64, bits uint) <-chan Iovec64 {
 	ret := make(chan Iovec64)
 	go func() {
 		for i := uint64(0); i < count; i++ {
 			if bits == 64 {
 				var iovec Iovec64
-				struc.UnpackWithOrder(r, &iovec, endian)
+				stream.Unpack(&iovec)
 				ret <- iovec
 			} else {
 				var iv32 Iovec32
-				struc.UnpackWithOrder(r, &iv32, endian)
+				stream.Unpack(&iv32)
 				ret <- Iovec64{uint64(iv32.Base), uint64(iv32.Len)}
 			}
 		}

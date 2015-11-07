@@ -3,7 +3,6 @@ package x86
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"github.com/lunixbochs/struc"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"syscall"
 
@@ -74,9 +73,9 @@ func CgcSyscall(u models.Usercorn) {
 		nfds := int(args[0])
 		var readSet, writeSet *fdset32
 		var timeout syscalls.Timespec
-		struc.UnpackWithOrder(u.Mem().StreamAt(args[1]), &readSet, u.ByteOrder())
-		struc.UnpackWithOrder(u.Mem().StreamAt(args[2]), &writeSet, u.ByteOrder())
-		struc.UnpackWithOrder(u.Mem().StreamAt(args[3]), &timeout, u.ByteOrder())
+		u.StrucAt(args[1]).Unpack(&readSet)
+		u.StrucAt(args[2]).Unpack(&writeSet)
+		u.StrucAt(args[3]).Unpack(&timeout)
 		readyFds := args[4]
 
 		readNative := readSet.Native()

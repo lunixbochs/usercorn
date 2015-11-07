@@ -19,6 +19,7 @@ type Usercorn interface {
 	Mmap(addr, size uint64) (uint64, error)
 	MmapWrite(addr uint64, p []byte) (uint64, error)
 	Mem() memio.MemIO
+	StrucAt(addr uint64) *StrucStream
 
 	PackAddr(buf []byte, n uint64) ([]byte, error)
 	UnpackAddr(buf []byte) uint64

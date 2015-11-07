@@ -1,7 +1,6 @@
 package syscalls
 
 import (
-	"github.com/lunixbochs/struc"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
@@ -13,7 +12,7 @@ func trunc(s string, length int) string {
 }
 
 func Uname(u models.Usercorn, addr uint64, un *models.Uname) uint64 {
-	struc.PackWithOrder(u.Mem().StreamAt(addr), un, u.ByteOrder())
+	u.StrucAt(addr).Pack(un)
 	/*
 		var utsname syscall.Utsname
 		if err := syscall.Uname(utsname); err != nil {

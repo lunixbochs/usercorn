@@ -138,6 +138,10 @@ func (u *Unicorn) Mem() memio.MemIO {
 	return u.memio
 }
 
+func (u *Unicorn) StrucAt(addr uint64) *models.StrucStream {
+	return &models.StrucStream{u.Mem().StreamAt(addr), u.ByteOrder()}
+}
+
 func (u *Unicorn) PackAddr(buf []byte, n uint64) ([]byte, error) {
 	if len(buf) < u.Bsz {
 		return nil, errors.New("Buffer too small.")

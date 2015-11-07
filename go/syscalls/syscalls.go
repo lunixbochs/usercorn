@@ -129,7 +129,7 @@ func fstat(u U, a []uint64) uint64 {
 		return errno(err)
 	}
 	targetStat := NewTargetStat(&stat, u.OS(), u.Bits())
-	if err := struc.PackWithOrder(u.Mem().StreamAt(buf), targetStat, u.ByteOrder()); err != nil {
+	if err := u.StrucAt(buf).Pack(targetStat); err != nil {
 		panic(err)
 	}
 	return 0
@@ -147,7 +147,7 @@ func stat(u U, a []uint64) uint64 {
 		return errno(err)
 	}
 	targetStat := NewTargetStat(&stat, u.OS(), u.Bits())
-	if err := struc.PackWithOrder(u.Mem().StreamAt(buf), targetStat, u.ByteOrder()); err != nil {
+	if err := u.StrucAt(buf).Pack(targetStat); err != nil {
 		panic(err)
 	}
 	return 0
@@ -161,7 +161,7 @@ func lstat(u U, a []uint64) uint64 {
 		return errno(err)
 	}
 	targetStat := NewTargetStat(&stat, u.OS(), u.Bits())
-	if err := struc.PackWithOrder(u.Mem().StreamAt(buf), targetStat, u.ByteOrder()); err != nil {
+	if err := u.StrucAt(buf).Pack(targetStat); err != nil {
 		panic(err)
 	}
 	return 0
@@ -188,7 +188,7 @@ func access(u U, a []uint64) uint64 {
 func readv(u U, a []uint64) uint64 {
 	fd, iov, count := int(a[0]), a[1], a[2]
 	var read uint64
-	for vec := range iovecIter(u.Mem().StreamAt(iov), count, int(u.Bits()), u.ByteOrder()) {
+	for vec := range iovecIter(u.StrucAt(iov), count, u.Bits()) {
 		tmp := make([]byte, vec.Len)
 		n, err := syscall.Read(fd, tmp)
 		if err != nil {
@@ -203,7 +203,7 @@ func readv(u U, a []uint64) uint64 {
 func writev(u U, a []uint64) uint64 {
 	fd, iov, count := int(a[0]), a[1], a[2]
 	var written uint64
-	for vec := range iovecIter(u.Mem().StreamAt(iov), count, int(u.Bits()), u.ByteOrder()) {
+	for vec := range iovecIter(u.StrucAt(iov), count, u.Bits()) {
 		data, _ := u.MemRead(vec.Base, vec.Len)
 		n, err := syscall.Write(fd, data)
 		if err != nil {
@@ -333,7 +333,7 @@ func getdents(u U, a []uint64) uint64 {
 	count := a[2]
 	// figure out our offset
 	// TODO: maybe figure out how the kernel does this
-	in := u.Mem().StreamAt(a[1])
+	in := u.StrucAt(a[1])
 	var offset, read uint64
 	// TODO: DRY? :(
 	var ent interface{}
@@ -344,7 +344,7 @@ func getdents(u U, a []uint64) uint64 {
 	}
 	for {
 		tmp := ent.(*LinuxDirent64)
-		if err := struc.Unpack(in, ent); err != nil {
+		if err := in.Unpack(ent); err != nil {
 			break
 		}
 		size, _ := struc.Sizeof(ent)
@@ -361,7 +361,7 @@ func getdents(u U, a []uint64) uint64 {
 	if offset >= uint64(len(dents)) {
 		return 0
 	}
-	out := u.Mem().StreamAt(a[1])
+	out := u.StrucAt(a[1])
 	dents = dents[offset:]
 	written := 0
 	for i, f := range dents {
@@ -392,7 +392,7 @@ func getdents(u U, a []uint64) uint64 {
 		} else {
 			ent = &LinuxDirent{inode, uint64(i), 0, f.Name() + "\x00", fileType}
 		}
-		size, err := struc.Sizeof(ent)
+		size, _ := struc.Sizeof(ent)
 		if uint64(written+size) > count {
 			break
 		}
@@ -402,8 +402,7 @@ func getdents(u U, a []uint64) uint64 {
 			ent.(*LinuxDirent).Len = size
 		}
 		written += size
-		err = struc.PackWithOrder(out, ent, u.ByteOrder())
-		if err != nil {
+		if err := out.Pack(ent); err != nil {
 			return UINT64_MAX // FIXME
 		}
 	}
@@ -504,12 +503,12 @@ func setsockopt(u U, a []uint64) uint64 {
 
 func clock_gettime(u U, a []uint64) uint64 {
 	var err error
-	out := u.Mem().StreamAt(a[1])
+	out := u.StrucAt(a[1])
 	ts := syscall.NsecToTimespec(time.Now().UnixNano())
 	if u.Bits() == 64 {
-		err = struc.Pack(out, &Timespec64{ts.Sec, ts.Nsec})
+		err = out.Pack(&Timespec64{ts.Sec, ts.Nsec})
 	} else {
-		err = struc.Pack(out, &Timespec{int32(ts.Sec), int32(ts.Nsec)})
+		err = out.Pack(&Timespec{int32(ts.Sec), int32(ts.Nsec)})
 	}
 	if err != nil {
 		return UINT64_MAX // FIXME
