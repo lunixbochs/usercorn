@@ -473,6 +473,35 @@ func sendto(u U, a []uint64) uint64 {
 	return errno(syscall.Sendto(fd, msg, int(flags), sa))
 }
 
+func getsockopt(u U, a []uint64) uint64 {
+	// TODO: dispatch/support both addr and int types
+	fd, level, opt := int(a[0]), int(a[1]), int(a[2])
+	value, err := syscall.GetsockoptInt(fd, level, opt)
+	if err != nil {
+		return errno(err)
+	}
+	value32 := int32(value)
+	size := int32(4)
+	binary.Write(u.Mem().StreamAt(a[3]), u.ByteOrder(), &value32)
+	binary.Write(u.Mem().StreamAt(a[4]), u.ByteOrder(), &size)
+	return 0
+}
+
+func setsockopt(u U, a []uint64) uint64 {
+	// TODO: dispatch/support all setsockopt types
+	fd, level, opt, size := int(a[0]), int(a[1]), int(a[2]), int(a[4])
+	if size != 4 {
+		fmt.Fprintf(os.Stderr, "WARNING: unsupported Setsockopt type %d\n", size)
+		return UINT64_MAX // FIXME
+	}
+	var value int32
+	binary.Read(u.Mem().StreamAt(a[3]), u.ByteOrder(), &value)
+	if err := syscall.SetsockoptInt(fd, level, opt, opt); err != nil {
+		return errno(err)
+	}
+	return 0
+}
+
 func clock_gettime(u U, a []uint64) uint64 {
 	var err error
 	out := u.Mem().StreamAt(a[1])
@@ -584,6 +613,9 @@ var syscalls = map[string]Syscall{
 	"connect":  {connect, A{INT, PTR, LEN}, INT},
 	"bind":     {bind, A{INT, PTR, LEN}, INT},
 	"sendto":   {sendto, A{FD, PTR, LEN, INT, PTR, LEN}, INT},
+
+	"getsockopt": {getsockopt, A{FD, INT, INT, PTR, PTR}, INT},
+	"setsockopt": {setsockopt, A{FD, INT, INT, PTR, INT}, INT},
 
 	"clock_gettime": {clock_gettime, A{INT, PTR}, INT},
 	"chdir":         {chdir, A{STR}, INT},
