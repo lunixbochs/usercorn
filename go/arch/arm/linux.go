@@ -7,7 +7,6 @@ import (
 
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
-	"github.com/lunixbochs/usercorn/go/kernel/posix"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
@@ -20,9 +19,10 @@ type ArmLinuxKernel struct {
 func (k *ArmLinuxKernel) SetTls(addr uint64) {}
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	armLinuxKernel := &ArmLinuxKernel{linux.Kernel{common.KernelBase{U: u}}}
-	armLinuxKernel.UsercornInit(armLinuxKernel)
-	return []interface{}{armLinuxKernel, posix.NewKernel(u)}
+	kernel := &ArmLinuxKernel{}
+	kernel.U = u
+	kernel.UsercornInit(kernel)
+	return []interface{}{kernel}
 }
 
 func LinuxInit(u models.Usercorn, args, env []string) error {

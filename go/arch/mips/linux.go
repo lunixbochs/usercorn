@@ -7,14 +7,13 @@ import (
 
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
-	"github.com/lunixbochs/usercorn/go/kernel/posix"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
 var LinuxRegs = []int{uc.MIPS_REG_A0, uc.MIPS_REG_A1, uc.MIPS_REG_A2, uc.MIPS_REG_A3}
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	return []interface{}{linux.NewKernel(u), posix.NewKernel(u)}
+	return []interface{}{linux.NewKernel(u)}
 }
 
 func LinuxInit(u models.Usercorn, args, env []string) error {
