@@ -3,8 +3,8 @@ package common
 import (
 	"testing"
 
-	"github.com/lunixbochs/usercorn/go"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/mock"
 )
 
 type PosixKernel struct {
@@ -24,10 +24,7 @@ func NewPosixKernel(u models.Usercorn) *PosixKernel {
 }
 
 func TestKernel(t *testing.T) {
-	u, err := usercorn.NewUsercorn("../../../bins/x86.linux.elf", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	u := &mock.Usercorn{}
 	kernel := NewPosixKernel(u)
 	ret := kernel.UsercornSyscall("exit").Call([]uint64{43})
 	if kernel.exitCode != 43 {
