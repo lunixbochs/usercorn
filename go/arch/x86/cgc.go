@@ -2,11 +2,42 @@ package x86
 
 import (
 	"crypto/rand"
+	"encoding/binary"
+	"github.com/lunixbochs/struc"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"syscall"
 
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/syscalls"
 )
+
+const UINT32_MAX = 0xFFFFFFFF
+
+type fdset32 struct {
+	Bits [32]int32
+}
+
+func (f *fdset32) Set(fd int) {
+	f.Bits[fd/32] |= (1 << (uint(fd) & (32 - 1)))
+}
+
+func (f *fdset32) Clear(fd int) {
+	f.Bits[fd/32] &= ^(1 << (uint(fd) & (32 - 1)))
+}
+
+func (f *fdset32) IsSet(fd int) bool {
+	return f.Bits[fd/32]&(1<<(uint(fd)&(32-1))) != 0
+}
+
+func (f *fdset32) Fds() []int {
+	var out []int
+	for fd := 0; fd < 1024; fd++ {
+		if f.IsSet(fd) {
+			out = append(out, fd)
+		}
+	}
+	return out
+}
 
 func writeAddr(u models.Usercorn, addr, val uint64) {
 	var buf [4]byte
@@ -39,6 +70,26 @@ func CgcSyscall(u models.Usercorn) {
 		addr, _ := u.Mmap(0, args[0])
 		// args[1] == is executable
 		writeAddr(u, args[2], addr)
+	case 6: // fdwait
+		nfds := int(args[0])
+		var readSet, writeSet *fdset32
+		var timeout syscalls.Timespec
+		struc.UnpackWithOrder(u.Mem().StreamAt(args[1]), &readSet, u.ByteOrder())
+		struc.UnpackWithOrder(u.Mem().StreamAt(args[2]), &writeSet, u.ByteOrder())
+		struc.UnpackWithOrder(u.Mem().StreamAt(args[3]), &timeout, u.ByteOrder())
+		readyFds := args[4]
+
+		readNative := readSet.Native()
+		writeNative := writeSet.Native()
+		n, err := cgcNativeSelect(nfds, readNative, writeNative, &timeout)
+		if err != nil {
+			ret = UINT32_MAX // FIXME?
+		} else {
+			numReady := int32(n)
+			if readyFds != 0 {
+				binary.Write(u.Mem().StreamAt(readyFds), u.ByteOrder(), &numReady)
+			}
+		}
 	case 7: // random
 		tmp := make([]byte, args[1])
 		rand.Read(tmp)
