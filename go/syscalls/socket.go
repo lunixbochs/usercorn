@@ -25,29 +25,29 @@ func decodeSockaddr(u U, p []byte) syscall.Sockaddr {
 	switch family {
 	case AF_LOCAL:
 		var a RawSockaddrUnix
-		struc.Unpack(buf, &a)
+		struc.UnpackWithOrder(buf, &a, u.ByteOrder())
 		paths := bytes.SplitN([]byte(a.Path[:]), []byte{0}, 2)
 		return &syscall.SockaddrUnix{Name: string(paths[0])}
 	case AF_INET:
 		var a syscall.RawSockaddrInet4
-		struc.Unpack(buf, &a)
+		struc.UnpackWithOrder(buf, &a, u.ByteOrder())
 		return &syscall.SockaddrInet4{Port: int(a.Port), Addr: a.Addr}
 	case AF_INET6:
 		var a syscall.RawSockaddrInet6
-		struc.Unpack(buf, &a)
+		struc.UnpackWithOrder(buf, &a, u.ByteOrder())
 		return &syscall.SockaddrInet6{Port: int(a.Port), Addr: a.Addr}
 		// TODO: only on Linux?
 		/*
 			case AF_PACKET:
 				var a syscall.RawSockaddrLinkLayer
-				struc.Unpack(buf, &a)
+				struc.UnpackWithOrder(buf, &a, u.ByteOrder())
 				return &syscall.SockaddrLinkLayer{
 					Protocol: a.Protocol, Ifindex: a.Ifindex, Hatype: a.Hatype,
 					Pkttype: a.Pkttype, Halen: a.Halen,
 				}
 			case AF_NETLINK:
 				var a syscall.RawSockaddrNetlink
-				struc.Unpack(buf, &a)
+				struc.UnpackWithOrder(buf, &a, u.ByteOrder())
 				return &syscall.SockaddrNetlink{Pad: a.Pad, Pid: a.Pid, Groups: a.Groups}
 		*/
 	}
