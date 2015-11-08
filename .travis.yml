@@ -17,6 +17,7 @@ before_install:
   - git clone https://github.com/unicorn-engine/unicorn.git
   - cd unicorn && git pull && make && sudo make install && cd ..
   - popd
+  - git checkout -b tmp && (git branch -d master || true) && git branch master
   - go get ./...
 
 script: 'make test'
