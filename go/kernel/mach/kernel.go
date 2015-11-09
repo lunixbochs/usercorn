@@ -5,12 +5,12 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
-type Kernel struct {
+type MachKernel struct {
 	common.KernelBase
 }
 
 func NewKernel(u models.Usercorn) common.Kernel {
-	kernel := &Kernel{common.KernelBase{U: u}}
-	kernel.UsercornInit(kernel)
+	kernel := &MachKernel{}
+	kernel.UsercornInit(kernel, u)
 	return kernel
 }

@@ -5,13 +5,12 @@ import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/kernel/common"
-	"github.com/lunixbochs/usercorn/go/kernel/mach"
-	"github.com/lunixbochs/usercorn/go/kernel/posix"
+	"github.com/lunixbochs/usercorn/go/kernel/darwin"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
 func DarwinKernels(u models.Usercorn) []interface{} {
-	return []interface{}{mach.NewKernel(u), posix.NewKernel(u)}
+	return []interface{}{darwin.NewKernel(u)}
 }
 
 func DarwinInit(u models.Usercorn, args, env []string) error {

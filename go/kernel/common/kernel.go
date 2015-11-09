@@ -23,7 +23,7 @@ func (s Syscall) U() models.Usercorn {
 type Kernel interface {
 	Usercorn() models.Usercorn
 	UsercornKernel() *KernelBase
-	UsercornInit(Kernel)
+	UsercornInit(Kernel, models.Usercorn)
 	UsercornSyscall(name string) *Syscall
 }
 
@@ -57,22 +57,23 @@ func camelToSnakeCase(name string) string {
 
 /*
    k.UsercornInit() fills out the Syscall table and is only a method of Kernel for convenience.
-   It requires an interface reference to the final structure, so
-   structures embedding the Kernel type should manually call Kernel.UsercornInit(self), like so:
+   It requires an interface reference to the final structure, so structures embedding the
+   Kernel type should manually call Kernel.UsercornInit(self), like so:
 
    type PosixKernel struct {
-		Kernel
+		KernelBase
    }
 
    func NewPosixKernel(u models.Usercorn) *PosixKernel {
-	   kernel := &PosixKernel{U: u}
-	   kernel.UsercornInit(kernel)
+	   kernel := &PosixKernel{}
+	   kernel.UsercornInit(kernel, u)
 	   return kernel
    }
 */
-func (k *KernelBase) UsercornInit(i Kernel) {
+func (k *KernelBase) UsercornInit(i Kernel, u models.Usercorn) {
 	syscalls := make(map[string]Syscall)
 	k.Syscalls = syscalls
+	k.U = u
 	typ := reflect.TypeOf(i)
 	instance := reflect.ValueOf(i)
 	for i := 0; i < typ.NumMethod(); i++ {

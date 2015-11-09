@@ -8,7 +8,7 @@ import (
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
-func (k *Kernel) Read(fd co.Fd, buf co.Obuf, size co.Len) uint64 {
+func (k *PosixKernel) Read(fd co.Fd, buf co.Obuf, size co.Len) uint64 {
 	tmp := make([]byte, size)
 	n, err := syscall.Read(int(fd), tmp)
 	if err != nil {
@@ -20,7 +20,7 @@ func (k *Kernel) Read(fd co.Fd, buf co.Obuf, size co.Len) uint64 {
 	return uint64(n)
 }
 
-func (k *Kernel) Write(fd co.Fd, buf co.Buf, size co.Len) uint64 {
+func (k *PosixKernel) Write(fd co.Fd, buf co.Buf, size co.Len) uint64 {
 	tmp := make([]byte, size)
 	if err := buf.Unpack(tmp); err != nil {
 		return UINT64_MAX // FIXME
@@ -32,7 +32,7 @@ func (k *Kernel) Write(fd co.Fd, buf co.Buf, size co.Len) uint64 {
 	return uint64(n)
 }
 
-func (k *Kernel) Open(path string, mode int, flags uint32) uint64 {
+func (k *PosixKernel) Open(path string, mode int, flags uint32) uint64 {
 	if strings.Contains(path, "/lib/") {
 		path = k.U.PrefixPath(path, false)
 	}
@@ -43,7 +43,7 @@ func (k *Kernel) Open(path string, mode int, flags uint32) uint64 {
 	return uint64(fd)
 }
 
-func (k *Kernel) Close(fd co.Fd) uint64 {
+func (k *PosixKernel) Close(fd co.Fd) uint64 {
 	// FIXME: temporary hack to preserve output on program exit
 	if fd == 2 {
 		return 0
@@ -51,7 +51,7 @@ func (k *Kernel) Close(fd co.Fd) uint64 {
 	return Errno(syscall.Close(int(fd)))
 }
 
-func (k *Kernel) Lseek(fd co.Fd, offset co.Off, whence int) uint64 {
+func (k *PosixKernel) Lseek(fd co.Fd, offset co.Off, whence int) uint64 {
 	off, err := syscall.Seek(int(fd), int64(offset), whence)
 	if err != nil {
 		return Errno(err)
@@ -59,7 +59,7 @@ func (k *Kernel) Lseek(fd co.Fd, offset co.Off, whence int) uint64 {
 	return uint64(off)
 }
 
-func (k *Kernel) Fstat(fd co.Fd, buf co.Buf) uint64 {
+func (k *PosixKernel) Fstat(fd co.Fd, buf co.Buf) uint64 {
 	var stat syscall.Stat_t
 	if err := syscall.Fstat(int(fd), &stat); err != nil {
 		return Errno(err)
@@ -71,7 +71,7 @@ func (k *Kernel) Fstat(fd co.Fd, buf co.Buf) uint64 {
 	return 0
 }
 
-func (k *Kernel) Lstat(path string, buf co.Buf) uint64 {
+func (k *PosixKernel) Lstat(path string, buf co.Buf) uint64 {
 	var stat syscall.Stat_t
 	if err := syscall.Lstat(path, &stat); err != nil {
 		return Errno(err)
@@ -83,7 +83,7 @@ func (k *Kernel) Lstat(path string, buf co.Buf) uint64 {
 	return 0
 }
 
-func (k *Kernel) Stat(path string, buf co.Buf) uint64 {
+func (k *PosixKernel) Stat(path string, buf co.Buf) uint64 {
 	// TODO: centralize path hook
 	if strings.Contains(path, "/lib/") {
 		path = k.U.PrefixPath(path, false)
@@ -99,7 +99,7 @@ func (k *Kernel) Stat(path string, buf co.Buf) uint64 {
 	return 0
 }
 
-func (k *Kernel) Getcwd(buf co.Buf, size co.Len) uint64 {
+func (k *PosixKernel) Getcwd(buf co.Buf, size co.Len) uint64 {
 	wd, _ := os.Getwd()
 	size -= 1
 	if co.Len(len(wd)) > size {
@@ -111,12 +111,12 @@ func (k *Kernel) Getcwd(buf co.Buf, size co.Len) uint64 {
 	return 0
 }
 
-func (k *Kernel) Access(path string, amode uint32) uint64 {
+func (k *PosixKernel) Access(path string, amode uint32) uint64 {
 	// TODO: portability
 	return Errno(syscall.Access(path, amode))
 }
 
-func (k *Kernel) Readv(fd co.Fd, iov co.Buf, count uint64) uint64 {
+func (k *PosixKernel) Readv(fd co.Fd, iov co.Buf, count uint64) uint64 {
 	var read uint64
 	for vec := range iovecIter(iov, count, k.U.Bits()) {
 		tmp := make([]byte, vec.Len)
@@ -130,7 +130,7 @@ func (k *Kernel) Readv(fd co.Fd, iov co.Buf, count uint64) uint64 {
 	return read
 }
 
-func (k *Kernel) Writev(fd co.Fd, iov co.Buf, count uint64) uint64 {
+func (k *PosixKernel) Writev(fd co.Fd, iov co.Buf, count uint64) uint64 {
 	var written uint64
 	for vec := range iovecIter(iov, count, k.U.Bits()) {
 		data, _ := k.U.MemRead(vec.Base, vec.Len)
@@ -143,18 +143,18 @@ func (k *Kernel) Writev(fd co.Fd, iov co.Buf, count uint64) uint64 {
 	return written
 }
 
-func (k *Kernel) Chmod(path string, mode uint32) uint64 {
+func (k *PosixKernel) Chmod(path string, mode uint32) uint64 {
 	return Errno(syscall.Chmod(path, mode))
 }
 
-func (k *Kernel) Dup2(oldFd co.Fd, newFd co.Fd) uint64 {
+func (k *PosixKernel) Dup2(oldFd co.Fd, newFd co.Fd) uint64 {
 	if err := syscall.Dup2(int(oldFd), int(newFd)); err != nil {
 		return Errno(err)
 	}
 	return uint64(newFd)
 }
 
-func (k *Kernel) Readlink(path string, buf co.Buf, size co.Len) uint64 {
+func (k *PosixKernel) Readlink(path string, buf co.Buf, size co.Len) uint64 {
 	// TODO: full proc emulation layer
 	// maybe have a syscall pre-hook for this after ghostrace makes it generic
 	// or specifically have path hooks and use that to implement prefix as well
@@ -177,26 +177,26 @@ func (k *Kernel) Readlink(path string, buf co.Buf, size co.Len) uint64 {
 	return uint64(len(name))
 }
 
-func (k *Kernel) Symlink(src, dst string) uint64 {
+func (k *PosixKernel) Symlink(src, dst string) uint64 {
 	return Errno(syscall.Symlink(src, dst))
 }
 
-func (k *Kernel) Link(src, dst string) uint64 {
+func (k *PosixKernel) Link(src, dst string) uint64 {
 	return Errno(syscall.Link(src, dst))
 }
 
-func (k *Kernel) Openat(dirfd co.Fd, path string, flags int, mode uint32) uint64 {
+func (k *PosixKernel) Openat(dirfd co.Fd, path string, flags int, mode uint32) uint64 {
 	// TODO: flags might be different per arch
 	return openat_native(int(dirfd), path, flags, mode)
 }
 
-func (k *Kernel) Chdir(path string) uint64 {
+func (k *PosixKernel) Chdir(path string) uint64 {
 	if err := os.Chdir(path); err != nil {
 		return UINT64_MAX // FIXME
 	}
 	return 0
 }
 
-func (k *Kernel) Chroot(path string) uint64 {
+func (k *PosixKernel) Chroot(path string) uint64 {
 	return Errno(syscall.Chroot(path))
 }

@@ -21,7 +21,7 @@ func (sys Syscall) Call(args []uint64) uint64 {
 		argVal := reflect.ValueOf(arg)
 		switch typ {
 		case BufType, ObufType:
-			val = reflect.ValueOf(Obuf{Addr: arg, StrucStream: kernelBase.U.StrucAt(arg)}).Convert(typ)
+			val = reflect.ValueOf(NewBuf(kernelBase.U, arg)).Convert(typ)
 		case LenType, OffType, FdType, PtrType:
 			val = argVal.Convert(typ)
 		default:
@@ -33,7 +33,11 @@ func (sys Syscall) Call(args []uint64) uint64 {
 				if argVal.Type().ConvertibleTo(typ) {
 					val = argVal.Convert(typ)
 				} else {
-					panic(fmt.Errorf("Unsupported syscall argument type %s(..%s..)", sys.Name, typ))
+					if v, ok := sys.Unpack(args[i:], typ); ok {
+						val = v
+					} else {
+						panic(fmt.Errorf("Unsupported syscall argument type %s(..%s..) (change the parameter type or handle in kernel.Unpack())", sys.Name, typ))
+					}
 				}
 			}
 		}

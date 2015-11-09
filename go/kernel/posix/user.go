@@ -7,31 +7,31 @@ import (
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
-func (k *Kernel) Getegid() int {
+func (k *PosixKernel) Getegid() int {
 	return os.Getegid()
 }
 
-func (k *Kernel) Getgid() int {
+func (k *PosixKernel) Getgid() int {
 	return os.Getgid()
 }
 
-func (k *Kernel) Getuid() int {
+func (k *PosixKernel) Getuid() int {
 	return os.Getuid()
 }
 
-func (k *Kernel) Setgid(gid int) int {
+func (k *PosixKernel) Setgid(gid int) int {
 	// TODO: doesn't work on Linux
 	syscall.Setgid(gid)
 	return 0
 }
 
-func (k *Kernel) Setuid(uid int) int {
+func (k *PosixKernel) Setuid(uid int) int {
 	// TODO: doesn't work on Linux
 	syscall.Setuid(uid)
 	return 0
 }
 
-func (k *Kernel) Getgroups(count int, buf co.Buf) uint64 {
+func (k *PosixKernel) Getgroups(count int, buf co.Buf) uint64 {
 	groups, err := syscall.Getgroups()
 	if err != nil {
 		return Errno(err)

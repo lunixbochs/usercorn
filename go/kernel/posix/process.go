@@ -7,28 +7,28 @@ import (
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
-func (k *Kernel) Exit(code int) {
+func (k *PosixKernel) Exit(code int) {
 	k.U.Exit(code)
 }
 
-func (k *Kernel) ExitGroup(code int) {
+func (k *PosixKernel) ExitGroup(code int) {
 	k.Exit(code)
 }
 
-func (k *Kernel) Getpid() int {
+func (k *PosixKernel) Getpid() int {
 	return os.Getpid()
 }
 
-func (k *Kernel) Getppid() int {
+func (k *PosixKernel) Getppid() int {
 	return os.Getppid()
 }
 
-func (k *Kernel) Kill(pid, signal int) uint64 {
+func (k *PosixKernel) Kill(pid, signal int) uint64 {
 	// TODO: os-specific signal handling?
 	return Errno(syscall.Kill(pid, syscall.Signal(signal)))
 }
 
-func (k *Kernel) Execve(path string, argvBuf, envpBuf co.Buf) uint64 {
+func (k *PosixKernel) Execve(path string, argvBuf, envpBuf co.Buf) uint64 {
 	// TODO: put this function somewhere generic?
 	readStrArray := func(buf co.Buf) []string {
 		var out []string

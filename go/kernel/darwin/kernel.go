@@ -7,26 +7,20 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
-type Kernel struct {
-	posix.Kernel
-	Mach common.Kernel
+type DarwinKernel struct {
+	common.KernelBase
+	mach.MachKernel
+	posix.PosixKernel
+
+	Unpack common.Unpacker
+}
+
+func DefaultKernel() *DarwinKernel {
+	return &DarwinKernel{Unpack: Unpack}
 }
 
 func NewKernel(u models.Usercorn) common.Kernel {
-	kernel := &Kernel{
-		Mach: mach.NewKernel(u),
-	}
-	kernel.U = u
-	kernel.UsercornInit(kernel)
+	kernel := DefaultKernel()
+	kernel.UsercornInit(kernel, u)
 	return kernel
-}
-
-func (k *Kernel) UsercornSyscall(name string) *common.Syscall {
-	if sys := k.Mach.UsercornSyscall(name); sys != nil {
-		return sys
-	}
-	if sys := k.Kernel.UsercornSyscall(name); sys != nil {
-		return sys
-	}
-	return nil
 }

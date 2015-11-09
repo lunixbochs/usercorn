@@ -1,7 +1,7 @@
 package posix
 
-func (k *Kernel) Ioctl()         {}
-func (k *Kernel) RtSigprocmask() {}
-func (k *Kernel) RtSigaction()   {}
-func (k *Kernel) Futex()         {}
-func (k *Kernel) Fcntl()         {}
+func (k *PosixKernel) Ioctl()         {}
+func (k *PosixKernel) RtSigprocmask() {}
+func (k *PosixKernel) RtSigaction()   {}
+func (k *PosixKernel) Futex()         {}
+func (k *PosixKernel) Fcntl()         {}

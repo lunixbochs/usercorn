@@ -12,8 +12,7 @@ import (
 
 const UINT64_MAX = 0xFFFFFFFFFFFFFFFF
 
-// TODO: move this to the Linux kernel
-func (k *Kernel) Getdents(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
+func (k *LinuxKernel) Getdents(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
 	dirPath, err := posix.PathFromFd(int(dirfd))
 	if err != nil {
 		return UINT64_MAX // FIXME

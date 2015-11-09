@@ -5,7 +5,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/kernel/posix"
 )
 
-func (k *Kernel) MachVmAllocate(unk int, size co.Len, addrOut co.Buf) uint64 {
+func (k *MachKernel) MachVmAllocate(unk int, size co.Len, addrOut co.Buf) uint64 {
 	addr, err := k.U.Mmap(0, uint64(size))
 	if err != nil {
 		return posix.UINT64_MAX // FIXME
@@ -18,4 +18,4 @@ func (k *Kernel) MachVmAllocate(unk int, size co.Len, addrOut co.Buf) uint64 {
 	return 0
 }
 
-func (k *Kernel) MachVmDeallocate() {}
+func (k *MachKernel) MachVmDeallocate() {}

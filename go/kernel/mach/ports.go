@@ -1,15 +1,15 @@
 package mach
 
-func (k *Kernel) TaskSelfTrap() uint64 {
+func (k *MachKernel) TaskSelfTrap() uint64 {
 	return 1
 }
 
-func (k *Kernel) MachReplyPort() uint64 {
+func (k *MachKernel) MachReplyPort() uint64 {
 	return 1
 }
 
-func (k *Kernel) HostSelfTrap() uint64 {
+func (k *MachKernel) HostSelfTrap() uint64 {
 	return 2
 }
 
-func (k *Kernel) MachMsgTrap() {}
+func (k *MachKernel) MachMsgTrap() {}

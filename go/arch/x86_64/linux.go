@@ -6,12 +6,11 @@ import (
 
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
-	"github.com/lunixbochs/usercorn/go/kernel/posix"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type LinuxKernel struct {
-	linux.Kernel
+	linux.LinuxKernel
 }
 
 // TODO: put these somewhere. ghostrace maybe.
@@ -44,10 +43,9 @@ func (k *LinuxKernel) ArchPrctl(code int, addr uint64) {
 func (k *LinuxKernel) SetTidAddress() {}
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	kernel := &LinuxKernel{}
-	kernel.U = u
-	kernel.UsercornInit(kernel)
-	return []interface{}{kernel, posix.NewKernel(u)}
+	kernel := &LinuxKernel{*linux.DefaultKernel()}
+	kernel.UsercornInit(kernel, u)
+	return []interface{}{kernel}
 }
 
 func LinuxInit(u models.Usercorn, args, env []string) error {

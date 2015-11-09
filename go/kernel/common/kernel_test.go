@@ -18,8 +18,8 @@ func (k *PosixKernel) Exit(code int) uint64 {
 }
 
 func NewPosixKernel(u models.Usercorn) *PosixKernel {
-	kernel := &PosixKernel{KernelBase{U: u}, 0}
-	kernel.UsercornInit(kernel)
+	kernel := &PosixKernel{}
+	kernel.UsercornInit(kernel, u)
 	return kernel
 }
 

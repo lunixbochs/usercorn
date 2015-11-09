@@ -7,7 +7,7 @@ import (
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
-func (k *Kernel) Mmap(addrHint, size uint64, prot, flags int, fd co.Fd, off co.Off) uint64 {
+func (k *PosixKernel) Mmap(addrHint, size uint64, prot, flags int, fd co.Fd, off co.Off) uint64 {
 	addr, _ := k.U.Mmap(addrHint, size)
 	if fd > 0 {
 		fd2, _ := syscall.Dup(int(fd))
@@ -21,19 +21,19 @@ func (k *Kernel) Mmap(addrHint, size uint64, prot, flags int, fd co.Fd, off co.O
 	return addr
 }
 
-func (k *Kernel) Mmap2(addrHint, size uint64, prot, flags int, fd co.Fd, off co.Off) uint64 {
+func (k *PosixKernel) Mmap2(addrHint, size uint64, prot, flags int, fd co.Fd, off co.Off) uint64 {
 	return k.Mmap(addrHint, size, prot, flags, fd, off)
 }
 
-func (k *Kernel) Munmap(addr, size uint64) uint64 {
+func (k *PosixKernel) Munmap(addr, size uint64) uint64 {
 	return 0
 }
 
-func (k *Kernel) Mprotect() uint64 {
+func (k *PosixKernel) Mprotect() uint64 {
 	return 0
 }
 
-func (k *Kernel) Brk(addr uint64) uint64 {
+func (k *PosixKernel) Brk(addr uint64) uint64 {
 	// TODO: return is Linux specific
 	ret, _ := k.U.Brk(addr)
 	return ret

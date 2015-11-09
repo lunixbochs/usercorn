@@ -6,13 +6,18 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
-type Kernel struct {
-	posix.Kernel
+type LinuxKernel struct {
+	posix.PosixKernel
+
+	Unpack common.Unpacker
+}
+
+func DefaultKernel() *LinuxKernel {
+	return &LinuxKernel{Unpack: Unpack}
 }
 
 func NewKernel(u models.Usercorn) common.Kernel {
-	kernel := &Kernel{}
-	kernel.U = u
-	kernel.UsercornInit(kernel)
+	kernel := DefaultKernel()
+	kernel.UsercornInit(kernel, u)
 	return kernel
 }

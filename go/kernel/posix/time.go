@@ -7,7 +7,7 @@ import (
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
-func (k *Kernel) ClockGettime(_ int, out co.Obuf) uint64 {
+func (k *PosixKernel) ClockGettime(_ int, out co.Obuf) uint64 {
 	var err error
 	ts := syscall.NsecToTimespec(time.Now().UnixNano())
 	if k.U.Bits() == 64 {
