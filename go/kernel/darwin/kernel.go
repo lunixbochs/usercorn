@@ -22,5 +22,7 @@ func DefaultKernel() *DarwinKernel {
 func NewKernel(u models.Usercorn) common.Kernel {
 	kernel := DefaultKernel()
 	kernel.UsercornInit(kernel, u)
+	kernel.MachKernel.U = u
+	kernel.PosixKernel.U = u
 	return kernel
 }
