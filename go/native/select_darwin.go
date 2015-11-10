@@ -1,4 +1,4 @@
-package x86
+package native
 
 import (
 	"syscall"
@@ -6,18 +6,14 @@ import (
 	"github.com/lunixbochs/usercorn/go/kernel/posix"
 )
 
-func (f *fdset32) Native() *syscall.FdSet {
-	return &syscall.FdSet{f.Bits}
-}
-
-func cgcNativeSelect(nfds int, readFds, writeFds *syscall.FdSet, timespec *posix.Timespec) (int, error) {
+func Select(nfds int, readFds, writeFds *syscall.FdSet, timespec *posix.Timespec) (int, error) {
 	timeout := &syscall.Timeval{Sec: int64(timespec.Sec), Usec: int32(timespec.Nsec / 1000)}
 	if err := syscall.Select(nfds, readFds, writeFds, nil, timeout); err != nil {
 		return 0, err
 	} else {
 		max := 0
-		read := fdset32{readFds.Bits}
-		write := fdset32{writeFds.Bits}
+		read := Fdset32{readFds.Bits}
+		write := Fdset32{writeFds.Bits}
 		fds := append(read.Fds(), write.Fds()...)
 		for _, v := range fds {
 			if v > max {

@@ -7,35 +7,10 @@ import (
 
 	"github.com/lunixbochs/usercorn/go/kernel/posix"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/native"
 )
 
 const UINT32_MAX = 0xFFFFFFFF
-
-type fdset32 struct {
-	Bits [32]int32
-}
-
-func (f *fdset32) Set(fd int) {
-	f.Bits[fd/32] |= (1 << (uint(fd) & (32 - 1)))
-}
-
-func (f *fdset32) Clear(fd int) {
-	f.Bits[fd/32] &= ^(1 << (uint(fd) & (32 - 1)))
-}
-
-func (f *fdset32) IsSet(fd int) bool {
-	return f.Bits[fd/32]&(1<<(uint(fd)&(32-1))) != 0
-}
-
-func (f *fdset32) Fds() []int {
-	var out []int
-	for fd := 0; fd < 1024; fd++ {
-		if f.IsSet(fd) {
-			out = append(out, fd)
-		}
-	}
-	return out
-}
 
 func writeAddr(u models.Usercorn, addr, val uint64) {
 	var buf [4]byte
@@ -70,7 +45,7 @@ func CgcSyscall(u models.Usercorn) {
 		writeAddr(u, args[2], addr)
 	case 6: // fdwait
 		nfds := int(args[0])
-		var readSet, writeSet *fdset32
+		var readSet, writeSet *native.Fdset32
 		var timeout posix.Timespec
 		u.StrucAt(args[1]).Unpack(&readSet)
 		u.StrucAt(args[2]).Unpack(&writeSet)
@@ -79,7 +54,7 @@ func CgcSyscall(u models.Usercorn) {
 
 		readNative := readSet.Native()
 		writeNative := writeSet.Native()
-		n, err := cgcNativeSelect(nfds, readNative, writeNative, &timeout)
+		n, err := native.Select(nfds, readNative, writeNative, &timeout)
 		if err != nil {
 			ret = UINT32_MAX // FIXME?
 		} else {
