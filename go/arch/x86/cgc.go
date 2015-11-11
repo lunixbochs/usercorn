@@ -5,7 +5,6 @@ import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"syscall"
 
-	"github.com/lunixbochs/usercorn/go/kernel/posix"
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/native"
 )
@@ -46,7 +45,7 @@ func CgcSyscall(u models.Usercorn) {
 	case 6: // fdwait
 		nfds := int(args[0])
 		var readSet, writeSet *native.Fdset32
-		var timeout posix.Timespec
+		var timeout native.Timespec
 		u.StrucAt(args[1]).Unpack(&readSet)
 		u.StrucAt(args[2]).Unpack(&writeSet)
 		u.StrucAt(args[3]).Unpack(&timeout)
