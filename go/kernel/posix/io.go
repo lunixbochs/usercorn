@@ -147,6 +147,14 @@ func (k *PosixKernel) Chmod(path string, mode uint32) uint64 {
 	return Errno(syscall.Chmod(path, mode))
 }
 
+func (k *PosixKernel) Dup(oldFd co.Fd) uint64 {
+	if newFd, err := syscall.Dup(int(oldFd)); err != nil {
+		return Errno(err)
+	} else {
+		return uint64(newFd)
+	}
+}
+
 func (k *PosixKernel) Dup2(oldFd co.Fd, newFd co.Fd) uint64 {
 	if err := syscall.Dup2(int(oldFd), int(newFd)); err != nil {
 		return Errno(err)
