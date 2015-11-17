@@ -32,6 +32,17 @@ func (k *PosixKernel) Sendto(fd co.Fd, buf co.Buf, size co.Len, flags int, sa sy
 	return Errno(syscall.Sendto(int(fd), msg, flags, sa))
 }
 
+func (k *PosixKernel) Recvfrom(fd co.Fd, buf co.Buf, size co.Len, flags int, from co.Buf, fromlen co.Len) uint64 {
+	p := make([]byte, size)
+	if n, _, err := syscall.Recvfrom(int(fd), p, flags); err != nil {
+		// TODO: need kernel.Pack() so we can pack a sockaddr into from
+		buf.Pack(p)
+		return uint64(n)
+	} else {
+		return UINT64_MAX // FIXME
+	}
+}
+
 func (k *PosixKernel) Getsockopt(fd co.Fd, level, opt int, valueOut, valueSizeOut co.Buf) uint64 {
 	// TODO: dispatch/support both addr and int types
 	value, err := syscall.GetsockoptInt(int(fd), level, opt)
