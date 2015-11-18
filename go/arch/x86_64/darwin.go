@@ -9,8 +9,19 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+type DarwinKernel struct {
+	darwin.DarwinKernel
+}
+
+func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
+	k.U.RegWrite(uc.X86_REG_GS, addr)
+	return 0
+}
+
 func DarwinKernels(u models.Usercorn) []interface{} {
-	return []interface{}{darwin.NewKernel(u)}
+	kernel := &DarwinKernel{}
+	kernel.UsercornInit(kernel, u)
+	return []interface{}{kernel}
 }
 
 func DarwinInit(u models.Usercorn, args, env []string) error {
