@@ -5,6 +5,7 @@ import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"syscall"
 
+	"github.com/lunixbochs/usercorn/go/kernel/posix"
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/native"
 )
@@ -18,7 +19,9 @@ func writeAddr(u models.Usercorn, addr, val uint64) {
 }
 
 func CgcInit(u models.Usercorn, args, env []string) error {
-	return u.PosixInit(args, env, nil)
+	// TODO: does CGC even specify argv?
+	// TODO: also, I seem to remember something about mapping in 16kb of random data
+	return posix.StackInit(u, args, env, nil)
 }
 
 func CgcSyscall(u models.Usercorn) {
@@ -78,5 +81,9 @@ func CgcInterrupt(u models.Usercorn, intno uint32) {
 }
 
 func init() {
-	Arch.RegisterOS(&models.OS{Name: "cgc", Init: CgcInit, Interrupt: CgcInterrupt})
+	Arch.RegisterOS(&models.OS{
+		Name:      "cgc",
+		Init:      CgcInit,
+		Interrupt: CgcInterrupt,
+	})
 }

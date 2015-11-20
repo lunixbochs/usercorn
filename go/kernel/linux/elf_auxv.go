@@ -1,10 +1,12 @@
-package models
+package linux
 
 import (
 	"bytes"
 	"crypto/rand"
 	"github.com/lunixbochs/struc"
 	"os"
+
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 const (
@@ -43,7 +45,7 @@ func add(auxv []Elf64Auxv, t, val uint64) []Elf64Auxv {
 	return append(auxv, Elf64Auxv{t, val})
 }
 
-func setupElfAuxv(u Usercorn) ([]Elf64Auxv, error) {
+func setupElfAuxv(u models.Usercorn) ([]Elf64Auxv, error) {
 	// set up AT_RANDOM
 	var tmp [16]byte
 	if _, err := rand.Read(tmp[:]); err != nil {
@@ -97,7 +99,7 @@ func setupElfAuxv(u Usercorn) ([]Elf64Auxv, error) {
 	return auxv, nil
 }
 
-func SetupElfAuxv(u Usercorn) ([]byte, error) {
+func SetupElfAuxv(u models.Usercorn) ([]byte, error) {
 	var buf bytes.Buffer
 	auxv, err := setupElfAuxv(u)
 	if err != nil {

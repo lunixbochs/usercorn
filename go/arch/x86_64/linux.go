@@ -49,11 +49,10 @@ func LinuxKernels(u models.Usercorn) []interface{} {
 }
 
 func LinuxInit(u models.Usercorn, args, env []string) error {
-	auxv, err := models.SetupElfAuxv(u)
-	if err != nil {
+	if err := linux.StackInit(u, args, env); err != nil {
 		return err
 	}
-	return AbiInit(u, args, env, auxv, LinuxSyscall)
+	return AbiInit(u, LinuxSyscall)
 }
 
 func LinuxSyscall(u models.Usercorn) {

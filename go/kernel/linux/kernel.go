@@ -21,3 +21,11 @@ func NewKernel(u models.Usercorn) common.Kernel {
 	kernel.UsercornInit(kernel, u)
 	return kernel
 }
+
+func StackInit(u models.Usercorn, args, env []string) error {
+	auxv, err := SetupElfAuxv(u)
+	if err != nil {
+		return err
+	}
+	return posix.StackInit(u, args, env, auxv)
+}

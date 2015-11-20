@@ -38,7 +38,6 @@ type Usercorn interface {
 	BinEntry() uint64
 
 	PrefixPath(s string, force bool) string
-	PosixInit(args, env []string, auxv []byte) error
 	Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error)
 	Exit(status int)
 }

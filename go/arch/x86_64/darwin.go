@@ -21,29 +21,16 @@ func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
 func DarwinKernels(u models.Usercorn) []interface{} {
 	kernel := &DarwinKernel{}
 	kernel.UsercornInit(kernel, u)
+	kernel.PosixKernel.U = u
+	kernel.MachKernel.U = u
 	return []interface{}{kernel}
 }
 
 func DarwinInit(u models.Usercorn, args, env []string) error {
-	exe := u.Exe()
-	addr, err := u.PushBytes([]byte(exe + "\x00"))
-	if err != nil {
+	if err := darwin.StackInit(u, args, env); err != nil {
 		return err
 	}
-	var tmp [8]byte
-	auxv, err := u.PackAddr(tmp[:], addr)
-	if err != nil {
-		return err
-	}
-	err = AbiInit(u, args, env, auxv, DarwinSyscall)
-	if err != nil {
-		return err
-	}
-	// offset to mach_header at exe[0:] in guest memory
-	textOffset, _, _ := u.Loader().Header()
-	offset := u.Base() + textOffset
-	_, err = u.Push(offset)
-	return err
+	return AbiInit(u, DarwinSyscall)
 }
 
 func DarwinSyscall(u models.Usercorn) {

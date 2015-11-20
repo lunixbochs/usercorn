@@ -15,10 +15,6 @@ func LinuxKernels(u models.Usercorn) []interface{} {
 	return []interface{}{linux.NewKernel(u)}
 }
 
-func LinuxInit(u models.Usercorn, args, env []string) error {
-	return u.PosixInit(args, env, nil)
-}
-
 func LinuxSyscall(u models.Usercorn) {
 	// TODO: handle errors or something
 	eax, _ := u.RegRead(uc.X86_REG_EAX)
@@ -34,5 +30,10 @@ func LinuxInterrupt(u models.Usercorn, intno uint32) {
 }
 
 func init() {
-	Arch.RegisterOS(&models.OS{Name: "linux", Kernels: LinuxKernels, Init: LinuxInit, Interrupt: LinuxInterrupt})
+	Arch.RegisterOS(&models.OS{
+		Name:      "linux",
+		Kernels:   LinuxKernels,
+		Init:      linux.StackInit,
+		Interrupt: LinuxInterrupt,
+	})
 }

@@ -21,7 +21,12 @@ func DarwinKernels(u models.Usercorn) []interface{} {
 }
 
 func DarwinInit(u models.Usercorn, args, env []string) error {
-	return u.PosixInit(args, env, nil)
+	if err := darwin.StackInit(u, args, env); err != nil {
+		return err
+	}
+	// FIXME: lib43 crashes if 32-bit darwin gets mach header. maybe I need to align the stack.
+	u.Pop()
+	return nil
 }
 
 func DarwinSyscall(u models.Usercorn, class int) {

@@ -120,7 +120,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	if err := u.addHooks(); err != nil {
 		return err
 	}
-	if err := u.setupStack(); err != nil {
+	if err := u.mapStack(); err != nil {
 		return err
 	}
 	if u.os.Init != nil {
@@ -208,42 +208,6 @@ func (u *Usercorn) Entry() uint64 {
 func (u *Usercorn) BinEntry() uint64 {
 	// points to binary entry, even if an interpreter is used
 	return u.binEntry
-}
-
-func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error {
-	// push argv and envp strings
-	envp, err := u.pushStrings(env...)
-	if err != nil {
-		return err
-	}
-	argv, err := u.pushStrings(args...)
-	if err != nil {
-		return err
-	}
-	// align stack pointer
-	sp, _ := u.RegRead(u.arch.SP)
-	u.RegWrite(u.arch.SP, (sp & ^uint64(15)))
-	// end marker
-	if _, err := u.Push(0); err != nil {
-		return err
-	}
-	// auxv
-	if len(auxv) > 0 {
-		if _, err := u.PushBytes(auxv); err != nil {
-			return err
-		}
-	}
-	// envp
-	if err := u.pushAddrs(envp); err != nil {
-		return err
-	}
-	// argv
-	if err := u.pushAddrs(argv); err != nil {
-		return err
-	}
-	// argc
-	_, err = u.Push(uint64(len(args)))
-	return err
 }
 
 func (u *Usercorn) PrefixPath(path string, force bool) string {
@@ -583,7 +547,7 @@ outer:
 	}
 }
 
-func (u *Usercorn) setupStack() error {
+func (u *Usercorn) mapStack() error {
 	stack, err := u.Mmap(STACK_BASE, STACK_SIZE)
 	if err != nil {
 		return err
@@ -594,30 +558,6 @@ func (u *Usercorn) setupStack() error {
 		return err
 	}
 	return u.MemMapProt(stackEnd, UC_MEM_ALIGN, uc.PROT_NONE)
-}
-
-func (u *Usercorn) pushStrings(args ...string) ([]uint64, error) {
-	addrs := make([]uint64, 0, len(args)+1)
-	for _, arg := range args {
-		if addr, err := u.PushBytes([]byte(arg + "\x00")); err != nil {
-			return nil, err
-		} else {
-			addrs = append(addrs, addr)
-		}
-	}
-	return addrs, nil
-}
-
-func (u *Usercorn) pushAddrs(addrs []uint64) error {
-	if _, err := u.Push(0); err != nil {
-		return err
-	}
-	for i, _ := range addrs {
-		if _, err := u.Push(addrs[len(addrs)-i-1]); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
