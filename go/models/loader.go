@@ -1,6 +1,7 @@
 package models
 
 import (
+	"debug/dwarf"
 	"encoding/binary"
 )
 
@@ -22,4 +23,5 @@ type Loader interface {
 	Symbols() ([]Symbol, error)
 	Segments() ([]SegmentData, error)
 	DataSegment() (uint64, uint64)
+	DWARF() (*dwarf.Data, error)
 }

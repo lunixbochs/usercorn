@@ -2,6 +2,7 @@ package loader
 
 import (
 	"bytes"
+	"debug/dwarf"
 	"debug/macho"
 	"encoding/binary"
 	"errors"
@@ -224,4 +225,8 @@ func (m *MachOLoader) Symbols() ([]models.Symbol, error) {
 		m.symCache, err = m.getSymbols()
 	}
 	return m.symCache, err
+}
+
+func (m *MachOLoader) DWARF() (*dwarf.Data, error) {
+	return m.file.DWARF()
 }

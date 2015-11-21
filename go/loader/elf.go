@@ -2,6 +2,7 @@ package loader
 
 import (
 	"bytes"
+	"debug/dwarf"
 	"debug/elf"
 	"errors"
 	"fmt"
@@ -159,4 +160,8 @@ func (e *ElfLoader) Symbols() ([]models.Symbol, error) {
 		e.symCache, err = e.getSymbols()
 	}
 	return e.symCache, err
+}
+
+func (e *ElfLoader) DWARF() (*dwarf.Data, error) {
+	return e.file.DWARF()
 }
