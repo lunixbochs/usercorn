@@ -90,11 +90,11 @@ func setupElfAuxv(u models.Usercorn) ([]Elf64Auxv, error) {
 		phdrEnt = 56 // FIXME
 	}
 	if phdrOff > 0 {
-		auxv = append(auxv, []Elf64Auxv{
+		auxv = append([]Elf64Auxv{
 			{ELF_AT_PHDR, phdrOff},
 			{ELF_AT_PHENT, uint64(phdrEnt)},
 			{ELF_AT_PHNUM, uint64(phdrCount)},
-		}...)
+		}, auxv...)
 	}
 	return auxv, nil
 }
