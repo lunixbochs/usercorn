@@ -15,6 +15,10 @@ func (k *PosixKernel) Getgid() int {
 	return os.Getgid()
 }
 
+func (k *PosixKernel) Geteuid() int {
+	return os.Geteuid()
+}
+
 func (k *PosixKernel) Getuid() int {
 	return os.Getuid()
 }
