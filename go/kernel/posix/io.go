@@ -143,6 +143,18 @@ func (k *PosixKernel) Writev(fd co.Fd, iov co.Buf, count uint64) uint64 {
 	return written
 }
 
+func (k *PosixKernel) Fchown(fd, uid, gid int) uint64 {
+	return Errno(syscall.Fchown(fd, uid, gid))
+}
+
+func (k *PosixKernel) Chown(path string, uid, gid int) uint64 {
+	return Errno(syscall.Chown(path, uid, gid))
+}
+
+func (k *PosixKernel) Fchmod(fd int, mode uint32) uint64 {
+	return Errno(syscall.Fchmod(fd, mode))
+}
+
 func (k *PosixKernel) Chmod(path string, mode uint32) uint64 {
 	return Errno(syscall.Chmod(path, mode))
 }
