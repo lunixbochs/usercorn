@@ -224,3 +224,14 @@ func (k *PosixKernel) Chdir(path string) uint64 {
 func (k *PosixKernel) Chroot(path string) uint64 {
 	return Errno(syscall.Chroot(path))
 }
+
+func (k *PosixKernel) Pipe(files co.Buf) uint64 {
+	var fds [2]int
+	err := syscall.Pipe(fds[:])
+	if err == nil {
+		if err := files.Pack(fds); err != nil {
+			return UINT64_MAX // FIXME
+		}
+	}
+	return Errno(err)
+}
