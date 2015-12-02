@@ -143,6 +143,30 @@ func (k *PosixKernel) Writev(fd co.Fd, iov co.Buf, count uint64) uint64 {
 	return written
 }
 
+func (k *PosixKernel) Pread(fd co.Fd, buf co.Obuf, size co.Len, offset int64) uint64 {
+	p := make([]byte, size)
+	n, err := syscall.Pread(int(fd), p, offset)
+	if err != nil {
+		return Errno(err)
+	}
+	if err := buf.Pack(p); err != nil {
+		return UINT64_MAX // FIXME
+	}
+	return uint64(n)
+}
+
+func (k *PosixKernel) Pwrite(fd co.Fd, buf co.Buf, size co.Len, offset int64) uint64 {
+	p := make([]byte, size)
+	if err := buf.Unpack(p); err != nil {
+		return UINT64_MAX // FIXME
+	}
+	n, err := syscall.Pwrite(int(fd), p, offset)
+	if err != nil {
+		return Errno(err)
+	}
+	return uint64(n)
+}
+
 func (k *PosixKernel) Chmod(path string, mode uint32) uint64 {
 	return Errno(syscall.Chmod(path, mode))
 }
