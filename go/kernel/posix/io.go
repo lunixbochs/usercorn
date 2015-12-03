@@ -143,7 +143,7 @@ func (k *PosixKernel) Writev(fd co.Fd, iov co.Buf, count uint64) uint64 {
 	return written
 }
 
-func (k *PosixKernel) Pread(fd co.Fd, buf co.Obuf, size co.Len, offset int64) uint64 {
+func (k *PosixKernel) Pread64(fd co.Fd, buf co.Obuf, size co.Len, offset int64) uint64 {
 	p := make([]byte, size)
 	n, err := syscall.Pread(int(fd), p, offset)
 	if err != nil {
@@ -155,7 +155,7 @@ func (k *PosixKernel) Pread(fd co.Fd, buf co.Obuf, size co.Len, offset int64) ui
 	return uint64(n)
 }
 
-func (k *PosixKernel) Pwrite(fd co.Fd, buf co.Buf, size co.Len, offset int64) uint64 {
+func (k *PosixKernel) Pwrite64(fd co.Fd, buf co.Buf, size co.Len, offset int64) uint64 {
 	p := make([]byte, size)
 	if err := buf.Unpack(p); err != nil {
 		return UINT64_MAX // FIXME
