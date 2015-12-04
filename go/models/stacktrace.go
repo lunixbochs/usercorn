@@ -23,6 +23,9 @@ func (s *Stacktrace) Print(u Usercorn) {
 	stack := append(s.Stack, stackFrame{pc, sp})
 	for i := len(stack) - 1; i >= 0; i-- {
 		frame := stack[i]
+		if i == len(stack)-1 && frame.PC == pc {
+			continue
+		}
 		sym, _ := u.Symbolicate(frame.PC, true)
 		fmt.Fprintf(os.Stderr, "  0x%x %s\n", frame.PC, sym)
 	}
