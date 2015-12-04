@@ -3,8 +3,10 @@ package mock
 import (
 	"encoding/binary"
 	"github.com/lunixbochs/ghostrace/ghost/memio"
-	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+	"os"
+
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type Usercorn struct {
@@ -16,7 +18,9 @@ func (u *Usercorn) OS() string                              { return "" }
 func (u *Usercorn) Bits() uint                              { return 0 }
 func (u *Usercorn) ByteOrder() binary.ByteOrder             { return binary.BigEndian }
 func (u *Usercorn) Disas(addr, size uint64) (string, error) { return "", nil }
-func (u *Usercorn) Symbolicate(addr uint64) (string, error) { return "", nil }
+
+func (u *Usercorn) RegisterAddr(f *os.File, start, end uint64, off int64) {}
+func (u *Usercorn) Symbolicate(addr uint64) (string, error)               { return "", nil }
 
 func (u *Usercorn) Brk(addr uint64) (uint64, error)                 { return 0, nil }
 func (u *Usercorn) Mmap(addr, size uint64) (uint64, error)          { return 0, nil }

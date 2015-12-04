@@ -5,6 +5,7 @@ import (
 	"fmt"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -20,6 +21,7 @@ type Usercorn struct {
 	loader       models.Loader
 	interpLoader models.Loader
 	kernels      []common.Kernel
+	mappedFiles  []*models.MappedFile
 
 	base       uint64
 	interpBase uint64
@@ -58,7 +60,11 @@ type Usercorn struct {
 }
 
 func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
-	l, err := loader.LoadFile(exe)
+	f, err := os.Open(exe)
+	if err != nil {
+		return nil, err
+	}
+	l, err := loader.Load(f)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +96,7 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 	}
 	// map binary (and interp) into memory
 	u.status = models.StatusDiff{U: u, Color: true}
-	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(u.loader, false)
+	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(f, false, l.Arch())
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +113,7 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 			}
 		}
 	}
+	f.Close()
 	// TODO: have a "host page size", maybe arch.Align()
 	mask := uint64(4096 - 1)
 	u.Brk((u.brk + mask) & ^mask)
@@ -222,48 +229,37 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 	return path
 }
 
-func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
-	var symbolicate = func(addr uint64, symbols []models.Symbol) (result models.Symbol, distance uint64) {
-		if len(symbols) == 0 {
-			return
-		}
-		nearest := make(map[uint64][]models.Symbol)
-		var min int64 = -1
-		for _, sym := range symbols {
-			if sym.Start == 0 {
-				continue
-			}
-			dist := int64(addr - sym.Start)
-			if dist >= 0 && (sym.Start+uint64(dist) <= sym.End || sym.End == 0) && sym.Name != "" {
-				if dist < min || min == -1 {
-					min = dist
-				}
-				nearest[uint64(dist)] = append(nearest[uint64(dist)], sym)
-			}
-		}
-		if len(nearest) > 0 {
-			sym := nearest[uint64(min)][0]
-			return sym, uint64(min)
-		}
+func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
+	l, err := loader.Load(f)
+	if err != nil {
 		return
 	}
-	symbols, _ := u.loader.Symbols()
-	var interpSym []models.Symbol
-	if u.interpLoader != nil {
-		interpSym, _ = u.interpLoader.Symbols()
-	}
-	sym, sdist := symbolicate(addr-u.base, symbols)
-	isym, idist := symbolicate(addr-u.interpBase, interpSym)
-	if idist < sdist && isym.Name != "" || sym.Name == "" {
-		sym = isym
-		sdist = idist
+	symbols, _ := l.Symbols()
+	u.mappedFiles = append(u.mappedFiles, &models.MappedFile{
+		Name:    path.Base(f.Name()),
+		Off:     off,
+		Addr:    addr,
+		Size:    size,
+		Symbols: symbols,
+	})
+}
+
+func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
+	var sym models.Symbol
+	var dist uint64
+	for _, f := range u.mappedFiles {
+		if f.Contains(addr) {
+			fmt.Println(f.Name)
+			sym, dist = f.Symbolicate(addr)
+			break
+		}
 	}
 	if sym.Name != "" {
 		if u.Demangle {
 			sym.Name = models.Demangle(sym.Name)
 		}
-		if sdist > 0 {
-			return fmt.Sprintf("%s+0x%x", sym.Name, sdist), nil
+		if dist > 0 {
+			return fmt.Sprintf("%s+0x%x", sym.Name, dist), nil
 		}
 	}
 	return sym.Name, nil
@@ -467,7 +463,15 @@ func (u *Usercorn) addHooks() error {
 	return nil
 }
 
-func (u *Usercorn) mapBinary(l models.Loader, isInterp bool) (interpBase, entry, base, realEntry uint64, err error) {
+func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase, entry, base, realEntry uint64, err error) {
+	var l models.Loader
+	l, err = loader.LoadArch(f, arch)
+	if err != nil {
+		return
+	}
+	if isInterp {
+		u.interpLoader = l
+	}
 	var dynamic bool
 	switch l.Type() {
 	case loader.EXEC:
@@ -512,6 +516,8 @@ outer:
 			}
 			err = u.MemMapProt(loadBias+seg.Start, seg.End-seg.Start, prot)
 		}
+		// register binary for symbolication
+		u.RegisterAddr(f, loadBias+seg.Start, seg.End-seg.Start, int64(seg.Start))
 		if err != nil {
 			return
 		}
@@ -530,17 +536,16 @@ outer:
 	// load interpreter if present
 	interp := l.Interp()
 	if interp != "" && !isInterp {
-		var bin models.Loader
-		bin, err = loader.LoadFileArch(u.PrefixPath(interp, true), l.Arch())
+		f, err = os.Open(u.PrefixPath(interp, true))
 		if err != nil {
 			return
 		}
-		if bin.Arch() != l.Arch() {
-			err = fmt.Errorf("Interpreter arch mismatch: %s != %s", l.Arch() != bin.Arch())
+		var interpBias, interpEntry uint64
+		_, _, interpBias, interpEntry, err = u.mapBinary(f, true, l.Arch())
+		if u.interpLoader.Arch() != l.Arch() {
+			err = fmt.Errorf("Interpreter arch mismatch: %s != %s", l.Arch(), u.interpLoader.Arch())
 			return
 		}
-		u.interpLoader = bin
-		_, _, interpBias, interpEntry, err := u.mapBinary(bin, true)
 		return interpBias, interpEntry, loadBias, entry, err
 	} else {
 		return 0, entry, loadBias, entry, nil

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"github.com/lunixbochs/ghostrace/ghost/memio"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+	"os"
 )
 
 type Usercorn interface {
@@ -13,6 +14,8 @@ type Usercorn interface {
 	Bits() uint
 	ByteOrder() binary.ByteOrder
 	Disas(addr, size uint64) (string, error)
+
+	RegisterAddr(f *os.File, addr, size uint64, off int64)
 	Symbolicate(addr uint64) (string, error)
 
 	Brk(addr uint64) (uint64, error)
@@ -37,7 +40,9 @@ type Usercorn interface {
 	Entry() uint64
 	BinEntry() uint64
 
+	// TODO: PrefixPath will be replaced by a full VFS subsystem
 	PrefixPath(s string, force bool) string
 	Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error)
+
 	Exit(status int)
 }

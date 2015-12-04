@@ -5,12 +5,6 @@ import (
 	"encoding/binary"
 )
 
-type Symbol struct {
-	Name       string
-	Start, End uint64
-	Dynamic    bool
-}
-
 type Loader interface {
 	Arch() string
 	Bits() int
