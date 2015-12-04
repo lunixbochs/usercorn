@@ -7,7 +7,7 @@ Building
 ---
 
 - You need [Unicorn](http://www.unicorn-engine.org/) and [Capstone](http://www.capstone-engine.org/) installed to use this.
-- The latest stable version of Go is recommended for performance and compatibility reasons.
+- Go 1.5 or newer is required.
 - Make sure you have the GOPATH environment variable pointed at a directory like `$HOME/go`, and `$GOPATH/bin` is in your PATH.
 
 Simply `go get -u github.com/lunixbochs/usercorn/go/usercorn`.
