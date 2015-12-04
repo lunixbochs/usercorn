@@ -16,7 +16,7 @@ type Usercorn interface {
 	Disas(addr, size uint64) (string, error)
 
 	RegisterAddr(f *os.File, addr, size uint64, off int64)
-	Symbolicate(addr uint64) (string, error)
+	Symbolicate(addr uint64, includeFile bool) (string, error)
 
 	Brk(addr uint64) (uint64, error)
 	Mmap(addr, size uint64) (uint64, error)

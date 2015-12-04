@@ -1,10 +1,17 @@
 package models
 
+import (
+	"debug/dwarf"
+	"fmt"
+	"path"
+)
+
 type MappedFile struct {
 	Name       string
 	Off        int64
 	Addr, Size uint64
 	Symbols    []Symbol
+	DWARF      *dwarf.Data
 }
 
 func (m *MappedFile) Contains(addr uint64) bool {
@@ -34,4 +41,47 @@ func (m *MappedFile) Symbolicate(addr uint64) (result Symbol, distance uint64) {
 		return nearest, uint64(min)
 	}
 	return
+}
+
+func (m *MappedFile) FileLine(addr uint64) string {
+	getAddr := func(f *dwarf.Field) uint64 {
+		if f == nil {
+			return 0
+		}
+		switch f.Class {
+		case dwarf.ClassAddress:
+			return f.Val.(uint64)
+		case dwarf.ClassConstant:
+			return uint64(f.Val.(int64))
+		}
+		return 0
+	}
+	if !m.Contains(addr) || m.DWARF == nil {
+		return ""
+	}
+	addr -= m.Addr
+	reader := m.DWARF.Reader()
+	for {
+		entry, err := reader.Next()
+		if err != nil {
+			panic(err)
+			break
+		}
+		if entry == nil {
+			break
+		}
+		if entry.Tag == dwarf.TagCompileUnit {
+			lowpc, highpc := getAddr(entry.AttrField(dwarf.AttrLowpc)), getAddr(entry.AttrField(dwarf.AttrHighpc))
+			if lowpc <= addr && lowpc+highpc > addr {
+				if reader, err := m.DWARF.LineReader(entry); err == nil {
+					var line dwarf.LineEntry
+					if err := reader.SeekPC(addr, &line); err == nil {
+						return fmt.Sprintf("%s:%d", path.Base(line.File.Name), line.Line)
+					}
+				}
+			}
+		}
+		reader.SkipChildren()
+	}
+	return ""
 }

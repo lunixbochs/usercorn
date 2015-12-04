@@ -166,8 +166,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	}
 	if u.TraceReg || u.TraceExec {
 		sp, _ := u.RegRead(u.arch.SP)
-		sym, _ := u.Symbolicate(u.entry)
-		u.stacktrace.Update(u.entry, sp, sym)
+		u.stacktrace.Update(u.entry, sp)
 	}
 	if u.TraceMemBatch {
 		u.memlog = *models.NewMemLog(u.ByteOrder())
@@ -235,34 +234,43 @@ func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
 		return
 	}
 	symbols, _ := l.Symbols()
+	DWARF, _ := l.DWARF()
 	u.mappedFiles = append(u.mappedFiles, &models.MappedFile{
 		Name:    path.Base(f.Name()),
 		Off:     off,
 		Addr:    addr,
 		Size:    size,
 		Symbols: symbols,
+		DWARF:   DWARF,
 	})
 }
 
-func (u *Usercorn) Symbolicate(addr uint64) (string, error) {
+func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) {
 	var sym models.Symbol
 	var dist uint64
+	fileLine := ""
 	for _, f := range u.mappedFiles {
 		if f.Contains(addr) {
-			fmt.Println(f.Name)
 			sym, dist = f.Symbolicate(addr)
+			if sym.Name != "" && includeFile {
+				fileLine = f.FileLine(addr)
+			}
 			break
 		}
 	}
-	if sym.Name != "" {
+	name := sym.Name
+	if name != "" {
 		if u.Demangle {
-			sym.Name = models.Demangle(sym.Name)
+			name = models.Demangle(name)
 		}
 		if dist > 0 {
-			return fmt.Sprintf("%s+0x%x", sym.Name, dist), nil
+			name = fmt.Sprintf("%s+0x%x", name, dist)
+		}
+		if fileLine != "" {
+			name = fmt.Sprintf("%s (%s)", name, fileLine)
 		}
 	}
-	return sym.Name, nil
+	return name, nil
 }
 
 func (u *Usercorn) Brk(addr uint64) (uint64, error) {
@@ -293,7 +301,8 @@ func (u *Usercorn) checkTraceMatch(addr uint64, sym string) bool {
 	for i := 0; i < u.TraceMatchDepth && i < l; i++ {
 		frame := u.stacktrace.Stack[l-i-1]
 		for _, v := range u.TraceMatch {
-			if match(frame.PC, frame.Sym, v) {
+			sym, _ := u.Symbolicate(frame.PC, false)
+			if match(frame.PC, sym, v) {
 				return true
 			}
 		}
@@ -304,7 +313,7 @@ func (u *Usercorn) checkTraceMatch(addr uint64, sym string) bool {
 func (u *Usercorn) addHooks() error {
 	if u.TraceExec || u.TraceReg {
 		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
-			sym, _ := u.Symbolicate(addr)
+			sym, _ := u.Symbolicate(addr, false)
 			if !u.checkTraceMatch(addr, sym) {
 				u.traceMatching = false
 				return
@@ -329,7 +338,7 @@ func (u *Usercorn) addHooks() error {
 				u.memlog.Reset()
 			}
 			if sp, err := u.RegRead(u.arch.SP); err == nil {
-				u.stacktrace.Update(addr, sp, sym)
+				u.stacktrace.Update(addr, sp)
 			}
 			indent = strings.Repeat("  ", u.stacktrace.Len())
 			blockIndent := indent
@@ -386,7 +395,7 @@ func (u *Usercorn) addHooks() error {
 					u.deadlock = 0
 				}
 				if u.deadlock > 2 {
-					sym, _ := u.Symbolicate(addr)
+					sym, _ := u.Symbolicate(addr, false)
 					if sym != "" {
 						sym = " (" + sym + ")"
 					}

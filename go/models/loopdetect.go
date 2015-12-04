@@ -123,7 +123,7 @@ func (l *LoopDetect) String(u Usercorn, loop []uint64) string {
 	for i, addr := range loop {
 		sym := ""
 		if u != nil {
-			sym, _ = u.Symbolicate(addr)
+			sym, _ = u.Symbolicate(addr, false)
 			if sym != "" {
 				sym = " (" + sym + ")"
 			}
