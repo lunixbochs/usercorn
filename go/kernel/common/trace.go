@@ -24,6 +24,8 @@ func (s Syscall) traceArg(args []uint64, typ reflect.Type) string {
 		case reflect.String:
 			s, _ := s.U().Mem().ReadStrAt(args[0])
 			return models.Repr([]byte(s))
+		case reflect.Uint64:
+			return fmt.Sprintf("0x%x", args[0])
 		default:
 			// TODO: facilitate pretty printing?
 			if v, ok := s.Unpack(args, typ); ok {
