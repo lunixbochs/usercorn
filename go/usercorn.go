@@ -59,7 +59,7 @@ type Usercorn struct {
 	deadlock  int
 }
 
-func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
+func NewUsercorn(exe string, prefix string, forceBase, forceInterpBase uint64) (*Usercorn, error) {
 	f, err := os.Open(exe)
 	if err != nil {
 		return nil, err
@@ -83,6 +83,9 @@ func NewUsercorn(exe string, prefix string) (*Usercorn, error) {
 		loader:        l,
 		LoadPrefix:    prefix,
 		traceMatching: true,
+
+		ForceBase:       forceBase,
+		ForceInterpBase: forceInterpBase,
 	}
 	// load kernels
 	// the array cast is a trick to work around circular imports
@@ -491,9 +494,39 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase
 		err = errors.New("Unsupported file load type.")
 		return
 	}
+	// find segment bounds
 	segments, err := l.Segments()
 	if err != nil {
 		return
+	}
+	var low, high uint64
+	for _, seg := range segments {
+		if seg.Addr < low {
+			low = seg.Addr
+		}
+		h := seg.Addr + seg.Size
+		if h > high {
+			high = h
+		}
+	}
+	// map contiguous binary
+	loadBias := u.ForceBase
+	if isInterp {
+		loadBias = u.ForceInterpBase
+	}
+	if dynamic {
+		mapLow := low
+		if loadBias > 0 {
+			mapLow = loadBias
+		} else if mapLow == 0 {
+			mapLow = 0x1000000
+		}
+		fmt.Println("hi", loadBias)
+		loadBias, err = u.Mmap(mapLow, high-low)
+		if err != nil {
+			return
+		}
+		loadBias -= low
 	}
 	// merge overlapping segments
 	merged := make([]*models.Segment, 0, len(segments))
@@ -510,19 +543,16 @@ outer:
 		merged = append(merged, s)
 	}
 	// map merged segments
-	loadBias := u.ForceBase
-	if isInterp {
-		loadBias = u.ForceInterpBase
-	}
 	for _, seg := range merged {
+		prot := seg.Prot
+		if prot == 0 {
+			prot = uc.PROT_ALL
+		}
 		size := seg.End - seg.Start
 		if dynamic && seg.Start == 0 && loadBias == 0 {
 			loadBias, err = u.Mmap(0x1000000, size)
+			err = u.MemProtect(loadBias, size, seg.Prot)
 		} else {
-			prot := seg.Prot
-			if prot == 0 {
-				prot = uc.PROT_ALL
-			}
 			err = u.MemMapProt(loadBias+seg.Start, seg.End-seg.Start, prot)
 		}
 		// register binary for symbolication

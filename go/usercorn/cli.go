@@ -50,7 +50,7 @@ func main() {
 			panic(err)
 		}
 	}
-	corn, err := usercorn.NewUsercorn(args[0], absPrefix)
+	corn, err := usercorn.NewUsercorn(args[0], absPrefix, *base, *ibase)
 	if err != nil {
 		panic(err)
 	}
@@ -75,8 +75,6 @@ func main() {
 		*looproll = 8
 	}
 	corn.LoopCollapse = *looproll
-	corn.ForceBase = *base
-	corn.ForceInterpBase = *ibase
 	corn.Demangle = *demangle
 
 	err = corn.Run(args, os.Environ())
