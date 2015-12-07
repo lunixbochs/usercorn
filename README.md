@@ -14,6 +14,8 @@ Simply `go get -u github.com/lunixbochs/usercorn/go/usercorn`.
 
 To do a source tree build, you can also run `make` or `go build -i -o usercorn ./go/usercorn`
 
+In case upstream dependencies need updating `make get` should be run.
+
 Examples
 ---
 
