@@ -13,6 +13,17 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+type strslice []string
+
+func (s *strslice) String() string {
+	return fmt.Sprintf("%v", *s)
+}
+
+func (s *strslice) Set(value string) error {
+	*s = append(*s, value)
+	return nil
+}
+
 func main() {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -32,6 +43,11 @@ func main() {
 	ibase := fs.Uint64("ibase", 0, "force interpreter base address")
 	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
 
+	var envSet strslice
+	var envUnset strslice
+	fs.Var(&envSet, "set", "set environment var in the form name=value")
+	fs.Var(&envUnset, "unset", "unset environment variable")
+
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options] <exe> [args...]\n", os.Args[0])
 		fs.PrintDefaults()
@@ -50,34 +66,62 @@ func main() {
 			panic(err)
 		}
 	}
-	corn, err := usercorn.NewUsercorn(args[0], absPrefix, *base, *ibase)
-	if err != nil {
-		panic(err)
+	if *looproll == 0 && *trace {
+		*looproll = 8
 	}
-	corn.Verbose = *verbose
-	corn.TraceSys = *strace || *trace
-	corn.TraceMem = *mtrace
-	corn.TraceMemBatch = *mtrace2 || *trace
-	corn.TraceReg = *rtrace || *trace
-	corn.TraceExec = *etrace || *trace
+	config := &usercorn.Config{
+		Demangle:        *demangle,
+		ForceBase:       *base,
+		ForceInterpBase: *ibase,
+		LoadPrefix:      absPrefix,
+		LoopCollapse:    *looproll,
+		TraceExec:       *etrace || *trace,
+		TraceMem:        *mtrace,
+		TraceMemBatch:   *mtrace2 || *trace,
+		TraceReg:        *rtrace || *trace,
+		TraceSys:        *strace || *trace,
+		Verbose:         *verbose,
+	}
 	if *match != "" {
 		split := strings.SplitN(*match, "+", 2)
 		if len(split) > 1 {
 			if split[1] == "" {
-				corn.TraceMatchDepth = 999999
+				config.TraceMatchDepth = 999999
 			} else {
-				corn.TraceMatchDepth, _ = strconv.Atoi(split[1])
+				config.TraceMatchDepth, _ = strconv.Atoi(split[1])
 			}
 		}
-		corn.TraceMatch = strings.Split(split[0], ",")
+		config.TraceMatch = strings.Split(split[0], ",")
 	}
-	if *looproll == 0 && *trace {
-		*looproll = 8
+	// merge environment with flags
+	env := os.Environ()
+	envSkip := make(map[string]bool)
+	for _, v := range envSet {
+		if strings.Contains(v, "=") {
+			split := strings.SplitN(v, "=", 2)
+			envSkip[split[0]] = true
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: skipping invalid env set %#v\n", v)
+		}
 	}
-	corn.LoopCollapse = *looproll
-	corn.Demangle = *demangle
-
-	err = corn.Run(args, os.Environ())
+	for _, v := range envUnset {
+		envSkip[v] = true
+	}
+	for _, v := range env {
+		if strings.Contains(v, "=") {
+			split := strings.SplitN(v, "=", 2)
+			if _, ok := envSkip[split[0]]; !ok {
+				envSet = append(envSet, v)
+			}
+		}
+	}
+	env = envSet
+	// launch usercorn
+	corn, err := usercorn.NewUsercorn(args[0], config)
+	if err != nil {
+		panic(err)
+	}
+	err = corn.Run(args, env)
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {
 			os.Exit(int(e))

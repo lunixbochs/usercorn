@@ -15,8 +15,25 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+type Config struct {
+	Demangle        bool
+	ForceBase       uint64
+	ForceInterpBase uint64
+	LoadPrefix      string
+	LoopCollapse    int
+	TraceExec       bool
+	TraceMatch      []string
+	TraceMatchDepth int
+	TraceMem        bool
+	TraceMemBatch   bool
+	TraceReg        bool
+	TraceSys        bool
+	Verbose         bool
+}
+
 type Usercorn struct {
 	*Unicorn
+	config       Config
 	exe          string
 	loader       models.Loader
 	interpLoader models.Loader
@@ -31,21 +48,8 @@ type Usercorn struct {
 	StackBase uint64
 	brk       uint64
 
-	Verbose         bool
-	TraceSys        bool
-	TraceMem        bool
-	TraceMemBatch   bool
-	TraceExec       bool
-	TraceReg        bool
-	TraceMatch      []string
-	TraceMatchDepth int
-	traceMatching   bool
-	ForceBase       uint64
-	ForceInterpBase uint64
-	LoopCollapse    int
-	Demangle        bool
+	traceMatching bool
 
-	LoadPrefix string
 	status     models.StatusDiff
 	stacktrace models.Stacktrace
 	blockloop  *models.LoopDetect
@@ -59,7 +63,10 @@ type Usercorn struct {
 	deadlock  int
 }
 
-func NewUsercorn(exe string, prefix string, forceBase, forceInterpBase uint64) (*Usercorn, error) {
+func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
+	if config == nil {
+		config = &Config{}
+	}
 	f, err := os.Open(exe)
 	if err != nil {
 		return nil, err
@@ -81,11 +88,8 @@ func NewUsercorn(exe string, prefix string, forceBase, forceInterpBase uint64) (
 		Unicorn:       unicorn,
 		exe:           exe,
 		loader:        l,
-		LoadPrefix:    prefix,
 		traceMatching: true,
-
-		ForceBase:       forceBase,
-		ForceInterpBase: forceInterpBase,
+		config:        *config,
 	}
 	// load kernels
 	// the array cast is a trick to work around circular imports
@@ -124,8 +128,8 @@ func NewUsercorn(exe string, prefix string, forceBase, forceInterpBase uint64) (
 }
 
 func (u *Usercorn) Run(args []string, env []string) error {
-	if u.LoopCollapse > 0 {
-		u.blockloop = models.NewLoopDetect(u.LoopCollapse)
+	if u.config.LoopCollapse > 0 {
+		u.blockloop = models.NewLoopDetect(u.config.LoopCollapse)
 	}
 	if err := u.addHooks(); err != nil {
 		return err
@@ -138,7 +142,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 			return err
 		}
 	}
-	if u.Verbose {
+	if u.config.Verbose {
 		fmt.Fprintf(os.Stderr, "[entry @ 0x%x]\n", u.entry)
 		dis, err := u.Disas(u.entry, 64)
 		if err != nil {
@@ -159,23 +163,23 @@ func (u *Usercorn) Run(args []string, env []string) error {
 			fmt.Fprintf(os.Stderr, "%s\n", line)
 		}
 	}
-	if u.Verbose || u.TraceReg {
+	if u.config.Verbose || u.config.TraceReg {
 		u.status.Changes().Print("", true, false)
 	}
-	if u.Verbose {
+	if u.config.Verbose {
 		fmt.Fprintln(os.Stderr, "=====================================")
 		fmt.Fprintln(os.Stderr, "==== Program output begins here. ====")
 		fmt.Fprintln(os.Stderr, "=====================================")
 	}
-	if u.TraceReg || u.TraceExec {
+	if u.config.TraceReg || u.config.TraceExec {
 		sp, _ := u.RegRead(u.arch.SP)
 		u.stacktrace.Update(u.entry, sp)
 	}
-	if u.TraceMemBatch {
+	if u.config.TraceMemBatch {
 		u.memlog = *models.NewMemLog(u.ByteOrder())
 	}
 	err := u.Unicorn.Start(u.entry, 0xffffffffffffffff)
-	if u.TraceMemBatch && !u.memlog.Empty() {
+	if u.config.TraceMemBatch && !u.memlog.Empty() {
 		u.memlog.Print("", u.arch.Bits)
 		u.memlog.Reset()
 	}
@@ -220,8 +224,8 @@ func (u *Usercorn) BinEntry() uint64 {
 }
 
 func (u *Usercorn) PrefixPath(path string, force bool) string {
-	if filepath.IsAbs(path) && u.LoadPrefix != "" {
-		target := filepath.Join(u.LoadPrefix, path)
+	if filepath.IsAbs(path) && u.config.LoadPrefix != "" {
+		target := filepath.Join(u.config.LoadPrefix, path)
 		_, err := os.Stat(target)
 		exists := !os.IsNotExist(err)
 		if force || exists {
@@ -263,7 +267,7 @@ func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) {
 	}
 	name := sym.Name
 	if name != "" {
-		if u.Demangle {
+		if u.config.Demangle {
 			name = models.Demangle(name)
 		}
 		if dist > 0 {
@@ -289,21 +293,21 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 }
 
 func (u *Usercorn) checkTraceMatch(addr uint64, sym string) bool {
-	if len(u.TraceMatch) == 0 {
+	if len(u.config.TraceMatch) == 0 {
 		return true
 	}
 	match := func(addr uint64, sym string, trace string) bool {
 		return sym == trace || strings.HasPrefix(sym, trace+"+") || fmt.Sprintf("0x%x", addr) == strings.ToLower(trace)
 	}
-	for _, v := range u.TraceMatch {
+	for _, v := range u.config.TraceMatch {
 		if match(addr, sym, v) {
 			return true
 		}
 	}
 	l := u.stacktrace.Len()
-	for i := 0; i < u.TraceMatchDepth && i < l; i++ {
+	for i := 0; i < u.config.TraceMatchDepth && i < l; i++ {
 		frame := u.stacktrace.Stack[l-i-1]
-		for _, v := range u.TraceMatch {
+		for _, v := range u.config.TraceMatch {
 			sym, _ := u.Symbolicate(frame.PC, false)
 			if match(frame.PC, sym, v) {
 				return true
@@ -314,7 +318,7 @@ func (u *Usercorn) checkTraceMatch(addr uint64, sym string) bool {
 }
 
 func (u *Usercorn) addHooks() error {
-	if u.TraceExec || u.TraceReg {
+	if u.config.TraceExec || u.config.TraceReg {
 		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
 			sym, _ := u.Symbolicate(addr, false)
 			if !u.checkTraceMatch(addr, sym) {
@@ -336,7 +340,7 @@ func (u *Usercorn) addHooks() error {
 					fmt.Fprintf(os.Stderr, indent+"- (%d) loops over %s\n", count, chain)
 				}
 			}
-			if u.TraceMemBatch {
+			if u.config.TraceMemBatch {
 				u.memlog.Print(indent, u.arch.Bits)
 				u.memlog.Reset()
 			}
@@ -352,7 +356,7 @@ func (u *Usercorn) addHooks() error {
 				sym = " (" + sym + ")"
 			}
 			blockLine := fmt.Sprintf("\n%s+ block%s @0x%x", blockIndent, sym, addr)
-			if !u.TraceExec && u.TraceReg && u.deadlock == 0 {
+			if !u.config.TraceExec && u.config.TraceReg && u.deadlock == 0 {
 				changes := u.status.Changes()
 				if changes.Count() > 0 {
 					fmt.Fprintln(os.Stderr, blockLine)
@@ -364,20 +368,20 @@ func (u *Usercorn) addHooks() error {
 			u.lastBlock = addr
 		})
 	}
-	if u.TraceExec {
+	if u.config.TraceExec {
 		u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
 			if !u.traceMatching {
 				return
 			}
 			indent := strings.Repeat("  ", u.stacktrace.Len())
 			var changes *models.Changes
-			if addr == u.lastCode || u.TraceReg && u.TraceExec {
+			if addr == u.lastCode || u.config.TraceReg && u.config.TraceExec {
 				changes = u.status.Changes()
 			}
-			if u.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 {
+			if u.config.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 {
 				dis, _ := u.Disas(addr, uint64(size))
 				fmt.Fprintf(os.Stderr, "%s", indent+dis)
-				if !u.TraceReg || changes.Count() == 0 {
+				if !u.config.TraceReg || changes.Count() == 0 {
 					fmt.Fprintln(os.Stderr)
 				} else {
 					dindent := ""
@@ -392,7 +396,7 @@ func (u *Usercorn) addHooks() error {
 			if addr == u.lastCode {
 				u.deadlock++
 				if changes.Count() > 0 {
-					if u.TraceReg {
+					if u.config.TraceReg {
 						changes.Print(indent, true, true)
 					}
 					u.deadlock = 0
@@ -412,7 +416,7 @@ func (u *Usercorn) addHooks() error {
 			u.lastCode = addr
 		})
 	}
-	if u.TraceMem || u.TraceMemBatch {
+	if u.config.TraceMem || u.config.TraceMemBatch {
 		u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) {
 			if !u.traceMatching {
 				return
@@ -436,7 +440,7 @@ func (u *Usercorn) addHooks() error {
 					}
 				}
 			}
-			if u.TraceMem {
+			if u.config.TraceMem {
 				memFmt := fmt.Sprintf("%%s%%s 0x%%0%dx 0x%%0%dx\n", u.Bsz*2, size*2)
 				indent := ""
 				if u.stacktrace.Len() > 0 {
@@ -444,9 +448,9 @@ func (u *Usercorn) addHooks() error {
 				}
 				fmt.Fprintf(os.Stderr, memFmt, indent, letter, addr, value)
 			}
-			if u.TraceMemBatch {
+			if u.config.TraceMemBatch {
 				write := (letter == "W")
-				if !(u.TraceExec || u.TraceReg) && !u.memlog.Adjacent(addr, value, size, write) {
+				if !(u.config.TraceExec || u.config.TraceReg) && !u.memlog.Adjacent(addr, value, size, write) {
 					u.memlog.Print("", u.arch.Bits)
 					u.memlog.Reset()
 				}
@@ -510,9 +514,9 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase
 		}
 	}
 	// map contiguous binary
-	loadBias := u.ForceBase
+	loadBias := u.config.ForceBase
 	if isInterp {
-		loadBias = u.ForceInterpBase
+		loadBias = u.config.ForceInterpBase
 	}
 	if dynamic {
 		mapLow := low
@@ -608,7 +612,7 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 	if name == "" {
 		panic(fmt.Sprintf("Syscall missing: %d", num))
 	}
-	if u.TraceSys && u.stacktrace.Len() > 0 {
+	if u.config.TraceSys && u.stacktrace.Len() > 0 {
 		fmt.Fprintf(os.Stderr, strings.Repeat("  ", u.stacktrace.Len()-1)+"s ")
 	}
 	for _, k := range u.kernels {
@@ -617,11 +621,11 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 			if err != nil {
 				return 0, err
 			}
-			if u.TraceSys {
+			if u.config.TraceSys {
 				sys.Trace(args)
 			}
 			ret := sys.Call(args)
-			if u.TraceSys {
+			if u.config.TraceSys {
 				sys.TraceRet(args, ret)
 			}
 			return ret, nil
