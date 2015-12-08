@@ -24,6 +24,6 @@ type Dirent64 struct {
 	Ino  uint64 `struc:"uint64"`
 	Off  uint64 `struc:"uint64"`
 	Len  int    `struc:"uint16"`
+	Type int    `struc:"uint8"`
 	Name string
-	Type int `struc:"uint8"`
 }

@@ -12,7 +12,7 @@ import (
 
 const UINT64_MAX = 0xFFFFFFFFFFFFFFFF
 
-func (k *LinuxKernel) Getdents(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
+func (k *LinuxKernel) getdents(dirfd co.Fd, buf co.Obuf, count uint64, bits uint) uint64 {
 	dirPath, err := posix.PathFromFd(int(dirfd))
 	if err != nil {
 		return UINT64_MAX // FIXME
@@ -27,7 +27,7 @@ func (k *LinuxKernel) Getdents(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
 	var offset, read uint64
 	// TODO: DRY? :(
 	var ent interface{}
-	if k.U.Bits() == 64 {
+	if bits == 64 {
 		ent = &Dirent64{}
 	} else {
 		ent = &Dirent{}
@@ -76,8 +76,8 @@ func (k *LinuxKernel) Getdents(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
 		}
 		// TODO: does inode get truncated? I guess there's getdents64
 		var ent interface{}
-		if k.U.Bits() == 64 {
-			ent = &Dirent64{inode, uint64(i), 0, f.Name() + "\x00", fileType}
+		if bits == 64 {
+			ent = &Dirent64{inode, uint64(i), 0, fileType, f.Name() + "\x00"}
 		} else {
 			ent = &Dirent{inode, uint64(i), 0, f.Name() + "\x00", fileType}
 		}
@@ -96,4 +96,12 @@ func (k *LinuxKernel) Getdents(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
 		}
 	}
 	return uint64(written)
+}
+
+func (k *LinuxKernel) Getdents(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
+	return k.getdents(dirfd, buf, count, k.U.Bits())
+}
+
+func (k *LinuxKernel) Getdents64(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
+	return k.getdents(dirfd, buf, count, 64)
 }
