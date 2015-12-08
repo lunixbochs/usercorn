@@ -202,7 +202,7 @@ func (k *PosixKernel) Dup2(oldFd co.Fd, newFd co.Fd) uint64 {
 	return uint64(newFd)
 }
 
-func (k *PosixKernel) Readlink(path string, buf co.Buf, size co.Len) uint64 {
+func (k *PosixKernel) Readlink(path string, buf co.Obuf, size co.Len) uint64 {
 	// TODO: full proc emulation layer
 	// maybe have a syscall pre-hook for this after ghostrace makes it generic
 	// or specifically have path hooks and use that to implement prefix as well
