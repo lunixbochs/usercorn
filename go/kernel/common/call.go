@@ -33,10 +33,10 @@ func (sys Syscall) Call(args []uint64) uint64 {
 				if argVal.Type().ConvertibleTo(typ) {
 					val = argVal.Convert(typ)
 				} else {
-					if v, ok := sys.Unpack(args[i:], typ); ok {
+					if v, err := sys.Unpack(args[i:], typ); err == nil {
 						val = v
 					} else {
-						panic(fmt.Errorf("Unsupported syscall argument type %s(..%s..) (change the parameter type or handle in kernel.Unpack())", sys.Name, typ))
+						panic(fmt.Errorf("error while unpacking %s(..%s..): '%s'", sys.Name, typ, err))
 					}
 				}
 			}

@@ -3,16 +3,16 @@ package linux
 import (
 	"syscall"
 
-	"github.com/lunixbochs/usercorn/go/kernel/common"
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux/unpack"
 )
 
-func Unpack(buf common.Buf, args []uint64, i interface{}) bool {
+func Unpack(buf co.Buf, args []uint64, i interface{}) error {
 	switch v := i.(type) {
 	case *syscall.Sockaddr:
 		*v = unpack.Sockaddr(buf, int(args[1]))
-		return true
+		return nil
 	default:
-		return false
+		return co.UnknownUnpackType
 	}
 }

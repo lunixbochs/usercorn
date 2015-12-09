@@ -28,7 +28,7 @@ func (s Syscall) traceArg(args []uint64, typ reflect.Type) string {
 			return fmt.Sprintf("0x%x", args[0])
 		default:
 			// TODO: facilitate pretty printing?
-			if v, ok := s.Unpack(args, typ); ok {
+			if v, err := s.Unpack(args, typ); err != nil {
 				return fmt.Sprintf("%v", v.Interface())
 			}
 			return fmt.Sprintf("%d", int32(args[0]))

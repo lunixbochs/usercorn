@@ -1,9 +1,9 @@
 package darwin
 
 import (
-	"github.com/lunixbochs/usercorn/go/kernel/common"
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
-func Unpack(buf common.Buf, args []uint64, i interface{}) bool {
-	return false
+func Unpack(buf co.Buf, args []uint64, i interface{}) error {
+	return co.UnknownUnpackType
 }
