@@ -525,7 +525,6 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase
 		} else if mapLow == 0 {
 			mapLow = 0x1000000
 		}
-		fmt.Println("hi", loadBias)
 		loadBias, err = u.Mmap(mapLow, high-low)
 		if err != nil {
 			return
