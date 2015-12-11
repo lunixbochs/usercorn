@@ -7,6 +7,10 @@ import (
 type Unpacker func(Buf, []uint64, interface{}) error
 
 func (sys Syscall) Unpack(args []uint64, typ reflect.Type) (reflect.Value, error) {
+	// NULL pointers will be passed through as an empty value
+	if args[0] == 0 {
+		return reflect.New(typ).Elem(), nil
+	}
 	e := sys.Instance.Elem()
 	u := sys.Instance.Interface().(Kernel).Usercorn()
 	buf := NewBuf(u, args[0])
