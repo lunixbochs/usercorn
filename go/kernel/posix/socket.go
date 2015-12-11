@@ -77,42 +77,29 @@ func (k *PosixKernel) Setsockopt(fd co.Fd, level, opt int, valueIn co.Buf, size 
 	return 0
 }
 
-func getfdset(b co.Buf) (*syscall.FdSet, error) {
-	if b.Addr == 0 {
-		return nil, nil
+func getfdset(f *native.Fdset32) *syscall.FdSet {
+	if f == nil {
+		return nil
 	}
-	fdset := &native.Fdset32{}
-	err := b.Unpack(fdset)
-	return fdset.Native(), err
+	return f.Native()
 }
 
-func putfdset(b co.Buf, fdset *syscall.FdSet) error {
+func putfdset(b co.Obuf, fdset *syscall.FdSet) error {
 	if fdset != nil && b.Addr != 0 {
-		return b.Copy().Pack(fdset)
+		return b.Pack(fdset)
 	}
 	return nil
 }
 
-func (k *PosixKernel) Select(nfds int, readfds, writefds, errorfds co.Buf, timeout *syscall.Timeval) uint64 {
+func (k *PosixKernel) Select(args []co.Obuf, nfds int, readfds, writefds, errorfds *native.Fdset32, timeout *syscall.Timeval) uint64 {
 	// TODO: might need to tweak 64-bit little-endian fdset parsing
-	r, err := getfdset(readfds)
-	if err != nil {
-		return UINT64_MAX // FIXME
-	}
-	w, err := getfdset(writefds)
-	if err != nil {
-		return UINT64_MAX // FIXME
-	}
-	e, err := getfdset(errorfds)
-	if err != nil {
-		return UINT64_MAX // FIXME
-	}
+	r, w, e := getfdset(readfds), getfdset(writefds), getfdset(errorfds)
 	if err := nativeSelect(nfds, r, w, e, timeout); err != nil {
 		return Errno(err)
 	}
 	// write out fdsets
-	putfdset(readfds, r)
-	putfdset(writefds, w)
-	putfdset(errorfds, e)
+	putfdset(args[1], r)
+	putfdset(args[2], w)
+	putfdset(args[3], e)
 	return 0
 }

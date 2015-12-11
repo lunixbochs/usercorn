@@ -9,8 +9,20 @@ import (
 func (sys Syscall) Call(args []uint64) uint64 {
 	kernel := sys.Instance.Interface().(Kernel)
 	kernelBase := kernel.UsercornKernel()
-	in := make([]reflect.Value, len(sys.In)+1)
+	extraArgs := 1
+	if sys.ObufArr {
+		extraArgs += 1
+	}
+	in := make([]reflect.Value, len(sys.In)+extraArgs)
 	in[0] = sys.Instance
+	// special case "all args" buf list
+	if sys.ObufArr {
+		arr := make([]Obuf, len(sys.In)-1)
+		for i := range arr {
+			arr[i] = Obuf(NewBuf(kernelBase.U, args[i]))
+		}
+		in[1] = reflect.ValueOf(arr)
+	}
 	// collect and cast syscall arguments
 	for i, typ := range sys.In {
 		var val reflect.Value
@@ -41,7 +53,7 @@ func (sys Syscall) Call(args []uint64) uint64 {
 				}
 			}
 		}
-		in[i+1] = val
+		in[extraArgs+i] = val
 	}
 	// call handler function
 	out := sys.Method.Func.Call(in)

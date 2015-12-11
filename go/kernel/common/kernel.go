@@ -14,6 +14,7 @@ type Syscall struct {
 	Method   reflect.Method
 	In       []reflect.Type
 	Out      []reflect.Type
+	ObufArr  bool
 }
 
 func (s Syscall) U() models.Usercorn {
@@ -88,6 +89,11 @@ func (k *KernelBase) UsercornInit(i Kernel, u models.Usercorn) {
 			for j := 1; j < method.Type.NumIn(); j++ {
 				in[j-1] = method.Type.In(j)
 			}
+			obufArr := false
+			if len(in) > 0 && in[0].Kind() == reflect.Slice && in[0].Elem() == ObufType {
+				obufArr = true
+				in = in[1:]
+			}
 			out := make([]reflect.Type, method.Type.NumOut())
 			for j := 0; j < method.Type.NumOut(); j++ {
 				out[j] = method.Type.Out(j)
@@ -96,6 +102,7 @@ func (k *KernelBase) UsercornInit(i Kernel, u models.Usercorn) {
 				Name:     name,
 				Instance: instance, Method: method,
 				In: in, Out: out,
+				ObufArr: obufArr,
 			}
 		}
 	}
