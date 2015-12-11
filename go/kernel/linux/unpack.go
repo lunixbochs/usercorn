@@ -12,6 +12,11 @@ func Unpack(buf co.Buf, args []uint64, i interface{}) error {
 	case *syscall.Sockaddr:
 		*v = unpack.Sockaddr(buf, int(args[1]))
 		return nil
+	case *syscall.FdSet:
+		if err := buf.Unpack(v); err != nil {
+			return err
+		}
+		return nil
 	default:
 		return co.UnknownUnpackType
 	}
