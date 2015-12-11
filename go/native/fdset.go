@@ -1,5 +1,9 @@
 package native
 
+import (
+	"fmt"
+)
+
 type Fdset32 struct {
 	Bits [32]int32
 }
@@ -24,4 +28,8 @@ func (f *Fdset32) Fds() []int {
 		}
 	}
 	return out
+}
+
+func (f *Fdset32) String() string {
+	return fmt.Sprintf("%v", f.Fds())
 }

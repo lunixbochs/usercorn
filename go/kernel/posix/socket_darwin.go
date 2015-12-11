@@ -4,9 +4,6 @@ import (
 	"syscall"
 )
 
-func (k *PosixKernel) Select(nfds int, readfds, writefds, errorfds *syscall.FdSet, timeout *syscall.Timeval) uint64 {
-	if err := syscall.Select(nfds, readfds, writefds, errorfds, timeout); err != nil {
-		return Errno(err)
-	}
-	return 0
+func nativeSelect(nfds int, readfds, writefds, errorfds *syscall.FdSet, timeout *syscall.Timeval) error {
+	return syscall.Select(nfds, readfds, writefds, errorfds, timeout)
 }

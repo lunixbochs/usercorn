@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
+	"github.com/lunixbochs/usercorn/go/native"
 )
 
 func (k *PosixKernel) Socket(domain, typ, protocol int) uint64 {
@@ -73,5 +74,45 @@ func (k *PosixKernel) Setsockopt(fd co.Fd, level, opt int, valueIn co.Buf, size 
 	if err := syscall.SetsockoptInt(int(fd), level, opt, opt); err != nil {
 		return Errno(err)
 	}
+	return 0
+}
+
+func getfdset(b co.Buf) (*syscall.FdSet, error) {
+	if b.Addr == 0 {
+		return nil, nil
+	}
+	fdset := &native.Fdset32{}
+	err := b.Unpack(fdset)
+	return fdset.Native(), err
+}
+
+func putfdset(b co.Buf, fdset *syscall.FdSet) error {
+	if fdset != nil && b.Addr != 0 {
+		return b.Copy().Pack(fdset)
+	}
+	return nil
+}
+
+func (k *PosixKernel) Select(nfds int, readfds, writefds, errorfds co.Buf, timeout *syscall.Timeval) uint64 {
+	// TODO: might need to tweak 64-bit little-endian fdset parsing
+	r, err := getfdset(readfds)
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
+	w, err := getfdset(writefds)
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
+	e, err := getfdset(errorfds)
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
+	if err := nativeSelect(nfds, r, w, e, timeout); err != nil {
+		return Errno(err)
+	}
+	// write out fdsets
+	putfdset(readfds, r)
+	putfdset(writefds, w)
+	putfdset(errorfds, e)
 	return 0
 }
