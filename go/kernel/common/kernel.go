@@ -84,10 +84,9 @@ func (k *KernelBase) UsercornInit(i Kernel, u models.Usercorn) {
 		if !strings.HasPrefix(name, "Usercorn") {
 			if strings.HasPrefix(name, "Literal") {
 				name = strings.Replace(name, "Literal", "", 1)
-			}
-			// skip private or broken unicode methods
-			if r, size := utf8.DecodeRuneInString(name); size <= 0 || !unicode.IsUpper(r) {
-				break
+			} else if r, size := utf8.DecodeRuneInString(name); size <= 0 || !unicode.IsUpper(r) {
+				// skip private or broken unicode methods
+				continue
 			}
 			name = camelToSnakeCase(name)
 			in := make([]reflect.Type, method.Type.NumIn()-1)
