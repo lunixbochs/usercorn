@@ -59,8 +59,12 @@ func (s *Stacktrace) Update(pc, sp uint64) {
 	if s.Empty() || sp < s.Peek().SP {
 		s.Push(pc, sp)
 	} else {
-		for !s.Empty() && sp > s.Peek().SP {
-			s.Pop()
+		if sp == s.Peek().SP {
+			s.Stack[s.Len()-1].PC = pc
+		} else {
+			for !s.Empty() && sp > s.Peek().SP {
+				s.Pop()
+			}
 		}
 	}
 }
