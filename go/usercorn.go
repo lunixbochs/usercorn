@@ -393,7 +393,7 @@ func (u *Usercorn) addHooks() error {
 					changes.Print(dindent, true, true)
 				}
 			}
-			if addr == u.lastCode {
+			if addr == u.lastCode && u.blockloop == nil {
 				u.deadlock++
 				if changes.Count() > 0 {
 					if u.config.TraceReg {
