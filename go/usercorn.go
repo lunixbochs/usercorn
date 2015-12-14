@@ -71,6 +71,7 @@ func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 	l, err := loader.Load(f)
 	if err != nil {
 		return nil, err
@@ -120,7 +121,6 @@ func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
 			}
 		}
 	}
-	f.Close()
 	// TODO: have a "host page size", maybe arch.Align()
 	mask := uint64(4096 - 1)
 	u.Brk((u.brk + mask) & ^mask)
@@ -582,6 +582,7 @@ outer:
 		if err != nil {
 			return
 		}
+		defer f.Close()
 		var interpBias, interpEntry uint64
 		_, _, interpBias, interpEntry, err = u.mapBinary(f, true, l.Arch())
 		if u.interpLoader.Arch() != l.Arch() {
