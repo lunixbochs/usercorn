@@ -87,7 +87,7 @@ func setupElfAuxv(u models.Usercorn) ([]Elf64Auxv, error) {
 	}
 	phdrEnt := 56
 	if u.Bits() == 32 {
-		phdrEnt = 56 // FIXME
+		phdrEnt = 32
 	}
 	if phdrOff > 0 {
 		auxv = append([]Elf64Auxv{
