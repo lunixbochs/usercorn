@@ -56,11 +56,6 @@ type Usercorn struct {
 	memlog     models.MemLog
 
 	exitStatus error
-
-	// deadlock detection
-	lastBlock uint64
-	lastCode  uint64
-	deadlock  int
 }
 
 func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
@@ -356,7 +351,7 @@ func (u *Usercorn) addHooks() error {
 				sym = " (" + sym + ")"
 			}
 			blockLine := fmt.Sprintf("\n%s+ block%s @0x%x", blockIndent, sym, addr)
-			if !u.config.TraceExec && u.config.TraceReg && u.deadlock == 0 {
+			if !u.config.TraceExec && u.config.TraceReg {
 				changes := u.status.Changes()
 				if changes.Count() > 0 {
 					fmt.Fprintln(os.Stderr, blockLine)
@@ -365,7 +360,6 @@ func (u *Usercorn) addHooks() error {
 			} else {
 				fmt.Fprintln(os.Stderr, blockLine)
 			}
-			u.lastBlock = addr
 		})
 	}
 	if u.config.TraceExec {
@@ -374,11 +368,8 @@ func (u *Usercorn) addHooks() error {
 				return
 			}
 			indent := strings.Repeat("  ", u.stacktrace.Len())
-			var changes *models.Changes
-			if addr == u.lastCode || u.config.TraceReg && u.config.TraceExec {
-				changes = u.status.Changes()
-			}
 			if u.config.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 {
+				changes := u.status.Changes()
 				dis, _ := u.Disas(addr, uint64(size))
 				fmt.Fprintf(os.Stderr, "%s", indent+dis)
 				if !u.config.TraceReg || changes.Count() == 0 {
@@ -393,27 +384,6 @@ func (u *Usercorn) addHooks() error {
 					changes.Print(dindent, true, true)
 				}
 			}
-			if addr == u.lastCode && u.blockloop == nil {
-				u.deadlock++
-				if changes.Count() > 0 {
-					if u.config.TraceReg {
-						changes.Print(indent, true, true)
-					}
-					u.deadlock = 0
-				}
-				if u.deadlock > 2 {
-					sym, _ := u.Symbolicate(addr, false)
-					if sym != "" {
-						sym = " (" + sym + ")"
-					}
-					fmt.Fprintf(os.Stderr, "FATAL: deadlock detected at 0x%x%s\n", addr, sym)
-					changes.Print(indent, true, false)
-					u.Stop()
-				}
-			} else {
-				u.deadlock = 0
-			}
-			u.lastCode = addr
 		})
 	}
 	if u.config.TraceMem || u.config.TraceMemBatch {
