@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -83,6 +84,10 @@ func (k *KernelBase) UsercornInit(i Kernel, u models.Usercorn) {
 		if !strings.HasPrefix(name, "Usercorn") {
 			if strings.HasPrefix(name, "Literal") {
 				name = strings.Replace(name, "Literal", "", 1)
+			}
+			// skip private or broken unicode methods
+			if r, size := utf8.DecodeRuneInString(name); size <= 0 || !unicode.IsUpper(r) {
+				break
 			}
 			name = camelToSnakeCase(name)
 			in := make([]reflect.Type, method.Type.NumIn()-1)
