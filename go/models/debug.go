@@ -127,13 +127,18 @@ func HexDump(base uint64, mem []byte, bits int) []string {
 				end := (j + 1) * bsz
 				var block []byte
 				if end > len(memLine) {
-					pad := bytes.Repeat([]byte{0}, end-len(memLine))
-					block = append(memLine[j*bsz:], pad...)
+					block = memLine[j*bsz:]
 				} else {
 					block = memLine[j*bsz : end]
 				}
 				blocks[j] = hex.EncodeToString(block)
 				tail[j] = clean(block)
+				// if block was too short, pad with spaces
+				if end > len(memLine) {
+					pad := end - len(memLine)
+					blocks[j] += strings.Repeat("  ", pad)
+					tail[j] += strings.Repeat(" ", pad)
+				}
 			} else {
 				blocks[j] = padBlock
 				tail[j] = padTail
