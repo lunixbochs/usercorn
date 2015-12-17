@@ -15,7 +15,7 @@ type (
 	Obuf Buf
 	Len  uint64
 	Off  int64
-	Fd   int
+	Fd   int32
 	Ptr  uint64
 )
 

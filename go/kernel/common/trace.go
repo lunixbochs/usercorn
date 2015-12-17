@@ -17,7 +17,9 @@ func (s Syscall) traceArg(args []uint64, typ reflect.Type) string {
 	switch typ {
 	case BufType, ObufType, OffType, PtrType:
 		return fmt.Sprintf("0x%x", args[0])
-	case LenType, FdType:
+	case FdType:
+		return fmt.Sprintf("%d", int32(args[0]))
+	case LenType:
 		return fmt.Sprintf("%d", args[0])
 	default:
 		switch typ.Kind() {

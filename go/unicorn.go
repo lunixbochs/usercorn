@@ -111,7 +111,7 @@ func (u *Unicorn) MemMap(addr, size uint64) error {
 	return u.MemMapProt(addr, size, uc.PROT_ALL)
 }
 
-func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
+func (u *Unicorn) MemReserve(addr, size uint64) (uint64, uint64, error) {
 	if addr == 0 {
 		addr = BASE
 	}
@@ -119,11 +119,18 @@ func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
 	addr, size = align(addr, size)
 	for i := addr; i < uint64(1)<<uint64(u.bits-1); i += UC_MEM_ALIGN {
 		if u.mapping(i, size) == nil {
-			err := u.MemMap(i, size)
-			return i, err
+			return i, size, nil
 		}
 	}
-	return 0, errors.New("Unicorn.Mmap() failed.")
+	return 0, 0, errors.New("failed to reserve memory")
+}
+
+func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
+	addr, size, err := u.MemReserve(addr, size)
+	if err != nil {
+		return 0, err
+	}
+	return addr, u.MemMap(addr, size)
 }
 
 func (u *Unicorn) MmapWrite(addr uint64, p []byte) (uint64, error) {
