@@ -9,7 +9,10 @@ import (
 
 func (k *PosixKernel) Mmap(addrHint, size uint64, prot, flags int, fd co.Fd, off co.Off) uint64 {
 	// TODO: MAP_FIXED means abort if we can't get the address
-	addr, _ := k.U.Mmap(addrHint, size)
+	addr, err := k.U.Mmap(addrHint, size)
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
 	if fd > 0 {
 		path, err := PathFromFd(int(fd))
 		fd2, _ := syscall.Dup(int(fd))
@@ -23,6 +26,8 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot, flags int, fd co.Fd, off
 		k.U.MemWrite(addr, tmp[:n])
 		syscall.Close(fd2)
 	}
+	// currently just trusting protection enums between Unicorn/kernel to match
+	k.U.MemProtect(addr, size, prot)
 	return addr
 }
 
@@ -34,7 +39,10 @@ func (k *PosixKernel) Munmap(addr, size uint64) uint64 {
 	return 0
 }
 
-func (k *PosixKernel) Mprotect() uint64 {
+func (k *PosixKernel) Mprotect(addr, size uint64, prot int) uint64 {
+	if err := k.U.MemProtect(addr, size, prot); err != nil {
+		return UINT64_MAX // FIXME
+	}
 	return 0
 }
 
