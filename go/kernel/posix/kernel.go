@@ -10,16 +10,18 @@ type PosixKernel struct {
 	Unpack func(common.Buf, interface{})
 }
 
-func pushAddrs(u models.Usercorn, addrs []uint64) error {
-	if _, err := u.Push(0); err != nil {
-		return err
-	}
-	for i, _ := range addrs {
-		if _, err := u.Push(addrs[len(addrs)-i-1]); err != nil {
-			return err
+func packAddrs(u models.Usercorn, addrs []uint64) ([]byte, error) {
+	buf := make([]byte, int(u.Bits())/8*(len(addrs)+1))
+	pos := buf
+	rev := append([]uint64{0}, addrs...)
+	for i := len(rev) - 1; i >= 0; i-- {
+		x, err := u.PackAddr(pos, rev[i])
+		if err != nil {
+			return nil, err
 		}
+		pos = pos[len(x):]
 	}
-	return nil
+	return buf, nil
 }
 
 func pushStrings(u models.Usercorn, args ...string) ([]uint64, error) {
@@ -44,28 +46,34 @@ func StackInit(u models.Usercorn, args, env []string, auxv []byte) error {
 	if err != nil {
 		return err
 	}
-	// align stack pointer
-	sp, _ := u.RegRead(u.Arch().SP)
-	u.RegWrite(u.Arch().SP, (sp & ^uint64(15)))
-	// end marker
-	if _, err := u.Push(0); err != nil {
+	// precalc envp -> argc for stack alignment
+	envpb, err := packAddrs(u, envp)
+	if err != nil {
 		return err
 	}
+	argvb, err := packAddrs(u, argv)
+	if err != nil {
+		return err
+	}
+	var tmp [8]byte
+	argcb, err := u.PackAddr(tmp[:], uint64(len(argv)))
+	init := append(argcb, argvb...)
+	init = append(init, envpb...)
+	// align stack pointer
+	sp, _ := u.RegRead(u.Arch().SP)
+	sp &= ^uint64(15)
+	off := len(init) & 15
+	if off > 0 {
+		sp -= uint64(16 - off)
+	}
+	u.RegWrite(u.Arch().SP, sp)
 	// auxv
 	if len(auxv) > 0 {
 		if _, err := u.PushBytes(auxv); err != nil {
 			return err
 		}
 	}
-	// envp
-	if err := pushAddrs(u, envp); err != nil {
-		return err
-	}
-	// argv
-	if err := pushAddrs(u, argv); err != nil {
-		return err
-	}
-	// argc
-	_, err = u.Push(uint64(len(args)))
+	// write envp -> argc
+	u.PushBytes(init)
 	return err
 }
