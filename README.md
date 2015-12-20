@@ -3,12 +3,17 @@ usercorn
 
 [![Build Status](https://travis-ci.org/lunixbochs/usercorn.svg?branch=master)](https://travis-ci.org/lunixbochs/usercorn)
 
-Building
+
+Dependencies
 ---
 
-- You need [Unicorn](http://www.unicorn-engine.org/) and [Capstone](http://www.capstone-engine.org/) installed to use this.
-- Go 1.5 or newer is required.
-- Make sure you have the GOPATH environment variable pointed at a directory like `$HOME/go`, and `$GOPATH/bin` is in your PATH.
+- Latest master build of [Unicorn](http://www.unicorn-engine.org/). Both Usercorn and Unicorn are rapidly changing, so make sure both are completely up-to-date before submitting a bug report.
+- Stable version of [Capstone](http://www.capstone-engine.org/)
+- Go 1.5 or newer
+- Make sure you have the GOPATH environment variable pointed at a directory like `$HOME/go`, and `$GOPATH/bin` is in your PATH
+
+Building
+---
 
 Simply `go get -u github.com/lunixbochs/usercorn/go/usercorn`.
 
@@ -17,12 +22,12 @@ To do a source tree build, you can also run `make` or `go build -i -o usercorn .
 Examples
 ---
 
-    ./usercorn bins/x86.linux.elf
-    ./usercorn bins/x86_64.linux.elf
-    ./usercorn bins/x86.darwin.macho
-    ./usercorn bins/x86_64.darwin.macho
-    ./usercorn bins/x86.linux.cgc
-    ./usercorn bins/mipsel.linux.elf
+    usercorn bins/x86.linux.elf
+    usercorn bins/x86_64.linux.elf
+    usercorn bins/x86.darwin.macho
+    usercorn bins/x86_64.darwin.macho
+    usercorn bins/x86.linux.cgc
+    usercorn bins/mipsel.linux.elf
 
 What.
 ----
@@ -33,7 +38,7 @@ What.
 - Unlike qemu-user, __does not require the same OS for which the binary was built__.
 - Wait, __what?__ What does that mean?
 - Syscalls are coerced into the Go language APIs using persuasive fit techniques. Syscalls s/should/might/ work almost anywhere the language does.
-- This means Usercorn should work anywhere Unicorn and Go work.
+- This means Usercorn will eventually work anywhere Unicorn and Go work (but currently means Linux, BSD, and OS X)
 
 Why?
 ----
