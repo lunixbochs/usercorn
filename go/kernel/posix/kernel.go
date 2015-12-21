@@ -13,9 +13,8 @@ type PosixKernel struct {
 func packAddrs(u models.Usercorn, addrs []uint64) ([]byte, error) {
 	buf := make([]byte, int(u.Bits())/8*(len(addrs)+1))
 	pos := buf
-	rev := append([]uint64{0}, addrs...)
-	for i := len(rev) - 1; i >= 0; i-- {
-		x, err := u.PackAddr(pos, rev[i])
+	for _, v := range addrs {
+		x, err := u.PackAddr(pos, v)
 		if err != nil {
 			return nil, err
 		}
