@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/lunixbochs/readline"
 	"io"
 	"net"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"strings"
 
 	usercorn "github.com/lunixbochs/usercorn/go"
+	"github.com/lunixbochs/usercorn/go/debug"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
@@ -74,22 +74,8 @@ func main() {
 	// connect to debug server (skips rest of usercorn)
 	if *connect > 0 {
 		addr := net.JoinHostPort("localhost", strconv.Itoa(*connect))
-		conn, err := net.Dial("tcp", addr)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error connecting to debug server: %v\n", err)
-			return
-		}
-		_, err = readline.MakeRaw(int(os.Stdin.Fd()))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error placing stdin into raw mode: %v\n", err)
-			return
-		}
-		remoteEOF := copyNotify(os.Stdout, conn)
-		localEOF := copyNotify(conn, os.Stdin)
-		select {
-		case <-remoteEOF:
-			fmt.Fprintf(os.Stderr, "remote closed connection\n")
-		case <-localEOF:
+		if err := debug.RunClient(addr); err != nil {
+			fmt.Fprintln(os.Stderr, err)
 		}
 		return
 	}
@@ -137,6 +123,7 @@ func main() {
 		}
 		config.TraceMatch = strings.Split(split[0], ",")
 	}
+
 	// merge environment with flags
 	env := os.Environ()
 	envSkip := make(map[string]bool)
@@ -169,10 +156,11 @@ func main() {
 
 	// start debug server
 	if *listen > 0 {
-		debugger := NewDebugger(corn)
+		debugger := debug.NewDebugger(corn)
 		addr := net.JoinHostPort("localhost", strconv.Itoa(*listen))
 		if err = debugger.Listen(addr); err != nil {
 			fmt.Fprintf(os.Stderr, "error listening on port %d: %v\n", *listen, err)
+			return
 		}
 	}
 
