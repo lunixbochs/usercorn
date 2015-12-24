@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/lunixbochs/readline"
+	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -24,6 +27,16 @@ func (s *strslice) Set(value string) error {
 	return nil
 }
 
+// like go io.Copy(), but returns a channel to notify you upon completion
+func copyNotify(dst io.Writer, src io.Reader) chan int {
+	ret := make(chan int)
+	go func() {
+		io.Copy(dst, src)
+		ret <- 1
+	}()
+	return ret
+}
+
 func main() {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -43,6 +56,9 @@ func main() {
 	ibase := fs.Uint64("ibase", 0, "force interpreter base address")
 	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
 
+	listen := fs.Int("listen", -1, "listen for debug connection on localhost:<port>")
+	connect := fs.Int("connect", -1, "connect to remote usercorn debugger on localhost:<port>")
+
 	var envSet strslice
 	var envUnset strslice
 	fs.Var(&envSet, "set", "set environment var in the form name=value")
@@ -50,14 +66,42 @@ func main() {
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options] <exe> [args...]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Debug Client: %s -connect <port>\n", os.Args[0])
 		fs.PrintDefaults()
 	}
 	fs.Parse(os.Args[1:])
+
+	// connect to debug server (skips rest of usercorn)
+	if *connect > 0 {
+		addr := net.JoinHostPort("localhost", strconv.Itoa(*connect))
+		conn, err := net.Dial("tcp", addr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error connecting to debug server: %v\n", err)
+			return
+		}
+		_, err = readline.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error placing stdin into raw mode: %v\n", err)
+			return
+		}
+		remoteEOF := copyNotify(os.Stdout, conn)
+		localEOF := copyNotify(conn, os.Stdin)
+		select {
+		case <-remoteEOF:
+			fmt.Fprintf(os.Stderr, "remote closed connection\n")
+		case <-localEOF:
+		}
+		return
+	}
+
+	// make sure we were passed an executable
 	args := fs.Args()
 	if len(args) < 1 {
 		fs.Usage()
 		os.Exit(1)
 	}
+
+	// build configuration
 	absPrefix := ""
 	var err error
 	if *prefix != "" {
@@ -116,11 +160,23 @@ func main() {
 		}
 	}
 	env = envSet
-	// launch usercorn
+
+	// prep usercorn
 	corn, err := usercorn.NewUsercorn(args[0], config)
 	if err != nil {
 		panic(err)
 	}
+
+	// start debug server
+	if *listen > 0 {
+		debugger := NewDebugger(corn)
+		addr := net.JoinHostPort("localhost", strconv.Itoa(*listen))
+		if err = debugger.Listen(addr); err != nil {
+			fmt.Fprintf(os.Stderr, "error listening on port %d: %v\n", *listen, err)
+		}
+	}
+
+	// start executable
 	err = corn.Run(args, env)
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {
