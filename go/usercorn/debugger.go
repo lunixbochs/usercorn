@@ -24,21 +24,16 @@ func (d *Debugger) Listen(addr string) error {
 	if err != nil {
 		return err
 	}
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error in debug accept: %v", err)
-				return
-			}
-			go d.Handle(conn)
-		}
-	}()
+	conn, err := ln.Accept()
+	if err != nil {
+		return err
+	}
+	go d.Handle(conn)
 	return nil
 }
 
 func (d *Debugger) Handle(c net.Conn) {
-	fmt.Fprintf(os.Stderr, "handling conn: %v\n", c)
+	fmt.Fprintf(os.Stderr, "Debug connection from %s\n", c.RemoteAddr())
 
 	stdin, err := c.(*net.TCPConn).File()
 	if err != nil {
