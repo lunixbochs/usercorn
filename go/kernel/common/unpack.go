@@ -1,35 +1,30 @@
 package common
 
 import (
+	"github.com/lunixbochs/argjoy"
 	"reflect"
 )
 
 type Unpacker func(Buf, []uint64, interface{}) error
 
-func (sys Syscall) Unpack(args []uint64, typ reflect.Type) (reflect.Value, error) {
-	// NULL pointers will be passed through as an empty value
-	if args[0] == 0 {
-		return reflect.New(typ).Elem(), nil
+func (k *KernelBase) unpack(arg interface{}, vals []interface{}) error {
+	// guard against null pointers
+	if v, ok := vals[0].(uint64); ok && v == 0 {
+		return nil
 	}
-	e := sys.Instance.Elem()
-	u := sys.Instance.Interface().(Kernel).Usercorn()
-	buf := NewBuf(u, args[0])
-	unpack := e.FieldByName("Unpack").Interface().(Unpacker)
-	if unpack != nil {
-		var tmp reflect.Value
-		if typ.Kind() == reflect.Ptr {
-			tmp = reflect.New(typ.Elem())
-		} else {
-			tmp = reflect.New(typ)
+	e := reflect.ValueOf(k.UsercornKernel()).Elem()
+	unpackField := e.FieldByName("Unpack")
+	if unpackField.IsValid() {
+		unpack := unpackField.Interface().(Unpacker)
+		regs := make([]uint64, len(vals))
+		for i, v := range vals {
+			regs[i] = v.(uint64)
 		}
-		if err := unpack(buf, args, tmp.Interface()); err != nil {
-			return reflect.Value{}, err
-		} else {
-			if typ.Kind() == reflect.Ptr {
-				return tmp, nil
-			}
-			return tmp.Elem(), nil
+		buf := NewBuf(k.U, regs[0])
+		if err := unpack(buf, regs, arg); err != nil {
+			return err
 		}
+		return nil
 	}
-	return reflect.Value{}, NoUnpackHandler
+	return argjoy.NoMatch
 }

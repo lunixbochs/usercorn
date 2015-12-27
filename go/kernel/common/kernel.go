@@ -1,6 +1,7 @@
 package common
 
 import (
+	"github.com/lunixbochs/argjoy"
 	"reflect"
 	"strings"
 	"unicode"
@@ -32,6 +33,7 @@ type Kernel interface {
 type KernelBase struct {
 	Syscalls map[string]Syscall
 	U        models.Usercorn
+	argjoy   *argjoy.Argjoy
 }
 
 func (k *KernelBase) Usercorn() models.Usercorn {
@@ -94,7 +96,7 @@ func (k *KernelBase) UsercornInit(i Kernel, u models.Usercorn) {
 				in[j-1] = method.Type.In(j)
 			}
 			obufArr := false
-			if len(in) > 0 && in[0].Kind() == reflect.Slice && in[0].Elem() == ObufType {
+			if len(in) > 0 && in[0] == reflect.SliceOf(reflect.TypeOf(Obuf{})) {
 				obufArr = true
 				in = in[1:]
 			}
@@ -110,6 +112,7 @@ func (k *KernelBase) UsercornInit(i Kernel, u models.Usercorn) {
 			}
 		}
 	}
+	k.argjoy = argjoy.NewArgjoy(k.commonArgCodec, argjoy.IntToInt, k.unpack)
 }
 
 func (k *KernelBase) UsercornSyscall(name string) *Syscall {
