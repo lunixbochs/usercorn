@@ -41,11 +41,7 @@ func (s Syscall) traceArg(args ...interface{}) string {
 func (s Syscall) traceArgs(regs []uint64) string {
 	kernel := s.Instance.Interface().(Kernel)
 	kernelBase := kernel.UsercornKernel()
-	regi := make([]interface{}, len(regs))
-	for i, v := range regs {
-		regi[i] = v
-	}
-	inRef, err := kernelBase.argjoy.Convert(s.In, false, regi...)
+	inRef, err := kernelBase.argjoy.Convert(s.In, false, regs)
 	if err != nil {
 		return err.Error()
 	}

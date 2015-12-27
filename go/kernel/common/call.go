@@ -61,11 +61,7 @@ func (sys Syscall) Call(args []uint64) uint64 {
 		in[1] = reflect.ValueOf(arr)
 	}
 	// convert syscall arguments
-	argi := make([]interface{}, len(args))
-	for i, v := range args {
-		argi[i] = v
-	}
-	converted, err := kernelBase.argjoy.Convert(sys.In, false, argi...)
+	converted, err := kernelBase.argjoy.Convert(sys.In, false, args)
 	if err != nil {
 		panic(err)
 	}
