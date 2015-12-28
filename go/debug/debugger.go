@@ -2,11 +2,11 @@ package debug
 
 import (
 	"fmt"
-	// uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"github.com/lunixbochs/readline"
 	"net"
 	"os"
 
+	"github.com/lunixbochs/usercorn/go/debug/cmd"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
@@ -50,12 +50,17 @@ func (d *Debugger) Handle(c net.Conn) {
 		fmt.Fprintf(os.Stderr, "error opening readline for debugger: %v\n", err)
 		return
 	}
+	context := &cmd.Context{ReadWriter: c, U: d.instances[0]}
 	for {
 		line, err := rl.Readline()
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "error in readline: %v\n", err)
 			break
 		}
-		fmt.Println(line)
+		if err := cmd.Run(context, line); err != nil {
+			fmt.Fprintf(os.Stderr, "error in command: %v\n", err)
+			break
+		}
 	}
 	stdin.Close()
 	c.Close()
