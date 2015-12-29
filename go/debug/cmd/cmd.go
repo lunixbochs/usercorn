@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"github.com/lunixbochs/argjoy"
 	"github.com/lunixbochs/go-shellwords"
+	"io"
 	"reflect"
+
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type Command struct {
@@ -22,6 +25,15 @@ func cmd(c *Command) *Command {
 	}
 	Commands[c.Name] = c
 	return c
+}
+
+type Context struct {
+	io.ReadWriter
+	U models.Usercorn
+}
+
+func (c *Context) Printf(format string, a ...interface{}) (n int, err error) {
+	return fmt.Fprintf(c, format, a...)
 }
 
 var aj = argjoy.NewArgjoy()
