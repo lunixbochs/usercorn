@@ -40,7 +40,7 @@ func (c *Context) Printf(format string, a ...interface{}) (n int, err error) {
 	return fmt.Fprintf(c, format, a...)
 }
 
-var aj = argjoy.NewArgjoy()
+var aj = argjoy.NewArgjoy(argjoy.RadStrToInt)
 
 func Run(c *Context, line string) error {
 	args, err := shellwords.Parse(line)

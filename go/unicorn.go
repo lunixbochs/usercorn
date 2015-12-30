@@ -16,7 +16,7 @@ type Unicorn struct {
 	bits   int
 	Bsz    int
 	order  binary.ByteOrder
-	memory []mmap
+	memory []models.Mmap
 	memio  memio.MemIO
 }
 
@@ -67,12 +67,12 @@ func (u *Unicorn) ByteOrder() binary.ByteOrder {
 	return u.order
 }
 
-func (u *Unicorn) mapping(addr, size uint64) *mmap {
+func (u *Unicorn) mapping(addr, size uint64) *models.Mmap {
 	for _, m := range u.memory {
-		if addr < m.Start && addr+size > m.Start {
+		if addr < m.Addr && addr+size > m.Addr {
 			return &m
 		}
-		if addr >= m.Start && addr < m.Start+m.Size {
+		if addr >= m.Addr && addr < m.Addr+m.Size {
 			return &m
 		}
 	}
@@ -90,7 +90,7 @@ func (u *Unicorn) Disas(addr, size uint64) (string, error) {
 func (u *Unicorn) MemMapProt(addr, size uint64, prot int) error {
 	m := u.mapping(addr, size)
 	for m != nil {
-		a, b := m.Start, m.Start+m.Size
+		a, b := m.Addr, m.Addr+m.Size
 		if addr < a {
 			size = a - addr
 		} else if addr < b && addr+size > b {
@@ -102,13 +102,17 @@ func (u *Unicorn) MemMapProt(addr, size uint64, prot int) error {
 		}
 		m = u.mapping(addr, size)
 	}
-	u.memory = append(u.memory, mmap{addr, size})
+	u.memory = append(u.memory, models.Mmap{Addr: addr, Size: size})
 	addr, size = align(addr, size, true)
 	return u.Unicorn.MemMap(addr, size)
 }
 
 func (u *Unicorn) MemMap(addr, size uint64) error {
 	return u.MemMapProt(addr, size, uc.PROT_ALL)
+}
+
+func (u *Unicorn) Mappings() []models.Mmap {
+	return u.memory
 }
 
 func (u *Unicorn) MemReserve(addr, size uint64) (uint64, uint64, error) {

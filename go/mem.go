@@ -7,10 +7,6 @@ const (
 	STACK_SIZE   = 8 * 1024 * 1024
 )
 
-type mmap struct {
-	Start, Size uint64
-}
-
 func align(addr, size uint64, growl ...bool) (uint64, uint64) {
 	to := uint64(UC_MEM_ALIGN)
 	mask := ^(to - 1)
