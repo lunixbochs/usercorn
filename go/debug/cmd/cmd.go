@@ -11,9 +11,10 @@ import (
 )
 
 type Command struct {
-	Name string
-	Desc string
-	Run  interface{}
+	Alias []string
+	Name  string
+	Desc  string
+	Run   interface{}
 }
 
 var Commands = make(map[string]*Command)
@@ -24,6 +25,9 @@ func cmd(c *Command) *Command {
 		panic(fmt.Sprintf("Command.Run must be a func: got (%T) %#v\n", c.Run, c.Run))
 	}
 	Commands[c.Name] = c
+	for _, alias := range c.Alias {
+		Commands[alias] = c
+	}
 	return c
 }
 
