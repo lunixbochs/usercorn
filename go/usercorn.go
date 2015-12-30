@@ -182,7 +182,11 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		fmt.Fprintln(os.Stderr, "Registers:")
 		u.status.Changes().Print("", true, false)
 		fmt.Fprintln(os.Stderr, "Stacktrace:")
-		u.stacktrace.Print(u)
+		pc, _ := u.RegRead(u.arch.PC)
+		sp, _ := u.RegRead(u.arch.SP)
+		for _, frame := range u.stacktrace.Freeze(pc, sp) {
+			fmt.Printf("  %s\n", frame.Pretty(u))
+		}
 	}
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus

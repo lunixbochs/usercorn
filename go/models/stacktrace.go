@@ -2,53 +2,50 @@ package models
 
 import (
 	"fmt"
-	"os"
 )
 
-type stackFrame struct {
+type Stackframe struct {
 	PC, SP uint64
 }
 
+func (s *Stackframe) Pretty(u Usercorn) string {
+	sym, _ := u.Symbolicate(s.PC, true)
+	return fmt.Sprintf("0x%x %s", s.PC, sym)
+}
+
 type Stacktrace struct {
-	Stack []stackFrame
+	Stack []Stackframe
 }
 
 func (s *Stacktrace) Len() int {
 	return len(s.Stack)
 }
 
-func (s *Stacktrace) Print(u Usercorn) {
-	pc, _ := u.RegRead(u.Arch().PC)
-	sp, _ := u.RegRead(u.Arch().SP)
-	stack := append(s.Stack, stackFrame{pc, sp})
-	for i := len(stack) - 1; i >= 0; i-- {
-		frame := stack[i]
-		if i == len(stack)-1 && frame.PC == pc {
-			continue
-		}
-		sym, _ := u.Symbolicate(frame.PC, true)
-		fmt.Fprintf(os.Stderr, "  0x%x %s\n", frame.PC, sym)
+func (s *Stacktrace) Freeze(pc, sp uint64) []Stackframe {
+	if s.Empty() || s.Peek().PC != pc {
+		return append(s.Stack, Stackframe{pc, sp})
 	}
+	return s.Stack
 }
 
 func (s *Stacktrace) Push(pc, sp uint64) {
-	s.Stack = append(s.Stack, stackFrame{pc, sp})
+	s.Stack = append(s.Stack, Stackframe{pc, sp})
 }
 
 func (s *Stacktrace) Empty() bool {
 	return s.Len() == 0
 }
 
-func (s *Stacktrace) Peek() stackFrame {
+func (s *Stacktrace) Peek() Stackframe {
 	if s.Empty() {
-		return stackFrame{}
+		return Stackframe{}
 	}
 	return s.Stack[s.Len()-1]
 }
 
-func (s *Stacktrace) Pop() stackFrame {
+func (s *Stacktrace) Pop() Stackframe {
 	if s.Empty() {
-		return stackFrame{}
+		return Stackframe{}
 	}
 	ret := s.Peek()
 	s.Stack = s.Stack[:s.Len()-1]
