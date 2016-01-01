@@ -42,9 +42,9 @@ func CgcSyscall(u models.Usercorn) {
 		u.MemWrite(args[1], tmp[:n])
 		writeAddr(u, args[3], uint64(n))
 	case 5: // allocate
-		addr, _ := u.Mmap(0, args[0])
+		mmap, _ := u.Mmap(0, args[0])
 		// args[1] == is executable
-		writeAddr(u, args[2], addr)
+		writeAddr(u, args[2], mmap.Addr)
 	case 6: // fdwait
 		nfds := int(args[0])
 		var readSet, writeSet *native.Fdset32

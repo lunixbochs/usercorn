@@ -19,9 +19,9 @@ type Usercorn interface {
 	Symbolicate(addr uint64, includeFile bool) (string, error)
 
 	Brk(addr uint64) (uint64, error)
-	Mappings() []Mmap
-	MemReserve(addr, size uint64) (uint64, uint64, error)
-	Mmap(addr, size uint64) (uint64, error)
+	Mappings() []*Mmap
+	MemReserve(addr, size uint64) (*Mmap, error)
+	Mmap(addr, size uint64) (*Mmap, error)
 	MmapWrite(addr uint64, p []byte) (uint64, error)
 	Mem() memio.MemIO
 	StrucAt(addr uint64) *StrucStream

@@ -9,7 +9,7 @@ import (
 
 func (k *PosixKernel) Mmap(addrHint, size uint64, prot, flags int, fd co.Fd, off co.Off) uint64 {
 	// TODO: MAP_FIXED means abort if we can't get the address
-	addr, err := k.U.Mmap(addrHint, size)
+	mmap, err := k.U.Mmap(addrHint, size)
 	if err != nil {
 		return UINT64_MAX // FIXME
 	}
@@ -19,16 +19,16 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot, flags int, fd co.Fd, off
 		f := os.NewFile(uintptr(fd2), path)
 		// register mapped files for symbolication of mapped shared libraries
 		if err == nil {
-			k.U.RegisterAddr(f, addr, size, int64(off))
+			k.U.RegisterAddr(f, mmap.Addr, size, int64(off))
 		}
 		tmp := make([]byte, size)
 		n, _ := f.ReadAt(tmp, int64(off))
-		k.U.MemWrite(addr, tmp[:n])
+		k.U.MemWrite(mmap.Addr, tmp[:n])
 		syscall.Close(fd2)
 	}
 	// currently just trusting protection enums between Unicorn/kernel to match
-	k.U.MemProtect(addr, size, prot)
-	return addr
+	k.U.MemProtect(mmap.Addr, size, prot)
+	return mmap.Addr
 }
 
 func (k *PosixKernel) Mmap2(addrHint, size uint64, prot, flags int, fd co.Fd, off co.Off) uint64 {

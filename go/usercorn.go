@@ -499,11 +499,12 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase
 		} else if mapLow == 0 {
 			mapLow = 0x1000000
 		}
-		loadBias, err = u.Mmap(mapLow, high-low)
+		var mmap *models.Mmap
+		mmap, err = u.Mmap(mapLow, high-low)
 		if err != nil {
 			return
 		}
-		loadBias -= low
+		loadBias = mmap.Addr - low
 	}
 	// merge overlapping segments
 	merged := make([]*models.Segment, 0, len(segments))
@@ -527,7 +528,12 @@ outer:
 		}
 		size := seg.End - seg.Start
 		if dynamic && seg.Start == 0 && loadBias == 0 {
-			loadBias, err = u.Mmap(0x1000000, size)
+			var mmap *models.Mmap
+			mmap, err = u.Mmap(0x1000000, size)
+			if err != nil {
+				return
+			}
+			loadBias = mmap.Addr
 			err = u.MemProtect(loadBias, size, seg.Prot)
 		} else {
 			err = u.MemMapProt(loadBias+seg.Start, seg.End-seg.Start, prot)
@@ -574,8 +580,8 @@ func (u *Usercorn) mapStack() error {
 	if err != nil {
 		return err
 	}
-	u.StackBase = stack
-	stackEnd := stack + STACK_SIZE
+	u.StackBase = stack.Addr
+	stackEnd := stack.Addr + STACK_SIZE
 	if err := u.RegWrite(u.arch.SP, stackEnd); err != nil {
 		return err
 	}

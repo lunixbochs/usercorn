@@ -16,7 +16,7 @@ type Unicorn struct {
 	bits   int
 	Bsz    int
 	order  binary.ByteOrder
-	memory []models.Mmap
+	memory []*models.Mmap
 	memio  memio.MemIO
 }
 
@@ -70,10 +70,10 @@ func (u *Unicorn) ByteOrder() binary.ByteOrder {
 func (u *Unicorn) mapping(addr, size uint64) *models.Mmap {
 	for _, m := range u.memory {
 		if addr < m.Addr && addr+size > m.Addr {
-			return &m
+			return m
 		}
 		if addr >= m.Addr && addr < m.Addr+m.Size {
-			return &m
+			return m
 		}
 	}
 	return nil
@@ -102,7 +102,7 @@ func (u *Unicorn) MemMapProt(addr, size uint64, prot int) error {
 		}
 		m = u.mapping(addr, size)
 	}
-	u.memory = append(u.memory, models.Mmap{Addr: addr, Size: size})
+	u.memory = append(u.memory, &models.Mmap{Addr: addr, Size: size})
 	addr, size = align(addr, size, true)
 	return u.Unicorn.MemMap(addr, size)
 }
@@ -111,11 +111,11 @@ func (u *Unicorn) MemMap(addr, size uint64) error {
 	return u.MemMapProt(addr, size, uc.PROT_ALL)
 }
 
-func (u *Unicorn) Mappings() []models.Mmap {
+func (u *Unicorn) Mappings() []*models.Mmap {
 	return u.memory
 }
 
-func (u *Unicorn) MemReserve(addr, size uint64) (uint64, uint64, error) {
+func (u *Unicorn) MemReserve(addr, size uint64) (*models.Mmap, error) {
 	if addr == 0 {
 		addr = BASE
 	}
@@ -123,26 +123,28 @@ func (u *Unicorn) MemReserve(addr, size uint64) (uint64, uint64, error) {
 	addr, size = align(addr, size)
 	for i := addr; i < uint64(1)<<uint64(u.bits-1); i += UC_MEM_ALIGN {
 		if u.mapping(i, size) == nil {
-			return i, size, nil
+			mmap := &models.Mmap{Addr: addr, Size: size}
+			u.memory = append(u.memory, mmap)
+			return mmap, nil
 		}
 	}
-	return 0, 0, errors.New("failed to reserve memory")
+	return nil, errors.New("failed to reserve memory")
 }
 
-func (u *Unicorn) Mmap(addr, size uint64) (uint64, error) {
-	addr, size, err := u.MemReserve(addr, size)
+func (u *Unicorn) Mmap(addr, size uint64) (*models.Mmap, error) {
+	mmap, err := u.MemReserve(addr, size)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return addr, u.MemMap(addr, size)
+	return mmap, u.Unicorn.MemMap(mmap.Addr, mmap.Size)
 }
 
 func (u *Unicorn) MmapWrite(addr uint64, p []byte) (uint64, error) {
-	addr, err := u.Mmap(addr, uint64(len(p)))
+	mmap, err := u.Mmap(addr, uint64(len(p)))
 	if err != nil {
 		return 0, err
 	}
-	return addr, u.MemWrite(addr, p)
+	return mmap.Addr, u.MemWrite(mmap.Addr, p)
 }
 
 func (u *Unicorn) Mem() memio.MemIO {
