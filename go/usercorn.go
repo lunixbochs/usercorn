@@ -241,14 +241,18 @@ func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
 	}
 	symbols, _ := l.Symbols()
 	DWARF, _ := l.DWARF()
-	u.mappedFiles = append(u.mappedFiles, &models.MappedFile{
+	mappedFile := &models.MappedFile{
 		Name:    path.Base(f.Name()),
 		Off:     off,
 		Addr:    addr,
 		Size:    size,
 		Symbols: symbols,
 		DWARF:   DWARF,
-	})
+	}
+	u.mappedFiles = append(u.mappedFiles, mappedFile)
+	if mmap := u.mapping(addr, size); mmap != nil {
+		mmap.File = mappedFile
+	}
 }
 
 func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) {
@@ -580,6 +584,7 @@ func (u *Usercorn) mapStack() error {
 	if err != nil {
 		return err
 	}
+	stack.Desc = "stack"
 	u.StackBase = stack.Addr
 	stackEnd := stack.Addr + STACK_SIZE
 	if err := u.RegWrite(u.arch.SP, stackEnd); err != nil {

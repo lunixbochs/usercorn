@@ -102,13 +102,20 @@ func (u *Unicorn) MemMapProt(addr, size uint64, prot int) error {
 		}
 		m = u.mapping(addr, size)
 	}
-	u.memory = append(u.memory, &models.Mmap{Addr: addr, Size: size})
+	u.memory = append(u.memory, &models.Mmap{Addr: addr, Size: size, Prot: prot})
 	addr, size = align(addr, size, true)
 	return u.Unicorn.MemMap(addr, size)
 }
 
 func (u *Unicorn) MemMap(addr, size uint64) error {
 	return u.MemMapProt(addr, size, uc.PROT_ALL)
+}
+
+func (u *Unicorn) MemProtect(addr, size uint64, prot int) error {
+	if mmap := u.mapping(addr, size); mmap != nil {
+		mmap.Prot = prot
+	}
+	return u.Unicorn.MemProtect(addr, size, prot)
 }
 
 func (u *Unicorn) Mappings() []*models.Mmap {
@@ -123,7 +130,7 @@ func (u *Unicorn) MemReserve(addr, size uint64) (*models.Mmap, error) {
 	addr, size = align(addr, size)
 	for i := addr; i < uint64(1)<<uint64(u.bits-1); i += UC_MEM_ALIGN {
 		if u.mapping(i, size) == nil {
-			mmap := &models.Mmap{Addr: addr, Size: size}
+			mmap := &models.Mmap{Addr: addr, Size: size, Prot: uc.PROT_ALL}
 			u.memory = append(u.memory, mmap)
 			return mmap, nil
 		}
