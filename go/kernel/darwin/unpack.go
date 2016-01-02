@@ -1,9 +1,9 @@
 package darwin
 
 import (
-	co "github.com/lunixbochs/usercorn/go/kernel/common"
+	"github.com/lunixbochs/argjoy"
 )
 
-func Unpack(buf co.Buf, args []uint64, i interface{}) error {
-	return co.UnknownUnpackType
+func Unpack(arg interface{}, vals []interface{}) error {
+	return argjoy.NoMatch
 }

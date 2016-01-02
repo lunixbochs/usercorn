@@ -8,12 +8,12 @@ import (
 
 type LinuxKernel struct {
 	posix.PosixKernel
-
-	Unpack common.Unpacker
 }
 
 func DefaultKernel() *LinuxKernel {
-	return &LinuxKernel{Unpack: Unpack}
+	kernel := &LinuxKernel{}
+	kernel.Argjoy.Register(kernel.Unpack)
+	return kernel
 }
 
 func NewKernel(u models.Usercorn) common.Kernel {

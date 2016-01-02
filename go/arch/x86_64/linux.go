@@ -10,7 +10,7 @@ import (
 )
 
 type LinuxKernel struct {
-	linux.LinuxKernel
+	*linux.LinuxKernel
 }
 
 // TODO: put these somewhere. ghostrace maybe.
@@ -43,7 +43,7 @@ func (k *LinuxKernel) ArchPrctl(code int, addr uint64) {
 func (k *LinuxKernel) SetTidAddress() {}
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	kernel := &LinuxKernel{*linux.DefaultKernel()}
+	kernel := &LinuxKernel{linux.DefaultKernel()}
 	kernel.UsercornInit(kernel, u)
 	return []interface{}{kernel}
 }

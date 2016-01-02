@@ -1,29 +1,33 @@
 package darwin
 
 import (
-	"github.com/lunixbochs/usercorn/go/kernel/common"
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/mach"
 	"github.com/lunixbochs/usercorn/go/kernel/posix"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type DarwinKernel struct {
-	common.KernelBase
+	co.KernelBase
 	mach.MachKernel
 	posix.PosixKernel
-
-	Unpack common.Unpacker
 }
 
 func DefaultKernel() *DarwinKernel {
-	return &DarwinKernel{Unpack: Unpack}
+	kernel := &DarwinKernel{}
+	kernel.Argjoy.Register(Unpack)
+	return kernel
 }
 
-func NewKernel(u models.Usercorn) common.Kernel {
+func (k *DarwinKernel) UsercornInit(i co.Kernel, u models.Usercorn) {
+	k.MachKernel.U = u
+	k.PosixKernel.U = u
+	k.KernelBase.UsercornInit(i, u)
+}
+
+func NewKernel(u models.Usercorn) co.Kernel {
 	kernel := DefaultKernel()
 	kernel.UsercornInit(kernel, u)
-	kernel.MachKernel.U = u
-	kernel.PosixKernel.U = u
 	return kernel
 }
 

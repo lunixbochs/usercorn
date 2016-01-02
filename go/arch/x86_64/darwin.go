@@ -10,7 +10,7 @@ import (
 )
 
 type DarwinKernel struct {
-	darwin.DarwinKernel
+	*darwin.DarwinKernel
 }
 
 func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
@@ -19,10 +19,8 @@ func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
 }
 
 func DarwinKernels(u models.Usercorn) []interface{} {
-	kernel := &DarwinKernel{}
+	kernel := &DarwinKernel{darwin.DefaultKernel()}
 	kernel.UsercornInit(kernel, u)
-	kernel.PosixKernel.U = u
-	kernel.MachKernel.U = u
 	return []interface{}{kernel}
 }
 

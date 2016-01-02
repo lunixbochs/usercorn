@@ -34,14 +34,6 @@ func (k *KernelBase) commonArgCodec(arg interface{}, vals []interface{}) error {
 	return argjoy.NoMatch
 }
 
-/*
-	if v, err := sys.Unpack(args[i:], typ); err == nil {
-		val = v
-	} else {
-		panic(fmt.Errorf("error while unpacking %s(..%s..): '%s'", sys.Name, typ, err))
-	}
-*/
-
 // Call a syscall from the dispatch table. Will panic() if anything goes terribly wrong.
 func (sys Syscall) Call(args []uint64) uint64 {
 	kernel := sys.Instance.Interface().(Kernel)
@@ -61,7 +53,7 @@ func (sys Syscall) Call(args []uint64) uint64 {
 		in[1] = reflect.ValueOf(arr)
 	}
 	// convert syscall arguments
-	converted, err := kernelBase.argjoy.Convert(sys.In, false, args)
+	converted, err := kernelBase.Argjoy.Convert(sys.In, false, args)
 	if err != nil {
 		panic(err)
 	}

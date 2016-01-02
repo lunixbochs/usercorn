@@ -33,7 +33,7 @@ type Kernel interface {
 type KernelBase struct {
 	Syscalls map[string]Syscall
 	U        models.Usercorn
-	argjoy   *argjoy.Argjoy
+	Argjoy   argjoy.Argjoy
 }
 
 func (k *KernelBase) Usercorn() models.Usercorn {
@@ -112,7 +112,8 @@ func (k *KernelBase) UsercornInit(i Kernel, u models.Usercorn) {
 			}
 		}
 	}
-	k.argjoy = argjoy.NewArgjoy(k.commonArgCodec, argjoy.IntToInt, k.unpack)
+	k.Argjoy.Register(k.commonArgCodec)
+	k.Argjoy.Register(argjoy.IntToInt)
 }
 
 func (k *KernelBase) UsercornSyscall(name string) *Syscall {

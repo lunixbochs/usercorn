@@ -13,7 +13,7 @@ import (
 var LinuxRegs = []int{uc.X86_REG_EBX, uc.X86_REG_ECX, uc.X86_REG_EDX, uc.X86_REG_ESI, uc.X86_REG_EDI, uc.X86_REG_EBP}
 
 type LinuxKernel struct {
-	linux.LinuxKernel
+	*linux.LinuxKernel
 }
 
 var socketCallMap = map[int]string{
@@ -55,7 +55,7 @@ func (k *LinuxKernel) Socketcall(index int, params co.Buf) uint64 {
 }
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	kernel := &LinuxKernel{*linux.DefaultKernel()}
+	kernel := &LinuxKernel{linux.DefaultKernel()}
 	kernel.UsercornInit(kernel, u)
 	return []interface{}{kernel}
 }
