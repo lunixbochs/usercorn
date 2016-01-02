@@ -16,12 +16,17 @@ var Arch = &models.Arch{
 	UC_MODE: uc.MODE_32,
 	PC:      uc.X86_REG_EIP,
 	SP:      uc.X86_REG_ESP,
-	Regs: map[int]string{
-		uc.X86_REG_EAX: "eax",
-		uc.X86_REG_EBX: "ebx",
-		uc.X86_REG_ECX: "ecx",
-		uc.X86_REG_EDX: "edx",
-		uc.X86_REG_ESI: "esi",
-		uc.X86_REG_EDI: "edi",
+	Regs: map[string]int{
+		"eip": uc.X86_REG_EIP,
+		"esp": uc.X86_REG_ESP,
+		"eax": uc.X86_REG_EAX,
+		"ebx": uc.X86_REG_EBX,
+		"ecx": uc.X86_REG_ECX,
+		"edx": uc.X86_REG_EDX,
+		"esi": uc.X86_REG_ESI,
+		"edi": uc.X86_REG_EDI,
+	},
+	DefaultRegs: []string{
+		"eax", "ebx", "ecx", "edx", "esi", "edi",
 	},
 }

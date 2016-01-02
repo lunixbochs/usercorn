@@ -13,12 +13,9 @@ var RegCmd = cmd(&Command{
 	Desc: "Read/write regs.",
 	Run: func(c *Context, args ...string) error {
 		if len(args) == 0 {
-			regs, err := c.U.RegDump()
-			if err != nil {
-				return err
-			}
-			for _, reg := range regs {
-				c.Printf("%s 0x%x\n", reg.Name, reg.Val)
+			for name, enum := range c.U.Arch().Regs {
+				val, _ := c.U.RegRead(enum)
+				c.Printf("%s 0x%x\n", name, val)
 			}
 		} else {
 			// maybe we should care if cpu is running?
@@ -45,7 +42,7 @@ var RegCmd = cmd(&Command{
 				}
 				// look for register and print or assign
 				valid := false
-				for enum, name := range c.U.Arch().Regs {
+				for name, enum := range c.U.Arch().Regs {
 					if reg == name {
 						valid = true
 						// match > 0 = valid assignment

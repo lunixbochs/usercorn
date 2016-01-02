@@ -38,12 +38,12 @@ func (r regList) Less(i, j int) bool {
 	}
 }
 
-type regMap map[int]string
+type regMap map[string]int
 
 func (r regMap) Items() regList {
 	ret := make(regList, 0, len(r))
-	for e, n := range r {
-		ret = append(ret, Reg{e, n})
+	for name, enum := range r {
+		ret = append(ret, Reg{enum, name})
 	}
 	return ret
 }
@@ -59,6 +59,8 @@ type Arch struct {
 	SP      int
 	OS      map[string]*OS
 	Regs    regMap
+
+	DefaultRegs []string
 
 	// sorted for RegDump
 	regList regList
@@ -78,7 +80,18 @@ func (a *Arch) getRegList() regList {
 	if a.regList == nil {
 		rl := a.Regs.Items()
 		sort.Sort(rl)
-		a.regList = rl
+
+		filtered := make(regList, 0, len(a.DefaultRegs))
+		for _, reg := range rl {
+			// O(N) but it's a small list and only searched once
+			for _, match := range a.DefaultRegs {
+				if reg.Name == match {
+					filtered = append(filtered, reg)
+					break
+				}
+			}
+		}
+		a.regList = filtered
 	}
 	return a.regList
 }
