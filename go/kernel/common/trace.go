@@ -14,7 +14,7 @@ func (s Syscall) traceArg(args ...interface{}) string {
 
 	switch arg := args[0].(type) {
 	case Obuf:
-		return hex(arg)
+		return hex(arg.Addr)
 	case Buf:
 		if len(args) > 1 {
 			if length, ok := args[1].(Len); ok {
@@ -22,7 +22,7 @@ func (s Syscall) traceArg(args ...interface{}) string {
 				return models.Repr(mem)
 			}
 		}
-		return hex(arg)
+		return hex(arg.Addr)
 	case Off:
 		return hex(arg)
 	case Ptr:
