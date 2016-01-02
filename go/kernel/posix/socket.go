@@ -25,6 +25,10 @@ func (k *PosixKernel) Bind(fd co.Fd, sa syscall.Sockaddr, size co.Len) uint64 {
 	return Errno(syscall.Bind(int(fd), sa))
 }
 
+func (k *PosixKernel) Shutdown(fd co.Fd, how int) uint64 {
+	return Errno(syscall.Shutdown(int(fd), how))
+}
+
 func (k *PosixKernel) Sendto(fd co.Fd, buf co.Buf, size co.Len, flags int, sa syscall.Sockaddr, socklen co.Len) uint64 {
 	msg := make([]byte, size)
 	if err := buf.Unpack(msg); err != nil {
