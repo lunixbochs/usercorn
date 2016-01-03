@@ -359,13 +359,18 @@ func (u *Usercorn) addHooks() error {
 				sym = " (" + sym + ")"
 			}
 			blockLine := fmt.Sprintf("\n%s+ block%s @0x%x", blockIndent, sym, addr)
+			changes := u.status.Changes()
 			if !u.config.TraceExec && u.config.TraceReg {
-				changes := u.status.Changes()
+				// if only registers are being traced, we don't need to print
+				// the block if no registers were modified
 				if changes.Count() > 0 {
 					fmt.Fprintln(os.Stderr, blockLine)
 					changes.Print(indent, true, true)
 				}
 			} else {
+				if changes.Count() > 0 {
+					changes.Print(blockIndent, true, true)
+				}
 				fmt.Fprintln(os.Stderr, blockLine)
 			}
 		})
