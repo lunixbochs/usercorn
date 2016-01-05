@@ -290,6 +290,9 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 		if err != nil {
 			return u.brk, err
 		}
+		if mmap := u.mapping(u.brk, addr); mmap != nil {
+			mmap.Desc = "brk"
+		}
 		u.brk = addr
 	}
 	return u.brk, nil
@@ -514,6 +517,11 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase
 			return
 		}
 		loadBias = mmap.Addr - low
+		if isInterp {
+			mmap.Desc = "interp"
+		} else {
+			mmap.Desc = "exe"
+		}
 	}
 	// merge overlapping segments
 	merged := make([]*models.Segment, 0, len(segments))
@@ -535,17 +543,11 @@ outer:
 		if prot == 0 {
 			prot = uc.PROT_ALL
 		}
-		size := seg.End - seg.Start
-		if dynamic && seg.Start == 0 && loadBias == 0 {
-			var mmap *models.Mmap
-			mmap, err = u.Mmap(0x1000000, size)
-			if err != nil {
-				return
-			}
-			loadBias = mmap.Addr
-			err = u.MemProtect(loadBias, size, seg.Prot)
-		} else {
+		if !dynamic {
 			err = u.MemMapProt(loadBias+seg.Start, seg.End-seg.Start, prot)
+			if mmap := u.mapping(loadBias+seg.Start, loadBias+seg.End); mmap != nil {
+				mmap.Desc = "exe"
+			}
 		}
 		// register binary for symbolication
 		u.RegisterAddr(f, loadBias+seg.Start, seg.End-seg.Start, int64(seg.Start))

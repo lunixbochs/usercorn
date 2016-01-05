@@ -43,6 +43,7 @@ func CgcSyscall(u models.Usercorn) {
 		writeAddr(u, args[3], uint64(n))
 	case 5: // allocate
 		mmap, _ := u.Mmap(0, args[0])
+		mmap.Desc = "heap"
 		// args[1] == is executable
 		writeAddr(u, args[2], mmap.Addr)
 	case 6: // fdwait
