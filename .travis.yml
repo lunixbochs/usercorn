@@ -18,7 +18,7 @@ before_install:
   - cd unicorn && git pull && make && sudo make install && cd ..
   - popd
   - git checkout -b tmp && (git branch -d master || true) && git branch master
-  - go get ./...
+  - make get
 
 script: 'make test'
 
