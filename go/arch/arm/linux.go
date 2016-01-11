@@ -13,13 +13,13 @@ import (
 var LinuxRegs = []int{uc.ARM_REG_R0, uc.ARM_REG_R1, uc.ARM_REG_R2, uc.ARM_REG_R3, uc.ARM_REG_R4, uc.ARM_REG_R5, uc.ARM_REG_R6}
 
 type ArmLinuxKernel struct {
-	linux.LinuxKernel
+	*linux.LinuxKernel
 }
 
 func (k *ArmLinuxKernel) SetTls(addr uint64) {}
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	kernel := &ArmLinuxKernel{*linux.DefaultKernel()}
+	kernel := &ArmLinuxKernel{linux.DefaultKernel()}
 	kernel.UsercornInit(kernel, u)
 	return []interface{}{kernel}
 }
