@@ -102,8 +102,8 @@ func (u *Unicorn) MemMapProt(addr, size uint64, prot int) error {
 		}
 		m = u.mapping(addr, size)
 	}
-	u.memory = append(u.memory, &models.Mmap{Addr: addr, Size: size, Prot: prot})
 	addr, size = align(addr, size, true)
+	u.memory = append(u.memory, &models.Mmap{Addr: addr, Size: size, Prot: prot})
 	return u.Unicorn.MemMap(addr, size)
 }
 
