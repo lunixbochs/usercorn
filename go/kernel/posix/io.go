@@ -259,3 +259,8 @@ func (k *PosixKernel) Pipe(files co.Buf) uint64 {
 	}
 	return Errno(err)
 }
+
+func (k *PosixKernel) Pipe2(files co.Buf, flags int) uint64 {
+	// TODO: handle flags
+	return k.Pipe(files)
+}
