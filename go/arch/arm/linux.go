@@ -67,9 +67,7 @@ func LinuxInit(u models.Usercorn, args, env []string) error {
 	return linux.StackInit(u, args, env)
 }
 
-func LinuxSyscall(u models.Usercorn) {
-	// TODO: handle errors or something
-	num, _ := u.RegRead(uc.ARM_REG_R7)
+func LinuxSyscall(u models.Usercorn, num int) {
 	// TODO: EABI has a different syscall base (OABI is 0x900000)
 	// TODO: does the generator handle this? it needs to.
 	if num > 0x900000 {
@@ -82,7 +80,21 @@ func LinuxSyscall(u models.Usercorn) {
 
 func LinuxInterrupt(u models.Usercorn, intno uint32) {
 	if intno == 2 {
-		LinuxSyscall(u)
+		// TODO: thumb? issue #121
+		pc, _ := u.RegRead(uc.ARM_REG_PC)
+		var tmp [4]byte
+		if err := u.MemReadInto(tmp[:], pc-4); err != nil {
+			panic(err)
+		}
+		n := u.UnpackAddr(tmp[:]) & 0xffff
+		if n > 0 {
+			LinuxSyscall(u, int(n))
+			return
+		}
+
+		// TODO: handle errors or something
+		num, _ := u.RegRead(uc.ARM_REG_R7)
+		LinuxSyscall(u, int(num))
 		return
 	}
 	panic(fmt.Sprintf("unhandled ARM interrupt: %d", intno))
