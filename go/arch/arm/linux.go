@@ -4,7 +4,6 @@ import (
 	"fmt"
 	sysnum "github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
-	"os"
 
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
@@ -15,26 +14,54 @@ var LinuxRegs = []int{uc.ARM_REG_R0, uc.ARM_REG_R1, uc.ARM_REG_R2, uc.ARM_REG_R3
 
 type ArmLinuxKernel struct {
 	*linux.LinuxKernel
+	tls uint64
 }
 
-func (k *ArmLinuxKernel) SetTls(addr uint64) {}
+func (k *ArmLinuxKernel) SetTls(addr uint64) {
+	k.tls = addr
+}
+
+func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
+	// handle arm kernel traps
+	// https://www.kernel.org/doc/Documentation/arm/kernel_user_helpers.txt
+	if err := u.MemMap(0xffff0000, 0x10000); err != nil {
+		return err
+	}
+	for addr := 0; addr < 0x10000; addr += 4 {
+		// write "bx lr" to all kernel trap addresses so they will return
+		bxlr := []byte{0x1e, 0xff, 0x2f, 0xe1}
+		if err := u.MemWrite(uint64(0xffff0000+addr), bxlr); err != nil {
+			return err
+		}
+	}
+	_, err := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+		switch addr {
+		case 0xffff0fe0:
+			// __kuser_get_tls
+			u.RegWrite(uc.ARM_REG_R0, kernel.tls)
+		default:
+			panic(fmt.Sprintf("unsupported kernel trap: 0x%x\n", addr))
+		}
+	}, 0xffff0000, 0xffffffff)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	kernel := &ArmLinuxKernel{linux.DefaultKernel()}
+	kernel := &ArmLinuxKernel{LinuxKernel: linux.DefaultKernel()}
 	kernel.UsercornInit(kernel, u)
+	// TODO: LinuxInit needs to have a copy of the kernel
+	// honestly init should be part of the kernel?
+	if err := setupTraps(u, kernel); err != nil {
+		panic(err)
+	}
 	return []interface{}{kernel}
 }
 
 func LinuxInit(u models.Usercorn, args, env []string) error {
 	if err := enterUsermode(u); err != nil {
-		return err
-	}
-	u.MemMap(0xffff0000, 0x10000)
-	_, err := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
-		fmt.Fprintf(os.Stderr, "kernel trap (unimplemented): 0x%x\n", addr)
-		u.Stop()
-	}, 0xffff0000, 0xffffffff)
-	if err != nil {
 		return err
 	}
 	return linux.StackInit(u, args, env)
