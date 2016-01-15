@@ -435,11 +435,6 @@ func (u *Usercorn) addHooks() error {
 				fmt.Fprintf(os.Stderr, memFmt, indent, letter, addr, value)
 			}
 			if u.config.TraceMemBatch {
-				write := (letter == "W")
-				if !(u.config.TraceExec || u.config.TraceReg) && !u.memlog.Adjacent(addr, value, size, write) {
-					u.memlog.Print("", u.arch.Bits)
-					u.memlog.Reset()
-				}
 				u.memlog.Update(addr, size, value, letter == "W")
 			}
 		})

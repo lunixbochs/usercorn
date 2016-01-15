@@ -17,8 +17,6 @@ type memDelta struct {
 type MemLog struct {
 	order binary.ByteOrder
 	log   []*memDelta
-	read  *memDelta
-	write *memDelta
 }
 
 func NewMemLog(order binary.ByteOrder) *MemLog {
@@ -31,38 +29,29 @@ func (m *MemLog) Empty() bool {
 
 func (m *MemLog) Reset() {
 	m.log = nil
-	m.read = nil
-	m.write = nil
 }
 
-func (m *MemLog) Adjacent(addr uint64, value int64, size int, write bool) bool {
-	var delta *memDelta
-	if write {
-		delta = m.write
-	} else {
-		delta = m.read
+func (m *MemLog) Adjacent(addr uint64, value int64, size int, write bool) (delta *memDelta, dup bool) {
+	for _, delta := range m.log {
+		if delta.write != write {
+			continue
+		}
+		if addr == delta.addr && value == delta.value {
+			return delta, true
+		}
+		if addr == delta.addr+uint64(len(delta.data)) || addr == delta.addr-uint64(size) {
+			return delta, false
+		}
 	}
-	if delta == nil || addr == delta.addr && value == delta.value {
-		return true
-	}
-	return addr == delta.addr+uint64(len(delta.data)) || addr == delta.addr-uint64(size)
+	return nil, false
 }
 
 func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
-	var deltap **memDelta
-	if write {
-		deltap = &m.write
-	} else {
-		deltap = &m.read
-	}
-	delta := *deltap
-	before := false
-	if delta == nil || !m.Adjacent(addr, value, size, write) {
-		*deltap = &memDelta{addr, value, nil, write, ' '}
-		delta = *deltap
-		m.log = append(m.log, delta)
-	} else {
-		if addr == delta.addr && value == delta.value {
+	var delta *memDelta
+	var dup, before bool
+	if delta, dup = m.Adjacent(addr, value, size, write); delta != nil {
+		// adjacent to old memory delta
+		if dup {
 			return
 		}
 		if addr < delta.addr {
@@ -80,6 +69,10 @@ func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
 		} else if delta.tag != tag {
 			delta.tag = '~'
 		}
+	} else {
+		// entirely new memory delta
+		delta = &memDelta{addr, value, nil, write, ' '}
+		m.log = append(m.log, delta)
 	}
 	var tmp [8]byte
 	switch size {
