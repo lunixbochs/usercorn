@@ -126,9 +126,6 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	if u.config.LoopCollapse > 0 {
 		u.blockloop = models.NewLoopDetect(u.config.LoopCollapse)
 	}
-	if err := u.addHooks(); err != nil {
-		return err
-	}
 	if err := u.mapStack(); err != nil {
 		return err
 	}
@@ -136,6 +133,9 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		if err := u.os.Init(u, args, env); err != nil {
 			return err
 		}
+	}
+	if err := u.addHooks(); err != nil {
+		return err
 	}
 	if u.config.Verbose {
 		fmt.Fprintf(os.Stderr, "[entry @ 0x%x]\n", u.entry)
@@ -400,7 +400,8 @@ func (u *Usercorn) addHooks() error {
 					changes.Print(dindent, true, true)
 				}
 			}
-		})
+		}, 0, 0xffffffffffffffff)
+		// range is set manually to support multiple hooks
 	}
 	if u.config.TraceMem || u.config.TraceMemBatch {
 		u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) {
@@ -437,7 +438,8 @@ func (u *Usercorn) addHooks() error {
 			if u.config.TraceMemBatch {
 				u.memlog.Update(addr, size, value, letter == "W")
 			}
-		})
+		}, 0, 0xffffffffffffffff)
+		// range is set manually to support multiple hooks
 	}
 	invalid := uc.HOOK_MEM_READ_INVALID | uc.HOOK_MEM_WRITE_INVALID | uc.HOOK_MEM_FETCH_INVALID
 	u.HookAdd(invalid, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) bool {

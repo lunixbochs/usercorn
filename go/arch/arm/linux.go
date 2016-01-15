@@ -4,6 +4,7 @@ import (
 	"fmt"
 	sysnum "github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+	"os"
 
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
@@ -26,6 +27,14 @@ func LinuxKernels(u models.Usercorn) []interface{} {
 
 func LinuxInit(u models.Usercorn, args, env []string) error {
 	if err := enterUsermode(u); err != nil {
+		return err
+	}
+	u.MemMap(0xffff0000, 0x10000)
+	_, err := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+		fmt.Fprintf(os.Stderr, "kernel trap (unimplemented): 0x%x\n", addr)
+		u.Stop()
+	}, 0xffff0000, 0xffffffff)
+	if err != nil {
 		return err
 	}
 	return linux.StackInit(u, args, env)
