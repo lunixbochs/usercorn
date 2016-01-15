@@ -56,6 +56,7 @@ type Usercorn struct {
 	memlog     models.MemLog
 
 	exitStatus error
+	insnCount  uint64
 }
 
 func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
@@ -380,6 +381,7 @@ func (u *Usercorn) addHooks() error {
 	}
 	if u.config.TraceExec {
 		u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+			u.insnCount++
 			if !u.traceMatching {
 				return
 			}
