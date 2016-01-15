@@ -25,6 +25,9 @@ func LinuxKernels(u models.Usercorn) []interface{} {
 }
 
 func LinuxInit(u models.Usercorn, args, env []string) error {
+	if err := enterUsermode(u); err != nil {
+		return err
+	}
 	return linux.StackInit(u, args, env)
 }
 
