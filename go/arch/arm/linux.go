@@ -30,7 +30,7 @@ func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
 	for addr := 0; addr < 0x10000; addr += 4 {
 		// write "bx lr" to all kernel trap addresses so they will return
 		bxlr := []byte{0x1e, 0xff, 0x2f, 0xe1}
-		if err := u.MemWrite(uint64(0xffff0000+addr), bxlr); err != nil {
+		if err := u.MemWrite(0xffff0000+uint64(addr), bxlr); err != nil {
 			return err
 		}
 	}
