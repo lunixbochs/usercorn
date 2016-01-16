@@ -1,16 +1,8 @@
 language: go
 sudo: true
 
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - gcc-5
-
 before_install:
   - date
-  - export CC='gcc-5'
   - mkdir /tmp/build && pushd /tmp/build
   - git clone https://github.com/aquynh/capstone.git
   - cd capstone && git pull && make && sudo make install && cd ..
