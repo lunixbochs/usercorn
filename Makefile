@@ -1,7 +1,7 @@
 .PHONY: usercorn get test
 .DEFAULT_GOAL := build
 
-DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.')
+DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
 
 build: get usercorn
 
