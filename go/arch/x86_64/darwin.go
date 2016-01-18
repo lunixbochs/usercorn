@@ -19,8 +19,7 @@ func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
 }
 
 func DarwinKernels(u models.Usercorn) []interface{} {
-	kernel := &DarwinKernel{darwin.DefaultKernel()}
-	kernel.UsercornInit(kernel, u)
+	kernel := &DarwinKernel{darwin.NewKernel(u)}
 	return []interface{}{kernel}
 }
 

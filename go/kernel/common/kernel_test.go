@@ -3,7 +3,6 @@ package common
 import (
 	"testing"
 
-	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/mock"
 )
 
@@ -17,16 +16,10 @@ func (k *PosixKernel) Exit(code int) uint64 {
 	return 44
 }
 
-func NewPosixKernel(u models.Usercorn) *PosixKernel {
-	kernel := &PosixKernel{}
-	kernel.UsercornInit(kernel, u)
-	return kernel
-}
-
 func TestKernel(t *testing.T) {
 	u := &mock.Usercorn{}
-	kernel := NewPosixKernel(u)
-	ret := kernel.UsercornSyscall("exit").Call([]uint64{43})
+	kernel := &PosixKernel{}
+	ret := Lookup(u, kernel, "exit").Call([]uint64{43})
 	if kernel.exitCode != 43 {
 		t.Fatal("Syscall failed.")
 	}

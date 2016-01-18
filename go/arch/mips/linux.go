@@ -13,7 +13,7 @@ import (
 var LinuxRegs = []int{uc.MIPS_REG_A0, uc.MIPS_REG_A1, uc.MIPS_REG_A2, uc.MIPS_REG_A3}
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	return []interface{}{linux.NewKernel(u)}
+	return []interface{}{linux.NewKernel()}
 }
 
 func LinuxInit(u models.Usercorn, args, env []string) error {

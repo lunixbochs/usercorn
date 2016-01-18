@@ -18,7 +18,7 @@ func (s Syscall) traceArg(args ...interface{}) string {
 	case Buf:
 		if len(args) > 1 {
 			if length, ok := args[1].(Len); ok {
-				mem, _ := s.U().MemRead(arg.Addr, uint64(length))
+				mem, _ := s.Kernel.U.MemRead(arg.Addr, uint64(length))
 				return models.Repr(mem)
 			}
 		}
@@ -39,9 +39,7 @@ func (s Syscall) traceArg(args ...interface{}) string {
 }
 
 func (s Syscall) traceArgs(regs []uint64) string {
-	kernel := s.Instance.Interface().(Kernel)
-	kernelBase := kernel.UsercornKernel()
-	inRef, err := kernelBase.Argjoy.Convert(s.In, false, regs)
+	inRef, err := s.Kernel.Argjoy.Convert(s.In, false, regs)
 	if err != nil {
 		return err.Error()
 	}
@@ -66,7 +64,7 @@ func (s Syscall) TraceRet(args []uint64, ret uint64) {
 		if typ == reflect.SliceOf(reflect.TypeOf(Obuf{})) && len(args) > i+1 {
 			r := int(ret)
 			if uint64(r) <= args[i+1] && r >= 0 {
-				mem, _ := s.U().MemRead(args[i], uint64(r))
+				mem, _ := s.Kernel.U.MemRead(args[i], uint64(r))
 				out = append(out, models.Repr(mem))
 			}
 		}

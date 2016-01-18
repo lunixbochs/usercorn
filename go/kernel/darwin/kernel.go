@@ -13,21 +13,11 @@ type DarwinKernel struct {
 	posix.PosixKernel
 }
 
-func DefaultKernel() *DarwinKernel {
+func NewKernel(u models.Usercorn) *DarwinKernel {
 	kernel := &DarwinKernel{}
+	kernel.MachKernel.U = u
+	kernel.PosixKernel.U = u
 	kernel.Argjoy.Register(Unpack)
-	return kernel
-}
-
-func (k *DarwinKernel) UsercornInit(i co.Kernel, u models.Usercorn) {
-	k.MachKernel.U = u
-	k.PosixKernel.U = u
-	k.KernelBase.UsercornInit(i, u)
-}
-
-func NewKernel(u models.Usercorn) co.Kernel {
-	kernel := DefaultKernel()
-	kernel.UsercornInit(kernel, u)
 	return kernel
 }
 

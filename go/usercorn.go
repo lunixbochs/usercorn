@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/lunixbochs/usercorn/go/arch"
-	"github.com/lunixbochs/usercorn/go/kernel/common"
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/loader"
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -37,7 +37,7 @@ type Usercorn struct {
 	exe          string
 	loader       models.Loader
 	interpLoader models.Loader
-	kernels      []common.Kernel
+	kernels      []co.Kernel
 	mappedFiles  []*models.MappedFile
 
 	base       uint64
@@ -92,9 +92,9 @@ func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
 	// the array cast is a trick to work around circular imports
 	if os.Kernels != nil {
 		kernelI := os.Kernels(u)
-		kernels := make([]common.Kernel, len(kernelI))
+		kernels := make([]co.Kernel, len(kernelI))
 		for i, k := range kernelI {
-			kernels[i] = k.(common.Kernel)
+			kernels[i] = k.(co.Kernel)
 		}
 		u.kernels = kernels
 	}
@@ -607,7 +607,7 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 		fmt.Fprintf(os.Stderr, strings.Repeat("  ", u.stacktrace.Len()-1)+"s ")
 	}
 	for _, k := range u.kernels {
-		if sys := k.UsercornSyscall(name); sys != nil {
+		if sys := co.Lookup(u, k, name); sys != nil {
 			args, err := getArgs(len(sys.In))
 			if err != nil {
 				return 0, err

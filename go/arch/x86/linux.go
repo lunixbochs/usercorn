@@ -39,7 +39,7 @@ var socketCallMap = map[int]string{
 
 func (k *LinuxKernel) Socketcall(index int, params co.Buf) uint64 {
 	if name, ok := socketCallMap[index]; ok {
-		if sys := k.UsercornSyscall(name); sys != nil {
+		if sys := co.Lookup(k.U, k, name); sys != nil {
 			rawArgs := make([]uint32, len(sys.In))
 			if err := params.Unpack(rawArgs); err != nil {
 				return posix.UINT64_MAX
@@ -55,8 +55,7 @@ func (k *LinuxKernel) Socketcall(index int, params co.Buf) uint64 {
 }
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	kernel := &LinuxKernel{linux.DefaultKernel()}
-	kernel.UsercornInit(kernel, u)
+	kernel := &LinuxKernel{linux.NewKernel()}
 	return []interface{}{kernel}
 }
 

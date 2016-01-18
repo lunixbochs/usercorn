@@ -11,6 +11,5 @@ type MachKernel struct {
 
 func NewKernel(u models.Usercorn) common.Kernel {
 	kernel := &MachKernel{}
-	kernel.UsercornInit(kernel, u)
 	return kernel
 }

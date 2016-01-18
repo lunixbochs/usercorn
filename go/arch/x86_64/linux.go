@@ -43,8 +43,7 @@ func (k *LinuxKernel) ArchPrctl(code int, addr uint64) {
 func (k *LinuxKernel) SetTidAddress() {}
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	kernel := &LinuxKernel{linux.DefaultKernel()}
-	kernel.UsercornInit(kernel, u)
+	kernel := &LinuxKernel{linux.NewKernel()}
 	return []interface{}{kernel}
 }
 
