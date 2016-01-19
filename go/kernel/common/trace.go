@@ -61,7 +61,7 @@ func (s Syscall) Trace(regs []uint64) {
 func (s Syscall) TraceRet(args []uint64, ret uint64) {
 	var out []string
 	for i, typ := range s.In {
-		if typ == reflect.SliceOf(reflect.TypeOf(Obuf{})) && len(args) > i+1 {
+		if typ == reflect.TypeOf(Obuf{}) && len(args) > i+1 {
 			r := int(ret)
 			if uint64(r) <= args[i+1] && r >= 0 {
 				mem, _ := s.Kernel.U.MemRead(args[i], uint64(r))
