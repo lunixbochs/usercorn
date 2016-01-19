@@ -32,13 +32,14 @@ func (k *PosixKernel) Execve(path string, argvBuf, envpBuf co.Buf) uint64 {
 	// TODO: put this function somewhere generic?
 	readStrArray := func(buf co.Buf) []string {
 		var out []string
+		st := buf.Struc()
 		for {
 			var addr uint64
 			if k.U.Bits() == 64 {
-				buf.Unpack(&addr)
+				st.Unpack(&addr)
 			} else {
 				var addr32 uint32
-				buf.Unpack(&addr32)
+				st.Unpack(&addr32)
 				addr = uint64(addr32)
 			}
 			if addr == 0 {

@@ -253,9 +253,10 @@ func (k *PosixKernel) Pipe(files co.Buf) uint64 {
 	var fds [2]int
 	err := syscall.Pipe(fds[:])
 	if err == nil {
-		err := files.Pack(int32(fds[0]))
+		st := files.Struc()
+		err := st.Pack(int32(fds[0]))
 		if err == nil {
-			err = files.Pack(int32(fds[1]))
+			err = st.Pack(int32(fds[1]))
 		}
 		if err != nil {
 			return UINT64_MAX // FIXME

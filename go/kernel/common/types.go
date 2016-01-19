@@ -8,9 +8,8 @@ type (
 	Buf struct {
 		Addr uint64
 		U    models.Usercorn
-		*models.StrucStream
 	}
-	Obuf Buf
+	Obuf struct{ Buf }
 	Len  uint64
 	Off  int64
 	Fd   int32
@@ -18,9 +17,17 @@ type (
 )
 
 func NewBuf(u models.Usercorn, addr uint64) Buf {
-	return Buf{U: u, Addr: addr, StrucStream: u.StrucAt(addr)}
+	return Buf{U: u, Addr: addr}
 }
 
-func (b Buf) Copy() Buf {
-	return NewBuf(b.U, b.Addr)
+func (b Buf) Struc() *models.StrucStream {
+	return b.U.StrucAt(b.Addr)
+}
+
+func (b Buf) Pack(i interface{}) error {
+	return b.Struc().Pack(i)
+}
+
+func (b Buf) Unpack(i interface{}) error {
+	return b.Struc().Unpack(i)
 }

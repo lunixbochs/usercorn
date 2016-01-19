@@ -56,32 +56,35 @@ func Sockaddr(buf common.Buf, length int) syscall.Sockaddr {
 	order := buf.U.ByteOrder()
 	// TODO: handle insufficient length
 	var family uint16
-	buf.Unpack(&family)
-	buf = buf.Copy()
+	if err := buf.Unpack(&family); err != nil {
+		return nil
+	}
+	// TODO: handle errors?
+	st := buf.Struc()
 	switch family {
 	case AF_LOCAL:
 		var a SockaddrUnix
-		buf.Unpack(&a)
+		st.Unpack(&a)
 		return sockaddrToNative(&a)
 	case AF_INET:
 		var a SockaddrInet4
-		buf.Unpack(&a)
+		st.Unpack(&a)
 		order.PutUint16(port[:], a.Port)
 		a.Port = binary.BigEndian.Uint16(port[:])
 		return sockaddrToNative(&a)
 	case AF_INET6:
 		var a SockaddrInet6
-		buf.Unpack(&a)
+		st.Unpack(&a)
 		order.PutUint16(port[:], a.Port)
 		a.Port = binary.BigEndian.Uint16(port[:])
 		return sockaddrToNative(&a)
 	case AF_PACKET:
 		var a SockaddrLinklayer
-		buf.Unpack(&a)
+		st.Unpack(&a)
 		return sockaddrToNative(&a)
 	case AF_NETLINK:
 		var a SockaddrNetlink
-		buf.Unpack(&a)
+		st.Unpack(&a)
 		return sockaddrToNative(&a)
 	}
 	return nil

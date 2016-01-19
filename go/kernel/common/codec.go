@@ -10,7 +10,7 @@ func (k *KernelBase) commonArgCodec(arg interface{}, vals []interface{}) error {
 		case *Buf:
 			*v = NewBuf(k.U, reg)
 		case *Obuf:
-			*v = Obuf(NewBuf(k.U, reg))
+			*v = Obuf{NewBuf(k.U, reg)}
 		case *Len:
 			*v = Len(reg)
 		case *Off:
