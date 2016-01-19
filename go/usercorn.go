@@ -187,6 +187,10 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		for _, line := range models.HexDump(sp, buf[:], u.arch.Bits) {
 			fmt.Fprintf(os.Stderr, "%s\n", line)
 		}
+		fmt.Fprintf(os.Stderr, "[memory map]\n")
+		for _, m := range u.Mappings() {
+			fmt.Fprintf(os.Stderr, "  %v\n", m.String())
+		}
 	}
 	if u.config.Verbose || u.config.TraceReg {
 		u.status.Changes().Print("", u.config.Color, false)
@@ -206,9 +210,13 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	err := u.Unicorn.Start(u.entry, 0xffffffffffffffff)
 	u.memlog.Flush("", u.arch.Bits)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Registers:")
+		fmt.Fprintf(os.Stderr, "[memory map]\n")
+		for _, m := range u.Mappings() {
+			fmt.Fprintf(os.Stderr, "  %v\n", m.String())
+		}
+		fmt.Fprintln(os.Stderr, "[registers]")
 		u.status.Changes().Print("", u.config.Color, false)
-		fmt.Fprintln(os.Stderr, "Stacktrace:")
+		fmt.Fprintln(os.Stderr, "[stacktrace]")
 		pc, _ := u.RegRead(u.arch.PC)
 		sp, _ := u.RegRead(u.arch.SP)
 		for _, frame := range u.stacktrace.Freeze(pc, sp) {
