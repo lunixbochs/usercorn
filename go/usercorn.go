@@ -199,9 +199,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		u.memlog = *models.NewMemLog(u.ByteOrder())
 	}
 	err := u.Unicorn.Start(u.entry, 0xffffffffffffffff)
-	if u.config.TraceMemBatch && !u.memlog.Empty() {
-		u.memlog.Flush("", u.arch.Bits)
-	}
+	u.memlog.Flush("", u.arch.Bits)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Registers:")
 		u.status.Changes().Print("", true, false)
@@ -370,9 +368,7 @@ func (u *Usercorn) addHooks() error {
 					fmt.Fprintf(os.Stderr, indent+"- (%d) loops over %s\n", count, chain)
 				}
 			}
-			if u.config.TraceMemBatch {
-				u.memlog.Flush(indent, u.arch.Bits)
-			}
+			u.memlog.Flush(indent, u.arch.Bits)
 			if sp, err := u.RegRead(u.arch.SP); err == nil {
 				u.stacktrace.Update(addr, sp)
 			}
@@ -640,13 +636,17 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 				fmt.Fprintf(os.Stderr, indent+"s ")
 				// TODO: return string and print this manually here?
 				sys.Trace(args)
+				// don't memlog our strace
+				u.memlog.Reset()
 			}
 			ret := sys.Call(args)
 			if u.config.TraceSys {
+				// don't memlog ret either
+				u.memlog.Freeze()
 				// TODO: print this manually?
 				sys.TraceRet(args, ret)
-				u.memlog.Flush(indent, u.arch.Bits)
 			}
+			u.memlog.Flush(indent, u.arch.Bits)
 			return ret, nil
 		}
 	}

@@ -16,8 +16,9 @@ type memDelta struct {
 }
 
 type MemLog struct {
-	order binary.ByteOrder
-	log   []*memDelta
+	order  binary.ByteOrder
+	log    []*memDelta
+	frozen bool
 }
 
 func NewMemLog(order binary.ByteOrder) *MemLog {
@@ -30,6 +31,16 @@ func (m *MemLog) Empty() bool {
 
 func (m *MemLog) Reset() {
 	m.log = nil
+	m.frozen = false
+}
+
+func (m *MemLog) Freeze() {
+	m.frozen = true
+}
+
+func (m *MemLog) Flush(indent string, bits int) {
+	m.Print(indent, bits)
+	m.Reset()
 }
 
 func (m *MemLog) Adjacent(addr uint64, p []byte, write bool) (delta *memDelta, dup bool) {
@@ -48,6 +59,9 @@ func (m *MemLog) Adjacent(addr uint64, p []byte, write bool) (delta *memDelta, d
 }
 
 func (m *MemLog) UpdateBytes(addr uint64, p []byte, write bool) {
+	if m.frozen {
+		return
+	}
 	var delta *memDelta
 	var dup, before bool
 	if delta, dup = m.Adjacent(addr, p, write); delta != nil {
@@ -116,9 +130,4 @@ func (m *MemLog) Print(indent string, bits int) {
 			}
 		}
 	}
-}
-
-func (m *MemLog) Flush(indent string, bits int) {
-	m.Print(indent, bits)
-	m.Reset()
 }
