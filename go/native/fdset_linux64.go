@@ -1,3 +1,6 @@
+// +build amd64 arm64
+// +build linux
+
 package native
 
 import (

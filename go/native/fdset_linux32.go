@@ -1,3 +1,6 @@
+// +build 386 arm
+// +build linux
+
 package native
 
 import (
