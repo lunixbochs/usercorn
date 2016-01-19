@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"os"
@@ -8,7 +9,7 @@ import (
 
 type memDelta struct {
 	addr  uint64
-	value int64
+	last  []byte
 	data  []byte
 	write bool
 	tag   byte
@@ -31,31 +32,31 @@ func (m *MemLog) Reset() {
 	m.log = nil
 }
 
-func (m *MemLog) Adjacent(addr uint64, value int64, size int, write bool) (delta *memDelta, dup bool) {
+func (m *MemLog) Adjacent(addr uint64, p []byte, write bool) (delta *memDelta, dup bool) {
 	for _, delta := range m.log {
 		if delta.write != write {
 			continue
 		}
-		if addr == delta.addr && value == delta.value {
+		if addr == delta.addr && bytes.Equal(p, delta.last) {
 			return delta, true
 		}
-		if addr == delta.addr+uint64(len(delta.data)) || addr == delta.addr-uint64(size) {
+		if addr == delta.addr+uint64(len(delta.data)) || addr == delta.addr-uint64(len(p)) {
 			return delta, false
 		}
 	}
 	return nil, false
 }
 
-func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
+func (m *MemLog) UpdateBytes(addr uint64, p []byte, write bool) {
 	var delta *memDelta
 	var dup, before bool
-	if delta, dup = m.Adjacent(addr, value, size, write); delta != nil {
+	if delta, dup = m.Adjacent(addr, p, write); delta != nil {
 		// adjacent to old memory delta
 		if dup {
 			return
 		}
 		if addr < delta.addr {
-			delta.addr -= uint64(size)
+			delta.addr -= uint64(len(p))
 			before = true
 		}
 		var tag byte
@@ -71,9 +72,22 @@ func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
 		}
 	} else {
 		// entirely new memory delta
-		delta = &memDelta{addr, value, nil, write, ' '}
+		delta = &memDelta{addr, nil, nil, write, ' '}
 		m.log = append(m.log, delta)
 	}
+	if before {
+		data := make([]byte, len(p), len(p)+len(delta.data))
+		copy(data, p)
+		copy(data[len(p):], delta.data)
+		delta.data = data
+		delta.last = delta.data[:len(p)]
+	} else {
+		delta.data = append(delta.data, p...)
+		delta.last = delta.data[len(delta.data)-len(p):]
+	}
+}
+
+func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
 	var tmp [8]byte
 	switch size {
 	case 1:
@@ -85,14 +99,7 @@ func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
 	case 8:
 		m.order.PutUint64(tmp[:], uint64(value))
 	}
-	if before {
-		data := make([]byte, size, size+len(delta.data))
-		copy(data, tmp[:size])
-		delta.data = append(data, delta.data...)
-	} else {
-		delta.data = append(delta.data, tmp[:size]...)
-	}
-	delta.value = value
+	m.UpdateBytes(addr, tmp[:size], write)
 }
 
 func (m *MemLog) Print(indent string, bits int) {
@@ -109,4 +116,9 @@ func (m *MemLog) Print(indent string, bits int) {
 			}
 		}
 	}
+}
+
+func (m *MemLog) Flush(indent string, bits int) {
+	m.Print(indent, bits)
+	m.Reset()
 }

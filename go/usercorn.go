@@ -3,6 +3,7 @@ package usercorn
 import (
 	"errors"
 	"fmt"
+	"github.com/lunixbochs/ghostrace/ghost/memio"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
 	"path"
@@ -39,6 +40,7 @@ type Usercorn struct {
 	interpLoader models.Loader
 	kernels      []co.Kernel
 	mappedFiles  []*models.MappedFile
+	memio        memio.MemIO
 
 	base       uint64
 	interpBase uint64
@@ -88,6 +90,28 @@ func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
 		traceMatching: true,
 		config:        *config,
 	}
+	u.memio = memio.NewMemIO(
+		// ReadAt() callback
+		func(p []byte, addr uint64) (int, error) {
+			if err := u.MemReadInto(p, addr); err != nil {
+				return 0, err
+			}
+			if u.config.TraceMemBatch {
+				u.memlog.UpdateBytes(addr, p, false)
+			}
+			return len(p), nil
+		},
+		// WriteAt() callback
+		func(p []byte, addr uint64) (int, error) {
+			if err := u.MemWrite(addr, p); err != nil {
+				return 0, err
+			}
+			if u.config.TraceMemBatch {
+				u.memlog.UpdateBytes(addr, p, true)
+			}
+			return len(p), nil
+		},
+	)
 	// load kernels
 	// the array cast is a trick to work around circular imports
 	if os.Kernels != nil {
@@ -176,8 +200,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	}
 	err := u.Unicorn.Start(u.entry, 0xffffffffffffffff)
 	if u.config.TraceMemBatch && !u.memlog.Empty() {
-		u.memlog.Print("", u.arch.Bits)
-		u.memlog.Reset()
+		u.memlog.Flush("", u.arch.Bits)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Registers:")
@@ -348,8 +371,7 @@ func (u *Usercorn) addHooks() error {
 				}
 			}
 			if u.config.TraceMemBatch {
-				u.memlog.Print(indent, u.arch.Bits)
-				u.memlog.Reset()
+				u.memlog.Flush(indent, u.arch.Bits)
 			}
 			if sp, err := u.RegRead(u.arch.SP); err == nil {
 				u.stacktrace.Update(addr, sp)
@@ -603,8 +625,10 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 	if name == "" {
 		panic(fmt.Sprintf("Syscall missing: %d", num))
 	}
+	indent := ""
 	if u.config.TraceSys && u.stacktrace.Len() > 0 {
-		fmt.Fprintf(os.Stderr, strings.Repeat("  ", u.stacktrace.Len()-1)+"s ")
+		indent = strings.Repeat("  ", u.stacktrace.Len()-1)
+		u.memlog.Flush(indent, u.arch.Bits)
 	}
 	for _, k := range u.kernels {
 		if sys := co.Lookup(u, k, name); sys != nil {
@@ -613,11 +637,15 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 				return 0, err
 			}
 			if u.config.TraceSys {
+				fmt.Fprintf(os.Stderr, indent+"s ")
+				// TODO: return string and print this manually here?
 				sys.Trace(args)
 			}
 			ret := sys.Call(args)
 			if u.config.TraceSys {
+				// TODO: print this manually?
 				sys.TraceRet(args, ret)
+				u.memlog.Flush(indent, u.arch.Bits)
 			}
 			return ret, nil
 		}
@@ -628,4 +656,12 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 func (u *Usercorn) Exit(status int) {
 	u.exitStatus = models.ExitStatus(status)
 	u.Stop()
+}
+
+func (u *Usercorn) Mem() memio.MemIO {
+	return u.memio
+}
+
+func (u *Usercorn) StrucAt(addr uint64) *models.StrucStream {
+	return &models.StrucStream{u.Mem().StreamAt(addr), u.ByteOrder()}
 }

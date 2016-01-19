@@ -3,7 +3,6 @@ package usercorn
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/lunixbochs/ghostrace/ghost/memio"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -17,7 +16,6 @@ type Unicorn struct {
 	Bsz    int
 	order  binary.ByteOrder
 	memory []*models.Mmap
-	memio  memio.MemIO
 }
 
 func NewUnicorn(arch *models.Arch, os *models.OS, order binary.ByteOrder) (*Unicorn, error) {
@@ -32,22 +30,6 @@ func NewUnicorn(arch *models.Arch, os *models.OS, order binary.ByteOrder) (*Unic
 		bits:    arch.Bits,
 		Bsz:     arch.Bits / 8,
 		order:   order,
-		memio: memio.NewMemIO(
-			// ReadAt() callback
-			func(p []byte, addr uint64) (int, error) {
-				if err := Uc.MemReadInto(p, addr); err != nil {
-					return 0, err
-				}
-				return len(p), nil
-			},
-			// WriteAt() callback
-			func(p []byte, addr uint64) (int, error) {
-				if err := Uc.MemWrite(addr, p); err != nil {
-					return 0, err
-				}
-				return len(p), nil
-			},
-		),
 	}, nil
 }
 
@@ -151,14 +133,6 @@ func (u *Unicorn) MmapWrite(addr uint64, p []byte) (uint64, error) {
 		return 0, err
 	}
 	return mmap.Addr, u.MemWrite(mmap.Addr, p)
-}
-
-func (u *Unicorn) Mem() memio.MemIO {
-	return u.memio
-}
-
-func (u *Unicorn) StrucAt(addr uint64) *models.StrucStream {
-	return &models.StrucStream{u.Mem().StreamAt(addr), u.ByteOrder()}
 }
 
 func (u *Unicorn) PackAddr(buf []byte, n uint64) ([]byte, error) {
