@@ -10,12 +10,11 @@ import (
 
 type StatusDiff struct {
 	U       Usercorn
-	Color   bool
 	oldRegs []RegVal
 }
 
-var chSame = ansi.ColorCode("black:default")
-var chNew = ansi.ColorCode("black+bu:default")
+var chSame = ansi.ColorCode("default:default")
+var chNew = ansi.ColorCode("default+bu:default")
 
 func colorPad(s, color string, pad int) string {
 	length := len(s)

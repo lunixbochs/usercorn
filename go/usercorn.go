@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/memio"
+	"github.com/lunixbochs/readline"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
 	"path"
@@ -17,6 +18,7 @@ import (
 )
 
 type Config struct {
+	Color           bool
 	Demangle        bool
 	ForceBase       uint64
 	ForceInterpBase uint64
@@ -74,11 +76,11 @@ func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
-	a, os, err := arch.GetArch(l.Arch(), l.OS())
+	a, OS, err := arch.GetArch(l.Arch(), l.OS())
 	if err != nil {
 		return nil, err
 	}
-	unicorn, err := NewUnicorn(a, os, l.ByteOrder())
+	unicorn, err := NewUnicorn(a, OS, l.ByteOrder())
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +91,9 @@ func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
 		loader:        l,
 		traceMatching: true,
 		config:        *config,
+	}
+	if readline.IsTerminal(int(os.Stderr.Fd())) {
+		u.config.Color = true
 	}
 	u.memio = memio.NewMemIO(
 		// ReadAt() callback
@@ -114,8 +119,8 @@ func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
 	)
 	// load kernels
 	// the array cast is a trick to work around circular imports
-	if os.Kernels != nil {
-		kernelI := os.Kernels(u)
+	if OS.Kernels != nil {
+		kernelI := OS.Kernels(u)
 		kernels := make([]co.Kernel, len(kernelI))
 		for i, k := range kernelI {
 			kernels[i] = k.(co.Kernel)
@@ -123,7 +128,7 @@ func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
 		u.kernels = kernels
 	}
 	// map binary (and interp) into memory
-	u.status = models.StatusDiff{U: u, Color: true}
+	u.status = models.StatusDiff{U: u}
 	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(f, false, l.Arch())
 	if err != nil {
 		return nil, err
@@ -184,7 +189,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		}
 	}
 	if u.config.Verbose || u.config.TraceReg {
-		u.status.Changes().Print("", true, false)
+		u.status.Changes().Print("", u.config.Color, false)
 	}
 	if u.config.Verbose {
 		fmt.Fprintln(os.Stderr, "=====================================")
@@ -202,12 +207,12 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	u.memlog.Flush("", u.arch.Bits)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Registers:")
-		u.status.Changes().Print("", true, false)
+		u.status.Changes().Print("", u.config.Color, false)
 		fmt.Fprintln(os.Stderr, "Stacktrace:")
 		pc, _ := u.RegRead(u.arch.PC)
 		sp, _ := u.RegRead(u.arch.SP)
 		for _, frame := range u.stacktrace.Freeze(pc, sp) {
-			fmt.Printf("  %s\n", frame.Pretty(u))
+			fmt.Fprintf(os.Stderr, "  %s\n", frame.Pretty(u))
 		}
 	}
 	if err == nil && u.exitStatus != nil {
@@ -387,7 +392,7 @@ func (u *Usercorn) addHooks() error {
 				// the block if no registers were modified
 				if changes.Count() > 0 {
 					fmt.Fprintln(os.Stderr, blockLine)
-					changes.Print(indent, true, true)
+					changes.Print(indent, u.config.Color, true)
 				}
 			} else {
 				if changes.Count() > 0 {
@@ -417,7 +422,7 @@ func (u *Usercorn) addHooks() error {
 					if pad > 0 {
 						dindent = strings.Repeat(" ", pad)
 					}
-					changes.Print(dindent, true, true)
+					changes.Print(dindent, u.config.Color, true)
 				}
 			}
 		}, 0, 0xffffffffffffffff)
