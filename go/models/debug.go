@@ -47,20 +47,22 @@ func Demangle(name string) string {
 var discache = make(map[string]string)
 
 func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
-	cacheKey := string(mem)
+	var asm []gapstone.Instruction
+	cacheKey := fmt.Sprintf("%d|%s", addr, mem)
 	if len(mem) == 0 {
 		return "", nil
 	}
-	var asm []gapstone.Instruction
 	if cached, ok := discache[cacheKey]; ok {
 		return cached, nil
 	}
-	engine, err := gapstone.New(arch.CS_ARCH, arch.CS_MODE)
-	if err != nil {
-		return "", err
+	if arch.cs == nil {
+		engine, err := gapstone.New(arch.CS_ARCH, arch.CS_MODE)
+		if err != nil {
+			return "", err
+		}
+		arch.cs = &engine
 	}
-	defer engine.Close()
-	asm, err = engine.Disasm(mem, addr, 0)
+	asm, err := arch.cs.Disasm(mem, addr, 0)
 	if err != nil {
 		return "", err
 	}

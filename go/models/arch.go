@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	cs "github.com/bnagy/gapstone"
 	"github.com/lunixbochs/fvbommel-util/sortorder"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 )
@@ -64,6 +65,7 @@ type Arch struct {
 
 	// sorted for RegDump
 	regList regList
+	cs      *cs.Engine
 }
 
 func (a *Arch) RegisterOS(os *OS) {
