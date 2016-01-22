@@ -32,11 +32,11 @@ func (k *PosixKernel) Write(fd co.Fd, buf co.Buf, size co.Len) uint64 {
 	return uint64(n)
 }
 
-func (k *PosixKernel) Open(path string, mode int, flags uint32) uint64 {
+func (k *PosixKernel) Open(path string, mode int, flags uint64) uint64 {
 	if strings.Contains(path, "/lib/") {
 		path = k.U.PrefixPath(path, false)
 	}
-	fd, err := syscall.Open(path, mode, flags)
+	fd, err := syscall.Open(path, mode, uint32(flags))
 	if err != nil {
 		return Errno(err)
 	}
