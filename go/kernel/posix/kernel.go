@@ -36,6 +36,14 @@ func pushStrings(u models.Usercorn, args ...string) ([]uint64, error) {
 }
 
 func StackInit(u models.Usercorn, args, env []string, auxv []byte) error {
+	if _, err := u.Push(0); err != nil {
+		return err
+	}
+	if len(args) > 0 {
+		if _, err := u.PushBytes([]byte(args[0] + "\x00")); err != nil {
+			return err
+		}
+	}
 	// push argv and envp strings
 	envp, err := pushStrings(u, env...)
 	if err != nil {
