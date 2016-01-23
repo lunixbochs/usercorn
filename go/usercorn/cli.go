@@ -99,7 +99,7 @@ func main() {
 	if *looproll == 0 && *trace {
 		*looproll = 8
 	}
-	config := &usercorn.Config{
+	config := &models.Config{
 		Demangle:        *demangle,
 		ForceBase:       *base,
 		ForceInterpBase: *ibase,

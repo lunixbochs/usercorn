@@ -17,26 +17,9 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
-type Config struct {
-	Color           bool
-	Demangle        bool
-	ForceBase       uint64
-	ForceInterpBase uint64
-	LoadPrefix      string
-	LoopCollapse    int
-	TraceExec       bool
-	TraceMatch      []string
-	TraceMatchDepth int
-	TraceMem        bool
-	TraceMemBatch   bool
-	TraceReg        bool
-	TraceSys        bool
-	Verbose         bool
-}
-
 type Usercorn struct {
 	*Unicorn
-	config       Config
+	config       *models.Config
 	exe          string
 	loader       models.Loader
 	interpLoader models.Loader
@@ -63,9 +46,9 @@ type Usercorn struct {
 	insnCount  uint64
 }
 
-func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
+func NewUsercorn(exe string, config *models.Config) (*Usercorn, error) {
 	if config == nil {
-		config = &Config{}
+		config = &models.Config{}
 	}
 	f, err := os.Open(exe)
 	if err != nil {
@@ -90,7 +73,7 @@ func NewUsercorn(exe string, config *Config) (*Usercorn, error) {
 		exe:           exe,
 		loader:        l,
 		traceMatching: true,
-		config:        *config,
+		config:        config,
 	}
 	if readline.IsTerminal(int(os.Stderr.Fd())) {
 		u.config.Color = true
@@ -677,4 +660,8 @@ func (u *Usercorn) Mem() memio.MemIO {
 
 func (u *Usercorn) StrucAt(addr uint64) *models.StrucStream {
 	return &models.StrucStream{u.Mem().StreamAt(addr), u.ByteOrder()}
+}
+
+func (u *Usercorn) Config() *models.Config {
+	return u.config
 }

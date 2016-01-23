@@ -18,6 +18,7 @@ func (u *Usercorn) OS() string                              { return "" }
 func (u *Usercorn) Bits() uint                              { return 0 }
 func (u *Usercorn) ByteOrder() binary.ByteOrder             { return binary.BigEndian }
 func (u *Usercorn) Disas(addr, size uint64) (string, error) { return "", nil }
+func (u *Usercorn) Config() *models.Config                  { return nil }
 
 func (u *Usercorn) RegisterAddr(f *os.File, start, end uint64, off int64)     {}
 func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) { return "", nil }

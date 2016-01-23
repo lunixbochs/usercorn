@@ -14,6 +14,7 @@ type Usercorn interface {
 	Bits() uint
 	ByteOrder() binary.ByteOrder
 	Disas(addr, size uint64) (string, error)
+	Config() *Config
 
 	RegisterAddr(f *os.File, addr, size uint64, off int64)
 	Symbolicate(addr uint64, includeFile bool) (string, error)
