@@ -1,5 +1,9 @@
 package linux
 
+func (k *LinuxKernel) Geteuid32() int {
+	return k.PosixKernel.Geteuid()
+}
+
 func (k *LinuxKernel) Getuid32() int {
 	return k.PosixKernel.Getuid()
 }
