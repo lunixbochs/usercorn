@@ -36,6 +36,23 @@ func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
 	}
 	_, err := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
 		switch addr {
+		case 0xffff0fc0:
+			// __kuser_cmpxchg
+			// TODO: would this throw a segfault?
+			// TODO: flags are not set
+			oldval, _ := u.RegRead(uc.ARM_REG_R0)
+			newval, _ := u.RegRead(uc.ARM_REG_R1)
+			ptr, _ := u.RegRead(uc.ARM_REG_R2)
+			var tmp [4]byte
+			var status uint64
+			if err := u.MemReadInto(tmp[:], ptr); err != nil {
+				// error
+			} else if u.UnpackAddr(tmp[:]) == oldval {
+				u.PackAddr(tmp[:], newval)
+				u.MemWrite(ptr, tmp[:])
+				status = 1
+			}
+			u.RegWrite(uc.ARM_REG_R0, status)
 		case 0xffff0fe0:
 			// __kuser_get_tls
 			u.RegWrite(uc.ARM_REG_R0, kernel.tls)
