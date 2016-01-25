@@ -13,7 +13,7 @@ var Arch = &models.Arch{
 	CS_ARCH: cs.CS_ARCH_SPARC,
 	CS_MODE: cs.CS_MODE_32,
 	UC_ARCH: uc.ARCH_SPARC,
-	UC_MODE: uc.MODE_32,
+	UC_MODE: uc.MODE_SPARC32 | uc.MODE_BIG_ENDIAN,
 	PC:      uc.SPARC_REG_PC,
 	SP:      uc.SPARC_REG_SP,
 	Regs: map[string]int{
