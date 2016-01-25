@@ -36,6 +36,25 @@ func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
 	}
 	_, err := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
 		switch addr {
+		case 0xffff0fa0:
+			// __kuser_memory_barrier
+			// *shrug*
+		case 0xffff0f60:
+			// __kuser_cmpxchg64
+			// TODO: DRY possible here?
+			oldval, _ := u.RegRead(uc.ARM_REG_R0)
+			newval, _ := u.RegRead(uc.ARM_REG_R1)
+			ptr, _ := u.RegRead(uc.ARM_REG_R2)
+			var tmp [8]byte
+			var status uint64
+			if err := u.MemReadInto(tmp[:], ptr); err != nil {
+				// error
+			} else if u.ByteOrder().Uint64(tmp[:]) == oldval {
+				u.ByteOrder().PutUint64(tmp[:], newval)
+				u.MemWrite(ptr, tmp[:])
+				status = 1
+			}
+			u.RegWrite(uc.ARM_REG_R0, status)
 		case 0xffff0fc0:
 			// __kuser_cmpxchg
 			// TODO: would this throw a segfault?
@@ -56,6 +75,9 @@ func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
 		case 0xffff0fe0:
 			// __kuser_get_tls
 			u.RegWrite(uc.ARM_REG_R0, kernel.tls)
+		case 0xffff0ffc:
+			// __kuser_helper_version
+			u.RegWrite(uc.ARM_REG_R0, 2)
 		default:
 			panic(fmt.Sprintf("unsupported kernel trap: 0x%x\n", addr))
 		}
