@@ -5,11 +5,20 @@ import (
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 func (k *PosixKernel) Mmap(addrHint, size uint64, prot, flags int, fd co.Fd, off co.Off) uint64 {
+	MAP_FIXED := 0x10 // on OS X and Linux anyway
 	// TODO: MAP_FIXED means abort if we can't get the address
-	mmap, err := k.U.Mmap(addrHint, size)
+	var err error
+	var mmap *models.Mmap
+	if flags&MAP_FIXED != 0 {
+		err = k.U.MemMapProt(addrHint, size, prot)
+		mmap = &models.Mmap{Addr: addrHint}
+	} else {
+		mmap, err = k.U.Mmap(addrHint, size)
+	}
 	if err != nil {
 		return UINT64_MAX // FIXME
 	}
