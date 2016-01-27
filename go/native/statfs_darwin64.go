@@ -7,7 +7,7 @@ import (
 	"syscall"
 )
 
-func NativeToLinuxStatfs_t(s *syscall.Statfs_t) *LinuxStatfs_t {
+func StatfsToLinux(s *syscall.Statfs_t) *LinuxStatfs_t {
 	return &LinuxStatfs_t{
 		Type:   int64(s.Type),
 		Bsize:  int64(s.Bsize),
@@ -36,7 +36,7 @@ func copyIntToByteSlice(dst []byte, src []int8) {
 	}
 }
 
-func NativeToDarwinStatfs32_t(s *syscall.Statfs_t) *DarwinStatfs32_t {
+func StatfsToDarwin32(s *syscall.Statfs_t) *DarwinStatfs32_t {
 	ret := &DarwinStatfs32_t{
 		Bsize:  int(s.Bsize),
 		Iosize: int(s.Iosize),
@@ -56,7 +56,7 @@ func NativeToDarwinStatfs32_t(s *syscall.Statfs_t) *DarwinStatfs32_t {
 	return ret
 }
 
-func NativeToDarwinStatfs64_t(s *syscall.Statfs_t) *DarwinStatfs64_t {
+func StatfsToDarwin64(s *syscall.Statfs_t) *DarwinStatfs64_t {
 	ret := &DarwinStatfs64_t{
 		Bsize:  uint32(s.Bsize),
 		Iosize: int32(s.Iosize),

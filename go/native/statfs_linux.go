@@ -4,7 +4,7 @@ import (
 	"syscall"
 )
 
-func NativeToLinuxStatfs_t(s *syscall.Statfs_t) *LinuxStatfs_t {
+func StatfsToLinux(s *syscall.Statfs_t) *LinuxStatfs_t {
 	return &LinuxStatfs_t{
 		Type:    s.Type,
 		Bsize:   s.Bsize,
@@ -20,7 +20,7 @@ func NativeToLinuxStatfs_t(s *syscall.Statfs_t) *LinuxStatfs_t {
 	}
 }
 
-func NativeToDarwinStatfs32_t(s *syscall.Statfs_t) *DarwinStatfs32_t {
+func StatfsToDarwin32(s *syscall.Statfs_t) *DarwinStatfs32_t {
 	// TODO: fs type, owner, mnt names?
 	return &DarwinStatfs32_t{
 		Bsize:  int(s.Bsize),
@@ -33,7 +33,7 @@ func NativeToDarwinStatfs32_t(s *syscall.Statfs_t) *DarwinStatfs32_t {
 	}
 }
 
-func NativeToDarwinStatfs64_t(s *syscall.Statfs_t) *DarwinStatfs64_t {
+func StatfsToDarwin64(s *syscall.Statfs_t) *DarwinStatfs64_t {
 	// TODO: fs type, owner, mnt names?
 	return &DarwinStatfs64_t{
 		Bsize:  uint32(s.Bsize),
