@@ -1,20 +1,19 @@
 package models
 
 import (
-	"encoding/binary"
 	"github.com/lunixbochs/struc"
 	"io"
 )
 
 type StrucStream struct {
-	Stream io.ReadWriter
-	Order  binary.ByteOrder
+	Stream  io.ReadWriter
+	Options *struc.Options
 }
 
 func (s *StrucStream) Pack(i interface{}) error {
-	return struc.PackWithOrder(s.Stream, i, s.Order)
+	return struc.PackWithOptions(s.Stream, i, s.Options)
 }
 
 func (s *StrucStream) Unpack(i interface{}) error {
-	return struc.UnpackWithOrder(s.Stream, i, s.Order)
+	return struc.UnpackWithOptions(s.Stream, i, s.Options)
 }

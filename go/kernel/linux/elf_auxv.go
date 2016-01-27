@@ -105,18 +105,19 @@ func SetupElfAuxv(u models.Usercorn) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	options := &struc.Options{Order: u.ByteOrder()}
 	if u.Bits() == 32 {
 		var auxv32 Elf32Auxv
 		for _, a := range auxv {
 			auxv32.Type = uint32(a.Type)
 			auxv32.Val = uint32(a.Val)
-			if err := struc.PackWithOrder(&buf, &auxv32, u.ByteOrder()); err != nil {
+			if err := struc.PackWithOptions(&buf, &auxv32, options); err != nil {
 				return nil, err
 			}
 		}
 	} else {
 		for _, a := range auxv {
-			if err := struc.PackWithOrder(&buf, &a, u.ByteOrder()); err != nil {
+			if err := struc.PackWithOptions(&buf, &a, options); err != nil {
 				return nil, err
 			}
 		}

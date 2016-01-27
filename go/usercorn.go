@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/memio"
 	"github.com/lunixbochs/readline"
+	"github.com/lunixbochs/struc"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
 	"path"
@@ -659,7 +660,11 @@ func (u *Usercorn) Mem() memio.MemIO {
 }
 
 func (u *Usercorn) StrucAt(addr uint64) *models.StrucStream {
-	return &models.StrucStream{u.Mem().StreamAt(addr), u.ByteOrder()}
+	options := &struc.Options{
+		Order:   u.ByteOrder(),
+		PtrSize: int(u.Bits()),
+	}
+	return &models.StrucStream{u.Mem().StreamAt(addr), options}
 }
 
 func (u *Usercorn) Config() *models.Config {
