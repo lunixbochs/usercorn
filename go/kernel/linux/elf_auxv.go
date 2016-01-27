@@ -33,19 +33,15 @@ const (
 	ELF_AT_SYSINFO_EHDR = 33
 )
 
-type Elf32Auxv struct {
-	Type, Val uint32
+type ElfAuxv struct {
+	Type, Val uint64 `struc:"size_t"`
 }
 
-type Elf64Auxv struct {
-	Type, Val uint64
+func add(auxv []ElfAuxv, t, val uint64) []ElfAuxv {
+	return append(auxv, ElfAuxv{t, val})
 }
 
-func add(auxv []Elf64Auxv, t, val uint64) []Elf64Auxv {
-	return append(auxv, Elf64Auxv{t, val})
-}
-
-func setupElfAuxv(u models.Usercorn) ([]Elf64Auxv, error) {
+func setupElfAuxv(u models.Usercorn) ([]ElfAuxv, error) {
 	// set up AT_RANDOM
 	var tmp [16]byte
 	if _, err := rand.Read(tmp[:]); err != nil {
@@ -61,7 +57,7 @@ func setupElfAuxv(u models.Usercorn) ([]Elf64Auxv, error) {
 		return nil, err
 	}
 	// main auxv table
-	auxv := []Elf64Auxv{
+	auxv := []ElfAuxv{
 		// TODO: set/track a page size somewhere - on Arch.OS?
 		{ELF_AT_PAGESZ, 4096},
 		{ELF_AT_BASE, u.InterpBase()},
@@ -90,7 +86,7 @@ func setupElfAuxv(u models.Usercorn) ([]Elf64Auxv, error) {
 		phdrEnt = 32
 	}
 	if phdrOff > 0 {
-		auxv = append([]Elf64Auxv{
+		auxv = append([]ElfAuxv{
 			{ELF_AT_PHDR, phdrOff},
 			{ELF_AT_PHENT, uint64(phdrEnt)},
 			{ELF_AT_PHNUM, uint64(phdrCount)},
@@ -105,21 +101,13 @@ func SetupElfAuxv(u models.Usercorn) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	options := &struc.Options{Order: u.ByteOrder()}
-	if u.Bits() == 32 {
-		var auxv32 Elf32Auxv
-		for _, a := range auxv {
-			auxv32.Type = uint32(a.Type)
-			auxv32.Val = uint32(a.Val)
-			if err := struc.PackWithOptions(&buf, &auxv32, options); err != nil {
-				return nil, err
-			}
-		}
-	} else {
-		for _, a := range auxv {
-			if err := struc.PackWithOptions(&buf, &a, options); err != nil {
-				return nil, err
-			}
+	options := &struc.Options{
+		PtrSize: int(u.Bits()),
+		Order:   u.ByteOrder(),
+	}
+	for _, a := range auxv {
+		if err := struc.PackWithOptions(&buf, &a, options); err != nil {
+			return nil, err
 		}
 	}
 	return buf.Bytes(), err
