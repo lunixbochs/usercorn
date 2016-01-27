@@ -26,7 +26,7 @@ func (sys Syscall) Call(args []uint64) uint64 {
 	if sys.ObufArr {
 		arr := make([]Obuf, len(sys.In)-1)
 		for i := range arr {
-			arr[i] = Obuf{NewBuf(sys.Kernel.U, args[i])}
+			arr[i] = Obuf{NewBuf(sys.Kernel, args[i])}
 		}
 		in[1] = reflect.ValueOf(arr)
 	}

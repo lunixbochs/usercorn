@@ -53,7 +53,7 @@ type SockaddrUnix struct {
 
 func Sockaddr(buf common.Buf, length int) syscall.Sockaddr {
 	var port [2]byte
-	order := buf.U.ByteOrder()
+	order := buf.K.U.ByteOrder()
 	// TODO: handle insufficient length
 	var family uint16
 	if err := buf.Unpack(&family); err != nil {

@@ -8,16 +8,21 @@ import (
 )
 
 type DarwinKernel struct {
-	co.KernelBase
+	*co.KernelBase
 	mach.MachKernel
 	posix.PosixKernel
 }
 
 func NewKernel(u models.Usercorn) *DarwinKernel {
-	kernel := &DarwinKernel{}
-	kernel.MachKernel.U = u
-	kernel.PosixKernel.U = u
-	kernel.Argjoy.Register(Unpack)
+	kernel := &DarwinKernel{
+		KernelBase:  &co.KernelBase{},
+		MachKernel:  *mach.NewKernel(),
+		PosixKernel: *posix.NewKernel(),
+	}
+	kernel.MachKernel.KernelBase = kernel.KernelBase
+	kernel.PosixKernel.KernelBase = kernel.KernelBase
+	kernel.U = u
+	registerUnpack(kernel)
 	return kernel
 }
 

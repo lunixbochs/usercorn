@@ -1,13 +1,15 @@
 package common
 
 import (
+	"github.com/lunixbochs/argjoy"
+
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type (
 	Buf struct {
 		Addr uint64
-		U    models.Usercorn
+		K    *KernelBase
 	}
 	Obuf struct{ Buf }
 	Len  uint64
@@ -16,15 +18,22 @@ type (
 	Ptr  uint64
 )
 
-func NewBuf(u models.Usercorn, addr uint64) Buf {
-	return Buf{U: u, Addr: addr}
+func NewBuf(k Kernel, addr uint64) Buf {
+	return Buf{K: k.UsercornKernel(), Addr: addr}
 }
 
 func (b Buf) Struc() *models.StrucStream {
-	return b.U.StrucAt(b.Addr)
+	return b.K.U.StrucAt(b.Addr)
 }
 
 func (b Buf) Pack(i interface{}) error {
+	if b.K.Pack != nil {
+		if err := b.K.Pack(b, i); err == nil {
+			return nil
+		} else if err != argjoy.NoMatch {
+			return err
+		}
+	}
 	return b.Struc().Pack(i)
 }
 

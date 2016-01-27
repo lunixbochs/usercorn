@@ -1,13 +1,17 @@
 package posix
 
 import (
-	"github.com/lunixbochs/usercorn/go/kernel/common"
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type PosixKernel struct {
-	common.KernelBase
-	Unpack func(common.Buf, interface{})
+	*co.KernelBase
+	Unpack func(co.Buf, interface{})
+}
+
+func NewKernel() *PosixKernel {
+	return &PosixKernel{KernelBase: &co.KernelBase{}}
 }
 
 func packAddrs(u models.Usercorn, addrs []uint64) ([]byte, error) {

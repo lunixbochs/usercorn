@@ -10,8 +10,9 @@ type LinuxKernel struct {
 }
 
 func NewKernel() *LinuxKernel {
-	kernel := &LinuxKernel{}
-	kernel.Argjoy.Register(kernel.Unpack)
+	kernel := &LinuxKernel{*posix.NewKernel()}
+	registerUnpack(kernel)
+	kernel.Pack = Pack
 	return kernel
 }
 

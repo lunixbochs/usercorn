@@ -9,8 +9,8 @@ import (
 	"github.com/lunixbochs/usercorn/go/native"
 )
 
-func (k *LinuxKernel) Unpack(arg interface{}, vals []interface{}) error {
-	buf := co.NewBuf(k.U, vals[0].(uint64))
+func Unpack(k *LinuxKernel, arg interface{}, vals []interface{}) error {
+	buf := co.NewBuf(k, vals[0].(uint64))
 	// null pointer guard
 	if buf.Addr == 0 {
 		return nil
@@ -29,4 +29,10 @@ func (k *LinuxKernel) Unpack(arg interface{}, vals []interface{}) error {
 	default:
 		return argjoy.NoMatch
 	}
+}
+
+func registerUnpack(k *LinuxKernel) {
+	k.Argjoy.Register(func(arg interface{}, vals []interface{}) error {
+		return Unpack(k, arg, vals)
+	})
 }

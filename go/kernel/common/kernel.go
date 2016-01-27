@@ -14,6 +14,7 @@ type KernelBase struct {
 	Syscalls map[string]Syscall
 	U        models.Usercorn
 	Argjoy   argjoy.Argjoy
+	Pack     func(b Buf, i interface{}) error
 }
 
 func (k *KernelBase) UsercornKernel() *KernelBase {

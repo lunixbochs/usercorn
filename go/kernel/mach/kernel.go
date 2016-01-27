@@ -1,15 +1,13 @@
 package mach
 
 import (
-	"github.com/lunixbochs/usercorn/go/kernel/common"
-	"github.com/lunixbochs/usercorn/go/models"
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
 type MachKernel struct {
-	common.KernelBase
+	*co.KernelBase
 }
 
-func NewKernel(u models.Usercorn) common.Kernel {
-	kernel := &MachKernel{}
-	return kernel
+func NewKernel() *MachKernel {
+	return &MachKernel{&co.KernelBase{}}
 }

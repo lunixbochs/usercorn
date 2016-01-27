@@ -8,9 +8,9 @@ func (k *KernelBase) commonArgCodec(arg interface{}, vals []interface{}) error {
 	if reg, ok := vals[0].(uint64); ok {
 		switch v := arg.(type) {
 		case *Buf:
-			*v = NewBuf(k.U, reg)
+			*v = NewBuf(k, reg)
 		case *Obuf:
-			*v = Obuf{NewBuf(k.U, reg)}
+			*v = Obuf{NewBuf(k, reg)}
 		case *Len:
 			*v = Len(reg)
 		case *Off:
