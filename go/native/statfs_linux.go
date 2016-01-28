@@ -6,17 +6,17 @@ import (
 
 func StatfsToLinux(s *syscall.Statfs_t) *LinuxStatfs_t {
 	return &LinuxStatfs_t{
-		Type:    s.Type,
-		Bsize:   s.Bsize,
+		Type:    int64(s.Type),
+		Bsize:   int64(s.Bsize),
 		Blocks:  s.Blocks,
 		Bfree:   s.Bfree,
 		Bavail:  s.Bavail,
 		Files:   s.Files,
 		Ffree:   s.Ffree,
 		Fsid:    s.Fsid,
-		Namelen: s.Namelen,
-		Frsize:  s.Frsize,
-		Flags:   s.Flags,
+		Namelen: int64(s.Namelen),
+		Frsize:  int64(s.Frsize),
+		Flags:   int64(s.Flags),
 	}
 }
 
