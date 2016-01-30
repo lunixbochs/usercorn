@@ -36,6 +36,9 @@ type Usercorn interface {
 	ReadRegs(reg []int) ([]uint64, error)
 	RegDump() ([]RegVal, error)
 
+	RunShellcodeMapped(mmap *Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error
+	RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error
+
 	Exe() string
 	Loader() Loader
 	InterpBase() uint64

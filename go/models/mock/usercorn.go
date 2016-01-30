@@ -40,6 +40,13 @@ func (u *Usercorn) Push(n uint64) (uint64, error)                 { return 0, ni
 func (u *Usercorn) ReadRegs(reg []int) ([]uint64, error)          { return nil, nil }
 func (u *Usercorn) RegDump() ([]models.RegVal, error)             { return nil, nil }
 
+func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
+	return nil
+}
+func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
+	return nil
+}
+
 func (u *Usercorn) Exe() string           { return "" }
 func (u *Usercorn) Loader() models.Loader { return nil }
 func (u *Usercorn) InterpBase() uint64    { return 0 }

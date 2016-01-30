@@ -670,3 +670,52 @@ func (u *Usercorn) StrucAt(addr uint64) *models.StrucStream {
 func (u *Usercorn) Config() *models.Config {
 	return u.config
 }
+
+// like RunShellcode but you're expected to map memory yourself
+func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
+	if regsClobbered == nil {
+		regsClobbered = make([]int, len(setRegs))
+		pos := 0
+		for reg, _ := range setRegs {
+			regsClobbered[pos] = reg
+			pos++
+		}
+	}
+	// save clobbered regs
+	savedRegs := make([]uint64, len(regsClobbered))
+	for i, reg := range regsClobbered {
+		savedRegs[i], _ = u.RegRead(reg)
+	}
+	// defer restoring saved regs
+	defer func() {
+		for i, reg := range regsClobbered {
+			u.RegWrite(reg, savedRegs[i])
+		}
+	}()
+	// set setRegs
+	for reg, val := range setRegs {
+		u.RegWrite(reg, val)
+	}
+	if err := u.MemWrite(mmap.Addr, code); err != nil {
+		return err
+	}
+	return u.Unicorn.Start(mmap.Addr, mmap.Addr+uint64(len(code)))
+}
+
+// maps and runs shellcode at addr
+// if regsClobbered is nil, setRegs will be saved/restored
+// if addr is 0, we'll pick one for you
+// if addr is already mapped, we will return an error
+// so non-PIE is your problem
+func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
+	exists := u.mapping(addr, uint64(len(code)))
+	if addr != 0 && exists != nil {
+		return fmt.Errorf("RunShellcode: 0x%x - 0x%x overlaps mapped memory", addr, addr+uint64(len(code)))
+	}
+	mmap, err := u.Mmap(addr, uint64(len(code)))
+	if err != nil {
+		return err
+	}
+	defer u.MemUnmap(mmap.Addr, mmap.Size)
+	return u.RunShellcodeMapped(mmap, code, setRegs, regsClobbered)
+}
