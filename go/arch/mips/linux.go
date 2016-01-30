@@ -12,8 +12,21 @@ import (
 
 var LinuxRegs = []int{uc.MIPS_REG_A0, uc.MIPS_REG_A1, uc.MIPS_REG_A2, uc.MIPS_REG_A3}
 
+type MipsLinuxKernel struct {
+	*linux.LinuxKernel
+}
+
+func (k *MipsLinuxKernel) SetThreadArea(addr uint64) error {
+	// TODO: Unicorn needs CP0 register support
+	// TODO: big vs little endian?
+	// mtc0 $t0, $29
+	code := []byte{0x40, 0x88, 0xe0, 0x00}
+	return k.U.RunShellcode(0, code, map[int]uint64{uc.MIPS_REG_T0: addr}, nil)
+}
+
 func LinuxKernels(u models.Usercorn) []interface{} {
-	return []interface{}{linux.NewKernel()}
+	kernel := &MipsLinuxKernel{LinuxKernel: linux.NewKernel()}
+	return []interface{}{kernel}
 }
 
 func LinuxInit(u models.Usercorn, args, env []string) error {
