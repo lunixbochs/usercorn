@@ -54,6 +54,7 @@ type Usercorn struct {
 
 	running     bool
 	trampolines []tramp
+	trampolined bool
 }
 
 func NewUsercorn(exe string, config *models.Config) (*Usercorn, error) {
@@ -214,12 +215,14 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		u.trampolines = nil
 		// TODO: trampolines should be annotated in trace
 		// trampolines should show up during symbolication?
+		u.trampolined = true
 		for _, tramp := range trampolines {
 			fmt.Fprintf(os.Stderr, "DEBUG: trampoline: %s\n", tramp.desc)
 			if err = tramp.fun(); err != nil {
 				break
 			}
 		}
+		u.trampolined = false
 		u.RegWrite(u.arch.PC, pc)
 		u.RegWrite(u.arch.SP, sp)
 	}
@@ -460,7 +463,7 @@ func (u *Usercorn) addHooks() error {
 				return
 			}
 			indent := strings.Repeat("  ", u.stacktrace.Len())
-			if u.config.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 {
+			if u.config.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 || u.trampolined {
 				changes := u.status.Changes()
 				dis, _ := u.Disas(addr, uint64(size))
 				fmt.Fprintf(os.Stderr, "%s", indent+dis)
