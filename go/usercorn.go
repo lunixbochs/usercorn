@@ -202,14 +202,15 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		u.memlog = *models.NewMemLog(u.ByteOrder())
 	}
 	// loop to restart Unicorn if we need to call a trampoline function
+	pc := u.entry
 	var err error
 	for err == nil {
-		err = u.Start(u.entry, 0xffffffffffffffff)
+		err = u.Start(pc, 0xffffffffffffffff)
 		u.memlog.Flush("", u.arch.Bits)
 		if err != nil || len(u.trampolines) == 0 {
 			break
 		}
-		pc, _ := u.RegRead(u.arch.PC)
+		pc, _ = u.RegRead(u.arch.PC)
 		sp, _ := u.RegRead(u.arch.SP)
 		trampolines := u.trampolines
 		u.trampolines = nil
@@ -428,8 +429,10 @@ func (u *Usercorn) addHooks() error {
 				}
 			}
 			u.memlog.Flush(indent, u.arch.Bits)
-			if sp, err := u.RegRead(u.arch.SP); err == nil {
-				u.stacktrace.Update(addr, sp)
+			if !u.trampolined {
+				if sp, err := u.RegRead(u.arch.SP); err == nil {
+					u.stacktrace.Update(addr, sp)
+				}
 			}
 			indent = strings.Repeat("  ", u.stacktrace.Len())
 			blockIndent := indent
