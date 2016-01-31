@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/lunixbochs/usercorn/go/arch"
@@ -17,6 +18,11 @@ import (
 	"github.com/lunixbochs/usercorn/go/loader"
 	"github.com/lunixbochs/usercorn/go/models"
 )
+
+type tramp struct {
+	desc string
+	fun  func() error
+}
 
 type Usercorn struct {
 	*Unicorn
@@ -45,6 +51,9 @@ type Usercorn struct {
 
 	exitStatus error
 	insnCount  uint64
+
+	running     bool
+	trampolines []tramp
 }
 
 func NewUsercorn(exe string, config *models.Config) (*Usercorn, error) {
@@ -191,8 +200,29 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	if u.config.TraceMemBatch {
 		u.memlog = *models.NewMemLog(u.ByteOrder())
 	}
-	err := u.Unicorn.Start(u.entry, 0xffffffffffffffff)
-	u.memlog.Flush("", u.arch.Bits)
+	// loop to restart Unicorn if we need to call a trampoline function
+	var err error
+	for err == nil {
+		err = u.Start(u.entry, 0xffffffffffffffff)
+		u.memlog.Flush("", u.arch.Bits)
+		if err != nil || len(u.trampolines) == 0 {
+			break
+		}
+		pc, _ := u.RegRead(u.arch.PC)
+		sp, _ := u.RegRead(u.arch.SP)
+		trampolines := u.trampolines
+		u.trampolines = nil
+		// TODO: trampolines should be annotated in trace
+		// trampolines should show up during symbolication?
+		for _, tramp := range trampolines {
+			fmt.Fprintf(os.Stderr, "DEBUG: trampoline: %s\n", tramp.desc)
+			if err = tramp.fun(); err != nil {
+				break
+			}
+		}
+		u.RegWrite(u.arch.PC, pc)
+		u.RegWrite(u.arch.SP, sp)
+	}
 	if err != nil || u.config.Verbose {
 		fmt.Fprintf(os.Stderr, "[memory map]\n")
 		for _, m := range u.Mappings() {
@@ -210,6 +240,13 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus
 	}
+	return err
+}
+
+func (u *Usercorn) Start(pc, end uint64) error {
+	u.running = true
+	err := u.Unicorn.Start(pc, end)
+	u.running = false
 	return err
 }
 
@@ -691,35 +728,53 @@ func (u *Usercorn) Config() *models.Config {
 	return u.config
 }
 
+func (u *Usercorn) trampoline(fun func() error) error {
+	if u.running {
+		desc := ""
+		if _, file, line, ok := runtime.Caller(1); ok {
+			desc = fmt.Sprintf("%s:%d", file, line)
+		}
+		u.trampolines = append(u.trampolines, tramp{
+			desc: desc,
+			fun:  fun,
+		})
+		return u.Stop()
+	} else {
+		return fun()
+	}
+}
+
 // like RunShellcode but you're expected to map memory yourself
 func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
-	if regsClobbered == nil {
-		regsClobbered = make([]int, len(setRegs))
-		pos := 0
-		for reg, _ := range setRegs {
-			regsClobbered[pos] = reg
-			pos++
+	return u.trampoline(func() error {
+		if regsClobbered == nil {
+			regsClobbered = make([]int, len(setRegs))
+			pos := 0
+			for reg, _ := range setRegs {
+				regsClobbered[pos] = reg
+				pos++
+			}
 		}
-	}
-	// save clobbered regs
-	savedRegs := make([]uint64, len(regsClobbered))
-	for i, reg := range regsClobbered {
-		savedRegs[i], _ = u.RegRead(reg)
-	}
-	// defer restoring saved regs
-	defer func() {
+		// save clobbered regs
+		savedRegs := make([]uint64, len(regsClobbered))
 		for i, reg := range regsClobbered {
-			u.RegWrite(reg, savedRegs[i])
+			savedRegs[i], _ = u.RegRead(reg)
 		}
-	}()
-	// set setRegs
-	for reg, val := range setRegs {
-		u.RegWrite(reg, val)
-	}
-	if err := u.MemWrite(mmap.Addr, code); err != nil {
-		return err
-	}
-	return u.Unicorn.Start(mmap.Addr, mmap.Addr+uint64(len(code)))
+		// defer restoring saved regs
+		defer func() {
+			for i, reg := range regsClobbered {
+				u.RegWrite(reg, savedRegs[i])
+			}
+		}()
+		// set setRegs
+		for reg, val := range setRegs {
+			u.RegWrite(reg, val)
+		}
+		if err := u.MemWrite(mmap.Addr, code); err != nil {
+			return err
+		}
+		return u.Start(mmap.Addr, mmap.Addr+uint64(len(code)))
+	})
 }
 
 // maps and runs shellcode at addr
@@ -727,6 +782,7 @@ func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs ma
 // if addr is 0, we'll pick one for you
 // if addr is already mapped, we will return an error
 // so non-PIE is your problem
+// will trampoline if unicorn is already running
 func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
 	exists := u.mapping(addr, uint64(len(code)))
 	if addr != 0 && exists != nil {
@@ -736,6 +792,8 @@ func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64
 	if err != nil {
 		return err
 	}
-	defer u.MemUnmap(mmap.Addr, mmap.Size)
+	defer u.trampoline(func() error {
+		return u.MemUnmap(mmap.Addr, mmap.Size)
+	})
 	return u.RunShellcodeMapped(mmap, code, setRegs, regsClobbered)
 }
