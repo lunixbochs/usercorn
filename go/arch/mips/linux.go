@@ -20,7 +20,7 @@ func (k *MipsLinuxKernel) SetThreadArea(addr uint64) error {
 	// TODO: Unicorn needs CP0 register support
 	// TODO: big vs little endian?
 	// mtc0 $t0, $29
-	code := []byte{0x40, 0x88, 0xe0, 0x00}
+	code := []byte{0x00, 0xe0, 0x88, 0x40}
 	return k.U.RunShellcode(0, code, map[int]uint64{uc.MIPS_REG_T0: addr}, nil)
 }
 
