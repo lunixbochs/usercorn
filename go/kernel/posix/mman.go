@@ -1,6 +1,7 @@
 package posix
 
 import (
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
 	"syscall"
 
@@ -49,6 +50,8 @@ func (k *PosixKernel) Munmap(addr, size uint64) uint64 {
 }
 
 func (k *PosixKernel) Mprotect(addr, size uint64, prot int) uint64 {
+	// FIXME: Issue #137
+	prot = uc.PROT_ALL
 	if err := k.U.MemProtect(addr, size, prot); err != nil {
 		return UINT64_MAX // FIXME
 	}
