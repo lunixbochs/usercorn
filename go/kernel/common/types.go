@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/lunixbochs/argjoy"
+	"os"
 
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -39,4 +40,8 @@ func (b Buf) Pack(i interface{}) error {
 
 func (b Buf) Unpack(i interface{}) error {
 	return b.Struc().Unpack(i)
+}
+
+func (f Fd) File() *os.File {
+	return os.NewFile(uintptr(f), "")
 }

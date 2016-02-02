@@ -2,6 +2,7 @@ package linux
 
 import (
 	"github.com/lunixbochs/struc"
+	"io"
 	"io/ioutil"
 	"os"
 	"syscall"
@@ -104,4 +105,22 @@ func (k *LinuxKernel) Getdents(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
 
 func (k *LinuxKernel) Getdents64(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
 	return k.getdents(dirfd, buf, count, 64)
+}
+
+func (k *LinuxKernel) Sendfile(out, in co.Fd, off co.Buf, count uint64) uint64 {
+	// TODO: the in_fd argument must correspond to a file which supports mmap(2)-like operations (i.e., it cannot be a socket).
+	outFile := out.File()
+	inFile := in.File()
+	var offset struc.Off_t
+	if off.Addr != 0 {
+		if err := off.Unpack(&offset); err != nil {
+			return UINT64_MAX // FIXME
+		}
+	}
+	written, err := io.CopyN(outFile, inFile, int64(count))
+	// TODO: is EOF handling correct here?
+	if (err != nil && err != io.EOF) || written < 0 {
+		return UINT64_MAX // FIXME
+	}
+	return uint64(written)
 }
