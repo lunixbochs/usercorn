@@ -14,3 +14,5 @@ func (k *PosixKernel) Munlockall()    {}
 
 func (k *PosixKernel) Swapon()  {}
 func (k *PosixKernel) Swapoff() {}
+
+func (k *PosixKernel) Gettid() int { return 0 }
