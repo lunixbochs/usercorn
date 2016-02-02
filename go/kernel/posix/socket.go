@@ -109,3 +109,14 @@ func (k *PosixKernel) Select(args []co.Obuf, nfds int, readfds, writefds, errorf
 	putfdset(args[3], e)
 	return 0
 }
+
+func (k *PosixKernel) Socketpair(domain, typ, proto int, vector co.Obuf) uint64 {
+	pair, err := syscall.Socketpair(domain, typ, proto)
+	if err != nil {
+		return Errno(err)
+	}
+	if err := vector.Pack(pair); err != nil {
+		return UINT64_MAX // FIXME
+	}
+	return 0
+}
