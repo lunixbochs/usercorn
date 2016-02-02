@@ -244,7 +244,16 @@ func (u *Usercorn) BinEntry() uint64 {
 func (u *Usercorn) PrefixPath(path string, force bool) string {
 	if filepath.IsAbs(path) && u.config.LoadPrefix != "" {
 		target := filepath.Join(u.config.LoadPrefix, path)
-		_, err := os.Stat(target)
+		link, err := os.Lstat(target)
+		if err == nil && link.Mode()&os.ModeSymlink != 0 {
+			path, err := os.Readlink(target)
+			if err == nil {
+				if !strings.HasPrefix(path, "/") {
+					path = filepath.Join(filepath.Dir(target), path)
+				}
+				return u.PrefixPath(path, force)
+			}
+		}
 		exists := !os.IsNotExist(err)
 		if force || exists {
 			return target

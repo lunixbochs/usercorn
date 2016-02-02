@@ -35,7 +35,7 @@ func (k *PosixKernel) Write(fd co.Fd, buf co.Buf, size co.Len) uint64 {
 
 func (k *PosixKernel) Open(path string, flags, mode uint64) uint64 {
 	// TODO: flags might be different per arch
-	if strings.Contains(path, "/lib/") {
+	if strings.HasPrefix(path, "/") {
 		path = k.U.PrefixPath(path, false)
 	}
 	fd, err := syscall.Open(path, int(flags), uint32(mode))
@@ -107,7 +107,7 @@ func (k *PosixKernel) Lstat(path string, buf co.Buf) uint64 {
 
 func (k *PosixKernel) Stat(path string, buf co.Buf) uint64 {
 	// TODO: centralize path hook
-	if strings.Contains(path, "/lib/") {
+	if strings.HasPrefix(path, "/") {
 		path = k.U.PrefixPath(path, false)
 	}
 	var stat syscall.Stat_t
