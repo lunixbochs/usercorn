@@ -11,3 +11,6 @@ func (k *PosixKernel) Mlock()         {}
 func (k *PosixKernel) Munlock()       {}
 func (k *PosixKernel) Mlockall()      {}
 func (k *PosixKernel) Munlockall()    {}
+
+func (k *PosixKernel) Swapon()  {}
+func (k *PosixKernel) Swapoff() {}
