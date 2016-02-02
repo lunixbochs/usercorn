@@ -2,6 +2,7 @@ package posix
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -32,15 +33,35 @@ func (k *PosixKernel) Write(fd co.Fd, buf co.Buf, size co.Len) uint64 {
 	return uint64(n)
 }
 
-func (k *PosixKernel) Open(path string, mode int, flags uint64) uint64 {
+func (k *PosixKernel) Open(path string, flags, mode uint64) uint64 {
+	// TODO: flags might be different per arch
 	if strings.Contains(path, "/lib/") {
 		path = k.U.PrefixPath(path, false)
 	}
-	fd, err := syscall.Open(path, mode, uint32(flags))
+	fd, err := syscall.Open(path, int(flags), uint32(mode))
 	if err != nil {
 		return Errno(err)
 	}
+	path, _ = filepath.Abs(path)
+	k.Files[co.Fd(fd)] = &File{
+		Fd:    co.Fd(fd),
+		Path:  path,
+		Flags: int(flags),
+		Mode:  int(mode),
+	}
 	return uint64(fd)
+}
+
+func (k *PosixKernel) Openat(dirfd co.Fd, path string, flags, mode uint64) uint64 {
+	// FIXME: AT_FDCWD == -100 on Linux, but this is Posix
+	if !strings.HasPrefix(path, "/") && dirfd != -100 {
+		if dir, ok := k.Files[dirfd]; ok {
+			path = filepath.Join(dir.Path, path)
+		} else {
+			return UINT64_MAX // FIXME
+		}
+	}
+	return k.Open(path, flags, mode)
 }
 
 func (k *PosixKernel) Close(fd co.Fd) uint64 {
@@ -48,6 +69,7 @@ func (k *PosixKernel) Close(fd co.Fd) uint64 {
 	if fd == 2 {
 		return 0
 	}
+	delete(k.Files, fd)
 	return Errno(syscall.Close(int(fd)))
 }
 
@@ -231,11 +253,6 @@ func (k *PosixKernel) Symlink(src, dst string) uint64 {
 
 func (k *PosixKernel) Link(src, dst string) uint64 {
 	return Errno(syscall.Link(src, dst))
-}
-
-func (k *PosixKernel) Openat(dirfd co.Fd, path string, flags int, mode uint32) uint64 {
-	// TODO: flags might be different per arch
-	return openat_native(int(dirfd), path, flags, mode)
 }
 
 func (k *PosixKernel) Chdir(path string) uint64 {

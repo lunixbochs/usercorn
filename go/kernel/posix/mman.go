@@ -24,11 +24,15 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot, flags int, fd co.Fd, off
 		return UINT64_MAX // FIXME
 	}
 	if fd > 0 {
-		path, err := PathFromFd(int(fd))
+		path := ""
+		file, ok := k.Files[fd]
+		if ok {
+			path = file.Path
+		}
 		fd2, _ := syscall.Dup(int(fd))
 		f := os.NewFile(uintptr(fd2), path)
 		// register mapped files for symbolication of mapped shared libraries
-		if err == nil {
+		if ok {
 			k.U.RegisterAddr(f, mmap.Addr, size, int64(off))
 		}
 		tmp := make([]byte, size)

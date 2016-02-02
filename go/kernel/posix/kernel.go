@@ -8,10 +8,23 @@ import (
 type PosixKernel struct {
 	*co.KernelBase
 	Unpack func(co.Buf, interface{})
+	Files  map[co.Fd]*File
+}
+
+type File struct {
+	Fd    co.Fd
+	Path  string
+	Mode  int
+	Flags int
+	// offset is currently only used by Linux getdents
+	Offset uint64
 }
 
 func NewKernel() *PosixKernel {
-	return &PosixKernel{KernelBase: &co.KernelBase{}}
+	return &PosixKernel{
+		KernelBase: &co.KernelBase{},
+		Files:      make(map[co.Fd]*File),
+	}
 }
 
 func packAddrs(u models.Usercorn, addrs []uint64) ([]byte, error) {
