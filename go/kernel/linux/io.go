@@ -51,9 +51,9 @@ func (k *LinuxKernel) getdents(dirfd co.Fd, buf co.Obuf, count uint64, bits uint
 		// TODO: does inode get truncated? I guess there's getdents64
 		var ent interface{}
 		if bits == 64 {
-			ent = &Dirent64{inode, offset + uint64(i), 0, fileType, f.Name() + "\x00"}
+			ent = &Dirent64{inode, dir.Offset + uint64(i), 0, fileType, f.Name() + "\x00"}
 		} else {
-			ent = &Dirent{inode, offset + uint64(i), 0, f.Name() + "\x00", fileType}
+			ent = &Dirent{inode, dir.Offset + uint64(i), 0, f.Name() + "\x00", fileType}
 		}
 		size, _ := struc.Sizeof(ent)
 		if uint64(written+size) > count {
