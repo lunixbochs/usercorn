@@ -54,6 +54,10 @@ func (k *LinuxKernel) Socketcall(index int, params co.Buf) uint64 {
 	return posix.UINT64_MAX // FIXME
 }
 
+func (k *LinuxKernel) SetThreadArea(addr uint64) error {
+	return k.U.RegWrite(uc.X86_REG_GS, addr)
+}
+
 func LinuxKernels(u models.Usercorn) []interface{} {
 	kernel := &LinuxKernel{linux.NewKernel()}
 	return []interface{}{kernel}
