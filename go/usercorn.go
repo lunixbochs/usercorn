@@ -193,7 +193,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	}
 	err := u.Unicorn.Start(u.entry, 0xffffffffffffffff)
 	u.memlog.Flush("", u.arch.Bits)
-	if err != nil {
+	if err != nil || u.config.Verbose {
 		fmt.Fprintf(os.Stderr, "[memory map]\n")
 		for _, m := range u.Mappings() {
 			fmt.Fprintf(os.Stderr, "  %v\n", m.String())
