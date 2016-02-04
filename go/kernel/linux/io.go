@@ -27,6 +27,7 @@ func (k *LinuxKernel) getdents(dirfd co.Fd, buf co.Obuf, count uint64, bits uint
 	dents = dents[dir.Offset:]
 	written := 0
 	offset := dir.Offset
+	out := buf.Struc()
 	for i, f := range dents {
 		// TODO: syscall.Stat_t portability?
 		inode := f.Sys().(*syscall.Stat_t).Ino
@@ -66,7 +67,7 @@ func (k *LinuxKernel) getdents(dirfd co.Fd, buf co.Obuf, count uint64, bits uint
 			ent.(*Dirent).Len = size
 		}
 		written += size
-		if err := buf.Pack(ent); err != nil {
+		if err := out.Pack(ent); err != nil {
 			return UINT64_MAX // FIXME
 		}
 	}
