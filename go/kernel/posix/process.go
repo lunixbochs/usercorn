@@ -23,6 +23,18 @@ func (k *PosixKernel) Getppid() int {
 	return os.Getppid()
 }
 
+func (k *PosixKernel) Getpgid(pid int) uint64 {
+	n, err := syscall.Getpgid(pid)
+	if err != nil {
+		return Errno(err)
+	}
+	return uint64(n)
+}
+
+func (k *PosixKernel) Getpgrp() int {
+	return syscall.Getpgrp()
+}
+
 func (k *PosixKernel) Kill(pid, signal int) uint64 {
 	// TODO: os-specific signal handling?
 	return Errno(syscall.Kill(pid, syscall.Signal(signal)))
