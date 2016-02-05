@@ -27,3 +27,17 @@ func (k *PosixKernel) Setitimer(which int, value co.Obuf) uint64 {
 func (k *PosixKernel) Getitimer(which int, value *native.Itimerval, ovalue co.Obuf) uint64 {
 	return 0
 }
+
+func (k *PosixKernel) ClockGetres(clockid int, out co.Obuf) uint64 {
+	// TODO: I'm just assuming you have a nanosecond-accurate clock available
+	if out.Addr != 0 {
+		res := native.Timespec{
+			Sec:  0,
+			Nsec: 1,
+		}
+		if err := out.Pack(&res); err != nil {
+			return UINT64_MAX // FIXME
+		}
+	}
+	return 0
+}
