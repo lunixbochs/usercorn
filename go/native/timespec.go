@@ -1,11 +1,6 @@
 package native
 
 type Timespec struct {
-	Sec  int32
-	Nsec int32
-}
-
-type Timespec64 struct {
-	Sec  int64
-	Nsec int64
+	Sec  int64 `struc:"off_t"`
+	Nsec int64 `struc:"off_t"`
 }
