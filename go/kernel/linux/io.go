@@ -49,7 +49,7 @@ func (k *LinuxKernel) getdents(dirfd co.Fd, buf co.Obuf, count uint64, bits uint
 		} else if mode&os.ModeSocket > 0 {
 			fileType = DT_SOCK
 		}
-		// TODO: does inode get truncated? I guess there's getdents64
+		// TODO: does inode get truncated? guess it depends on guest LFS support
 		var ent interface{}
 		if bits == 64 {
 			ent = &Dirent64{inode, dir.Offset + uint64(i), 0, fileType, f.Name() + "\x00"}
@@ -61,7 +61,7 @@ func (k *LinuxKernel) getdents(dirfd co.Fd, buf co.Obuf, count uint64, bits uint
 			break
 		}
 		offset++
-		if k.U.Bits() == 64 {
+		if bits == 64 {
 			ent.(*Dirent64).Len = size
 		} else {
 			ent.(*Dirent).Len = size
@@ -76,7 +76,7 @@ func (k *LinuxKernel) getdents(dirfd co.Fd, buf co.Obuf, count uint64, bits uint
 }
 
 func (k *LinuxKernel) Getdents(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {
-	return k.getdents(dirfd, buf, count, k.U.Bits())
+	return k.getdents(dirfd, buf, count, 32)
 }
 
 func (k *LinuxKernel) Getdents64(dirfd co.Fd, buf co.Obuf, count uint64) uint64 {

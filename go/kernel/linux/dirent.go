@@ -12,9 +12,10 @@ const (
 	DT_WHT     = 14
 )
 
+// TODO: need to differentiate between guests with and without LFS
 type Dirent struct {
-	Ino  uint64 `struc:"uint32"`
-	Off  uint64 `struc:"uint32"`
+	Ino  uint64 `struc:"uint64"`
+	Off  uint64 `struc:"uint64"`
 	Len  int    `struc:"uint16"`
 	Name string
 	Type int `struc:"uint8"`
