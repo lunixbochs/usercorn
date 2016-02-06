@@ -81,7 +81,7 @@ func (k *PosixKernel) Lseek(fd co.Fd, offset co.Off, whence int) uint64 {
 	return uint64(off)
 }
 
-func (k *PosixKernel) Fstat(fd co.Fd, buf co.Buf) uint64 {
+func (k *PosixKernel) Fstat(fd co.Fd, buf co.Obuf) uint64 {
 	var stat syscall.Stat_t
 	if err := syscall.Fstat(int(fd), &stat); err != nil {
 		return Errno(err)
@@ -93,7 +93,7 @@ func (k *PosixKernel) Fstat(fd co.Fd, buf co.Buf) uint64 {
 	return 0
 }
 
-func (k *PosixKernel) Lstat(path string, buf co.Buf) uint64 {
+func (k *PosixKernel) Lstat(path string, buf co.Obuf) uint64 {
 	var stat syscall.Stat_t
 	if err := syscall.Lstat(path, &stat); err != nil {
 		return Errno(err)
@@ -105,7 +105,7 @@ func (k *PosixKernel) Lstat(path string, buf co.Buf) uint64 {
 	return 0
 }
 
-func (k *PosixKernel) Stat(path string, buf co.Buf) uint64 {
+func (k *PosixKernel) Stat(path string, buf co.Obuf) uint64 {
 	// TODO: centralize path hook
 	if strings.HasPrefix(path, "/") {
 		path = k.U.PrefixPath(path, false)
@@ -121,7 +121,7 @@ func (k *PosixKernel) Stat(path string, buf co.Buf) uint64 {
 	return 0
 }
 
-func (k *PosixKernel) Getcwd(buf co.Buf, size co.Len) uint64 {
+func (k *PosixKernel) Getcwd(buf co.Obuf, size co.Len) uint64 {
 	wd, _ := os.Getwd()
 	size -= 1
 	if co.Len(len(wd)) > size {
