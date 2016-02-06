@@ -100,3 +100,7 @@ func (k *LinuxKernel) Sendfile(out, in co.Fd, off co.Buf, count uint64) uint64 {
 	}
 	return uint64(written)
 }
+
+func (k *LinuxKernel) Lstat64(path string, buf co.Obuf) uint64 {
+	return k.Lstat(path, buf)
+}
