@@ -7,6 +7,7 @@ import (
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux/unpack"
 	"github.com/lunixbochs/usercorn/go/native"
+	"github.com/lunixbochs/usercorn/go/native/enum"
 )
 
 func Unpack(k *LinuxKernel, arg interface{}, vals []interface{}) error {
@@ -25,6 +26,9 @@ func Unpack(k *LinuxKernel, arg interface{}, vals []interface{}) error {
 			return err
 		}
 		*v = tmp
+		return nil
+	case *enum.OpenFlag:
+		*v = unpack.OpenFlag(vals[0].(uint64))
 		return nil
 	default:
 		return argjoy.NoMatch

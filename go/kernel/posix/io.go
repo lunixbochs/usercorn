@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
+	"github.com/lunixbochs/usercorn/go/native/enum"
 )
 
 func (k *PosixKernel) Read(fd co.Fd, buf co.Obuf, size co.Len) uint64 {
@@ -33,7 +34,7 @@ func (k *PosixKernel) Write(fd co.Fd, buf co.Buf, size co.Len) uint64 {
 	return uint64(n)
 }
 
-func (k *PosixKernel) Open(path string, flags, mode uint64) uint64 {
+func (k *PosixKernel) Open(path string, flags enum.OpenFlag, mode uint64) uint64 {
 	// TODO: flags might be different per arch
 	if strings.HasPrefix(path, "/") {
 		path = k.U.PrefixPath(path, false)
@@ -52,7 +53,7 @@ func (k *PosixKernel) Open(path string, flags, mode uint64) uint64 {
 	return uint64(fd)
 }
 
-func (k *PosixKernel) Openat(dirfd co.Fd, path string, flags, mode uint64) uint64 {
+func (k *PosixKernel) Openat(dirfd co.Fd, path string, flags enum.OpenFlag, mode uint64) uint64 {
 	// FIXME: AT_FDCWD == -100 on Linux, but this is Posix
 	if !strings.HasPrefix(path, "/") && dirfd != -100 {
 		if dir, ok := k.Files[dirfd]; ok {
@@ -285,4 +286,8 @@ func (k *PosixKernel) Pipe(files co.Buf) uint64 {
 func (k *PosixKernel) Pipe2(files co.Buf, flags int) uint64 {
 	// TODO: handle flags
 	return k.Pipe(files)
+}
+
+func (k *PosixKernel) Unlink(path string) uint64 {
+	return Errno(syscall.Unlink(path))
 }
