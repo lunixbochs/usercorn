@@ -47,5 +47,4 @@ func NewLinuxStat(stat *syscall.Stat_t, bits uint) interface{} {
 
 func NewDarwinStat(stat *syscall.Stat_t, bits uint) interface{} {
 	panic("darwin stat struct unimplemented")
-	return nil
 }

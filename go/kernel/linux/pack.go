@@ -15,5 +15,4 @@ func Pack(buf co.Buf, i interface{}) error {
 	default:
 		return argjoy.NoMatch
 	}
-	return nil
 }

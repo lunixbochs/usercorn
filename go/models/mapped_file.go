@@ -64,7 +64,6 @@ func (m *MappedFile) FileLine(addr uint64) string {
 	for {
 		entry, err := reader.Next()
 		if err != nil {
-			panic(err)
 			break
 		}
 		if entry == nil {
