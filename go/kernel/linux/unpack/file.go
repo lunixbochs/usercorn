@@ -25,7 +25,7 @@ const (
 	O_CLOEXEC   = 02000000
 )
 
-var modeMap = map[int]int{
+var fileModeMap = map[int]int{
 	O_RDONLY: os.O_RDONLY,
 	O_WRONLY: os.O_WRONLY,
 	O_RDWR:   os.O_RDWR,
@@ -38,7 +38,7 @@ var modeMap = map[int]int{
 
 func OpenFlag(reg uint64) enum.OpenFlag {
 	var out enum.OpenFlag
-	for a, b := range modeMap {
+	for a, b := range fileModeMap {
 		if int(reg)&a == a {
 			out |= enum.OpenFlag(b)
 		}

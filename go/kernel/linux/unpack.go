@@ -11,28 +11,31 @@ import (
 )
 
 func Unpack(k *LinuxKernel, arg interface{}, vals []interface{}) error {
-	buf := co.NewBuf(k, vals[0].(uint64))
+	reg0 := vals[0].(uint64)
 	// null pointer guard
-	if buf.Addr == 0 {
+	if reg0 == 0 {
 		return nil
 	}
+	buf := co.NewBuf(k, reg0)
 	switch v := arg.(type) {
 	case *syscall.Sockaddr:
 		*v = unpack.Sockaddr(buf, int(vals[1].(uint64)))
-		return nil
 	case **native.Fdset32:
 		tmp := &native.Fdset32{}
 		if err := buf.Unpack(tmp); err != nil {
 			return err
 		}
 		*v = tmp
-		return nil
 	case *enum.OpenFlag:
-		*v = unpack.OpenFlag(vals[0].(uint64))
-		return nil
+		*v = unpack.OpenFlag(reg0)
+	case *enum.MmapFlag:
+		*v = unpack.MmapFlag(reg0)
+	case *enum.MmapProt:
+		*v = unpack.MmapProt(reg0)
 	default:
 		return argjoy.NoMatch
 	}
+	return nil
 }
 
 func registerUnpack(k *LinuxKernel) {
