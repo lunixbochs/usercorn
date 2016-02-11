@@ -20,6 +20,7 @@ var machineMap = map[elf.Machine]string{
 	elf.EM_MIPS:   "mips",
 	elf.EM_PPC:    "ppc",
 	elf.EM_PPC64:  "ppc64",
+	elf.EM_SPARC:  "sparc",
 }
 
 type ElfLoader struct {
