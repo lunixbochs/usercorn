@@ -56,6 +56,7 @@ func main() {
 	ibase := fs.Uint64("ibase", 0, "force interpreter base address")
 	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
 	strsize := fs.Int("strsize", 30, "limited -strace'd strings to length (0 disables)")
+	native := fs.Bool("native", false, "use native kernel shim")
 
 	listen := fs.Int("listen", -1, "listen for debug connection on localhost:<port>")
 	connect := fs.Int("connect", -1, "connect to remote usercorn debugger on localhost:<port>")
@@ -113,6 +114,7 @@ func main() {
 		TraceSys:        *strace || *trace,
 		Verbose:         *verbose,
 		Strsize:         *strsize,
+		Native:          *native,
 	}
 	if *match != "" {
 		split := strings.SplitN(*match, "+", 2)

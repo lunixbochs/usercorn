@@ -101,9 +101,19 @@ func NewUsercorn(exe string, config *models.Config) (*Usercorn, error) {
 			return len(p), nil
 		},
 	)
-	// load kernels
-	// the array cast is a trick to work around circular imports
-	if OS.Kernels != nil {
+	// if native flag is set, try to force a passthrough kernel
+	if config.Native {
+		if OS.NativeKernel == nil {
+			return nil, fmt.Errorf("OS '%s' has no native kernel", OS.Name)
+		}
+		kernel, err := OS.NativeKernel(u)
+		if err != nil {
+			return nil, err
+		}
+		u.kernels = []co.Kernel{kernel.(co.Kernel)}
+	} else if OS.Kernels != nil {
+		// load kernels
+		// the array cast is a trick to work around circular imports
 		kernelI := OS.Kernels(u)
 		kernels := make([]co.Kernel, len(kernelI))
 		for i, k := range kernelI {
