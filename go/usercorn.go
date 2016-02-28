@@ -414,7 +414,7 @@ func (u *Usercorn) addHooks() error {
 				}
 				fmt.Fprintln(os.Stderr, blockLine)
 			}
-		})
+		}, 1, 0)
 	}
 	if u.config.TraceExec {
 		u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
@@ -439,8 +439,7 @@ func (u *Usercorn) addHooks() error {
 					changes.Print(dindent, u.config.Color, true)
 				}
 			}
-		}, 0, 0xffffffffffffffff)
-		// range is set manually to support multiple hooks
+		}, 1, 0)
 	}
 	if u.config.TraceMem || u.config.TraceMemBatch {
 		u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) {
@@ -477,8 +476,7 @@ func (u *Usercorn) addHooks() error {
 			if u.config.TraceMemBatch {
 				u.memlog.Update(addr, size, value, letter == "W")
 			}
-		}, 0, 0xffffffffffffffff)
-		// range is set manually to support multiple hooks
+		}, 1, 0)
 	}
 	invalid := uc.HOOK_MEM_READ_INVALID | uc.HOOK_MEM_WRITE_INVALID | uc.HOOK_MEM_FETCH_INVALID
 	u.HookAdd(invalid, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) bool {
@@ -494,10 +492,10 @@ func (u *Usercorn) addHooks() error {
 		}
 		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x\n", addr, size, uint64(value))
 		return false
-	})
+	}, 1, 0)
 	u.HookAdd(uc.HOOK_INTR, func(_ uc.Unicorn, intno uint32) {
 		u.os.Interrupt(u, intno)
-	})
+	}, 1, 0)
 	return nil
 }
 
