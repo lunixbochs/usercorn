@@ -218,7 +218,6 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		// trampolines should show up during symbolication?
 		u.trampolined = true
 		for _, tramp := range trampolines {
-			fmt.Fprintf(os.Stderr, "DEBUG: trampoline: %s\n", tramp.desc)
 			if err = tramp.fun(); err != nil {
 				break
 			}

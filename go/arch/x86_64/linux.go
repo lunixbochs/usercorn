@@ -22,19 +22,22 @@ const (
 )
 
 func (k *LinuxKernel) ArchPrctl(code int, addr uint64) {
+	fsmsr := uint64(0xC0000100)
+	gsmsr := uint64(0xC0000101)
+
 	var tmp [8]byte
 	// TODO: make SET check for valid mapped memory
 	switch code {
 	case ARCH_SET_FS:
-		k.U.RegWrite(uc.X86_REG_FS, addr)
+		Wrmsr(k.U, fsmsr, addr)
 	case ARCH_SET_GS:
-		k.U.RegWrite(uc.X86_REG_GS, addr)
+		Wrmsr(k.U, gsmsr, addr)
 	case ARCH_GET_FS:
-		val, _ := k.U.RegRead(uc.X86_REG_FS)
+		val := Rdmsr(k.U, fsmsr)
 		buf, _ := k.U.PackAddr(tmp[:], val)
 		k.U.MemWrite(addr, buf)
 	case ARCH_GET_GS:
-		val, _ := k.U.RegRead(uc.X86_REG_GS)
+		val := Rdmsr(k.U, gsmsr)
 		buf, _ := k.U.PackAddr(tmp[:], val)
 		k.U.MemWrite(addr, buf)
 	}
