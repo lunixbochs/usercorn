@@ -10,7 +10,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
-var LinuxRegs = []int{uc.MIPS_REG_A0, uc.MIPS_REG_A1, uc.MIPS_REG_A2, uc.MIPS_REG_A3}
+var LinuxRegs = []int{uc.MIPS_REG_A0, uc.MIPS_REG_A1, uc.MIPS_REG_A2, uc.MIPS_REG_A3, 0, 0}
 
 type MipsLinuxKernel struct {
 	*linux.LinuxKernel
