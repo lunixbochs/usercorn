@@ -1,6 +1,7 @@
 package usercorn
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/memio"
@@ -67,6 +68,19 @@ func NewUsercorn(exe string, config *models.Config) (*Usercorn, error) {
 	}
 	defer f.Close()
 	l, err := loader.Load(f)
+	if err == loader.UnknownMagic {
+		f.Seek(0, 0)
+		scanner := bufio.NewScanner(f)
+		if scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "#!") && len(line) > 2 {
+				args := strings.Split(line[2:], " ")
+				prefix := append(args[1:], exe)
+				config.PrefixArgs = append(prefix, config.PrefixArgs...)
+				return NewUsercorn(args[0], config)
+			}
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +161,10 @@ func NewUsercorn(exe string, config *models.Config) (*Usercorn, error) {
 }
 
 func (u *Usercorn) Run(args []string, env []string) error {
+	// PrefixArgs was added for shebang
+	if len(u.config.PrefixArgs) > 0 {
+		args = append(u.config.PrefixArgs, args...)
+	}
 	if u.config.LoopCollapse > 0 {
 		u.blockloop = models.NewLoopDetect(u.config.LoopCollapse)
 	}

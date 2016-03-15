@@ -9,6 +9,8 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+var UnknownMagic = errors.New("Could not identify file magic.")
+
 func LoadFile(path string) (models.Loader, error) {
 	return LoadFileArch(path, "any")
 }
@@ -33,6 +35,6 @@ func LoadArch(r io.ReaderAt, arch string) (models.Loader, error) {
 	} else if MatchCgc(r) {
 		return NewCgcLoader(r, arch)
 	} else {
-		return nil, errors.New("Could not identify file magic.")
+		return nil, UnknownMagic
 	}
 }

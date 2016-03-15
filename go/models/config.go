@@ -16,4 +16,6 @@ type Config struct {
 	TraceSys        bool
 	Verbose         bool
 	Strsize         int
+
+	PrefixArgs []string
 }
