@@ -1,12 +1,21 @@
 package posix
 
 import (
+	"github.com/lunixbochs/struc"
 	"syscall"
 	"time"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/native"
 )
+
+func (k *PosixKernel) Time(out co.Obuf) uint64 {
+	t := time.Now().Unix()
+	if out.Addr != 0 {
+		out.Pack(struc.Size_t(t))
+	}
+	return uint64(t)
+}
 
 func (k *PosixKernel) ClockGettime(_ int, out co.Obuf) uint64 {
 	ts := syscall.NsecToTimespec(time.Now().UnixNano())
