@@ -77,7 +77,8 @@ func NewUsercorn(exe string, config *models.Config) (*Usercorn, error) {
 				args := strings.Split(line[2:], " ")
 				prefix := append(args[1:], exe)
 				config.PrefixArgs = append(prefix, config.PrefixArgs...)
-				return NewUsercorn(args[0], config)
+				shell := config.PrefixPath(args[0], false)
+				return NewUsercorn(shell, config)
 			}
 		}
 	}
@@ -300,37 +301,7 @@ func (u *Usercorn) BinEntry() uint64 {
 }
 
 func (u *Usercorn) PrefixPath(path string, force bool) string {
-	if u.config.LoadPrefix == "" {
-		return path
-	}
-	if filepath.IsAbs(path) {
-		target := filepath.Join(u.config.LoadPrefix, path)
-		link, err := os.Lstat(target)
-		if err == nil && link.Mode()&os.ModeSymlink != 0 {
-			path, err := os.Readlink(target)
-			if err == nil {
-				if !strings.HasPrefix(path, "/") {
-					path = filepath.Join(filepath.Dir(target), path)
-				}
-				return u.PrefixPath(path, force)
-			}
-		}
-		exists := !os.IsNotExist(err)
-		if force || exists {
-			return target
-		}
-	} else {
-		link, err := os.Lstat(path)
-		if err == nil && link.Mode()&os.ModeSymlink != 0 {
-			if linked, err := os.Readlink(path); err != nil {
-				if !strings.HasPrefix(linked, "/") {
-					linked = filepath.Join(filepath.Dir(path), linked)
-				}
-				return u.PrefixPath(linked, force)
-			}
-		}
-	}
-	return path
+	return u.config.PrefixPath(path, force)
 }
 
 func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
