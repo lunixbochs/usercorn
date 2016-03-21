@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
@@ -12,15 +13,34 @@ import (
 
 const UINT64_MAX = 0xFFFFFFFFFFFFFFFF
 
+type fileInfoProxy struct {
+	os.FileInfo
+	name string
+}
+
+func (f fileInfoProxy) Name() string {
+	return f.name
+}
+
 func (k *LinuxKernel) getdents(dirfd co.Fd, buf co.Obuf, count uint64, bits uint) uint64 {
 	dir, ok := k.Files[dirfd]
 	if !ok {
 		return UINT64_MAX // FIXME
 	}
-	dents, err := ioutil.ReadDir(dir.Path)
+	var dents []os.FileInfo
+	dent, err := os.Lstat(path.Join(dir.Path, ".."))
+	if err == nil {
+		dents = append(dents, fileInfoProxy{dent, ".."})
+	}
+	dent, err = os.Lstat(dir.Path)
+	if err == nil {
+		dents = append(dents, fileInfoProxy{dent, "."})
+	}
+	contents, err := ioutil.ReadDir(dir.Path)
 	if err != nil {
 		return UINT64_MAX // FIXME
 	}
+	dents = append(dents, contents...)
 	if dir.Offset >= uint64(len(dents)) {
 		return 0
 	}
