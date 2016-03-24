@@ -37,6 +37,11 @@ func LinuxSyscall(u models.Usercorn, num int) {
 }
 
 func LinuxInterrupt(u models.Usercorn, intno uint32) {
+	if intno == 2 {
+		num, _ := u.RegRead(uc.ARM64_REG_X8)
+		LinuxSyscall(u, int(num))
+		return
+	}
 	panic(fmt.Sprintf("unhandled ARM interrupt: %d", intno))
 }
 
