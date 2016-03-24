@@ -56,6 +56,7 @@ func main() {
 	ibase := fs.Uint64("ibase", 0, "force interpreter base address")
 	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
 	strsize := fs.Int("strsize", 30, "limited -strace'd strings to length (0 disables)")
+	skipinterp := fs.Bool("nointerp", false, "don't load binary's interpreter")
 
 	listen := fs.Int("listen", -1, "listen for debug connection on localhost:<port>")
 	connect := fs.Int("connect", -1, "connect to remote usercorn debugger on localhost:<port>")
@@ -106,6 +107,7 @@ func main() {
 		ForceInterpBase: *ibase,
 		LoadPrefix:      absPrefix,
 		LoopCollapse:    *looproll,
+		SkipInterp:      *skipinterp,
 		TraceExec:       *etrace || *trace,
 		TraceMem:        *mtrace,
 		TraceMemBatch:   *mtrace2 || *trace,

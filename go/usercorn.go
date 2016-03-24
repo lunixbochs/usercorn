@@ -633,7 +633,7 @@ outer:
 	entry = loadBias + l.Entry()
 	// load interpreter if present
 	interp := l.Interp()
-	if interp != "" && !isInterp {
+	if interp != "" && !isInterp && !u.config.SkipInterp {
 		f, err = os.Open(u.PrefixPath(interp, true))
 		if err != nil {
 			return
