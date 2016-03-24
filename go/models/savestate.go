@@ -15,10 +15,8 @@ import (
 // file header
 // uint32(savestate format version)
 // -- unicorn header --
-// uint32(unicorn major version)
-// uint32(unicorn minor version)
-// uint32(unicorn arch enum)
-// uint32(unicorn mode enum)
+// uint32(unicorn major version, minor version)
+// uint32(unicorn arch enum, mode enum)
 //
 // -- compressed data header --
 // uint64(length of compressed data)
@@ -26,12 +24,12 @@ import (
 //
 // -- uncompressed data start --
 // registers
-// uint32(number of registers)
-// 1..num: uint32(register enum), uint64(register value)
+// uint64(number of registers)
+// 1..num: uint64(register enum, register value)
 //
 // memory
 // uint64(number of mapped sections)
-// 1..num: uint64(addr), uint64(len), uint32(prot), <raw memory bytes of len>
+// 1..num: uint64(addr, len), uint32(prot), <raw memory bytes of len>
 
 var SAVE_MAGIC = "UCSV"
 
