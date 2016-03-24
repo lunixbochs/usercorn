@@ -58,6 +58,9 @@ func main() {
 	strsize := fs.Int("strsize", 30, "limited -strace'd strings to length (0 disables)")
 	skipinterp := fs.Bool("nointerp", false, "don't load binary's interpreter")
 
+	savepre := fs.String("savepre", "", "save state to file before execution starts")
+	savepost := fs.String("savepost", "", "save state to file after execution ends")
+
 	listen := fs.Int("listen", -1, "listen for debug connection on localhost:<port>")
 	connect := fs.Int("connect", -1, "connect to remote usercorn debugger on localhost:<port>")
 
@@ -107,14 +110,16 @@ func main() {
 		ForceInterpBase: *ibase,
 		LoadPrefix:      absPrefix,
 		LoopCollapse:    *looproll,
+		SavePost:        *savepost,
+		SavePre:         *savepre,
 		SkipInterp:      *skipinterp,
+		Strsize:         *strsize,
 		TraceExec:       *etrace || *trace,
 		TraceMem:        *mtrace,
 		TraceMemBatch:   *mtrace2 || *trace,
 		TraceReg:        *rtrace || *trace,
 		TraceSys:        *strace || *trace,
 		Verbose:         *verbose,
-		Strsize:         *strsize,
 	}
 	if *match != "" {
 		split := strings.SplitN(*match, "+", 2)

@@ -8,6 +8,7 @@ import (
 	"github.com/lunixbochs/readline"
 	"github.com/lunixbochs/struc"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -220,6 +221,19 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	if u.config.TraceMemBatch {
 		u.memlog = *models.NewMemLog(u.ByteOrder())
 	}
+	if u.config.SavePre != "" {
+		if err := u.save(u.config.SavePre); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to save pre-state: %s\n", err)
+		}
+	}
+	// handle savestate even under panic
+	if u.config.SavePost != "" {
+		defer func() {
+			if err := u.save(u.config.SavePost); err != nil {
+				fmt.Fprintf(os.Stderr, "failed to save post-state: %s\n", err)
+			}
+		}()
+	}
 	// loop to restart Unicorn if we need to call a trampoline function
 	pc := u.entry
 	var err error
@@ -261,6 +275,14 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	}
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus
+	}
+	return err
+}
+
+func (u *Usercorn) save(filename string) error {
+	data, err := models.Save(u)
+	if err == nil {
+		err = ioutil.WriteFile(filename, data, 0644)
 	}
 	return err
 }

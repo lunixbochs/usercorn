@@ -13,7 +13,10 @@ type Config struct {
 	ForceInterpBase uint64
 	LoadPrefix      string
 	LoopCollapse    int
+	SavePost        string
+	SavePre         string
 	SkipInterp      bool
+	Strsize         int
 	TraceExec       bool
 	TraceMatch      []string
 	TraceMatchDepth int
@@ -22,7 +25,6 @@ type Config struct {
 	TraceReg        bool
 	TraceSys        bool
 	Verbose         bool
-	Strsize         int
 
 	PrefixArgs []string
 }
