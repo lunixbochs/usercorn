@@ -21,6 +21,9 @@ var machineMap = map[elf.Machine]string{
 	elf.EM_PPC:    "ppc",
 	elf.EM_PPC64:  "ppc64",
 	elf.EM_SPARC:  "sparc",
+
+	// TODO: if minimum version is bumped to Go 1.6, use the native enum elf.EM_AARCH64
+	183: "arm64",
 }
 
 type ElfLoader struct {
