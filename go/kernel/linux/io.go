@@ -27,20 +27,23 @@ func (k *LinuxKernel) getdents(dirfd co.Fd, buf co.Obuf, count uint64, bits uint
 	if !ok {
 		return UINT64_MAX // FIXME
 	}
-	var dents []os.FileInfo
-	dent, err := os.Lstat(path.Join(dir.Path, ".."))
-	if err == nil {
-		dents = append(dents, fileInfoProxy{dent, ".."})
+	dents := dir.Dirents
+	if dents == nil {
+		dent, err := os.Lstat(path.Join(dir.Path, ".."))
+		if err == nil {
+			dents = append(dents, fileInfoProxy{dent, ".."})
+		}
+		dent, err = os.Lstat(dir.Path)
+		if err == nil {
+			dents = append(dents, fileInfoProxy{dent, "."})
+		}
+		contents, err := ioutil.ReadDir(dir.Path)
+		if err != nil {
+			return UINT64_MAX // FIXME
+		}
+		dents = append(dents, contents...)
+		dir.Dirents = dents
 	}
-	dent, err = os.Lstat(dir.Path)
-	if err == nil {
-		dents = append(dents, fileInfoProxy{dent, "."})
-	}
-	contents, err := ioutil.ReadDir(dir.Path)
-	if err != nil {
-		return UINT64_MAX // FIXME
-	}
-	dents = append(dents, contents...)
 	if dir.Offset >= uint64(len(dents)) {
 		return 0
 	}

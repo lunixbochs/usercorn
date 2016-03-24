@@ -1,6 +1,8 @@
 package posix
 
 import (
+	"os"
+
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -16,8 +18,9 @@ type File struct {
 	Path  string
 	Mode  int
 	Flags int
-	// offset is currently only used by Linux getdents
-	Offset uint64
+	// entries/offset currently only used by Linux getdents
+	Dirents []os.FileInfo
+	Offset  uint64
 }
 
 func NewKernel() *PosixKernel {
