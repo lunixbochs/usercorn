@@ -33,7 +33,10 @@ import (
 // uint64(number of mapped sections)
 // 1..num: uint64(addr), uint64(len), uint32(prot), <raw memory bytes of len>
 
+var SAVE_MAGIC = "UCSV"
+
 type SaveHeader struct {
+	Magic            string `struc:"[4]byte"`
 	Version          uint32
 	UcMajor, UcMinor uint32
 	UcArch, UcMode   uint32
@@ -121,6 +124,7 @@ func Save(u Usercorn) ([]byte, error) {
 
 	// write header / combine everything
 	header := &SaveHeader{
+		Magic:   SAVE_MAGIC,
 		Version: 1,
 		// unicorn version isn't exposed by Go bindings yet (Unicorn PR #483)
 		UcMajor: 0, UcMinor: 0,
