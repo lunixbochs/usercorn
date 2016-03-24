@@ -72,10 +72,9 @@ type SaveReg struct {
 }
 
 type SaveMem struct {
-	Addr, Size uint64
-	Prot       uint32
-
-	Len  uint64 `struc:"sizeof=Data"`
+	Addr uint64
+	Size uint64 `struc:"sizeof="Data"`
+	Prot uint32
 	Data []byte
 }
 
