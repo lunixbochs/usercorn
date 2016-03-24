@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"fmt"
 	"github.com/lunixbochs/struc"
+	"os"
 )
 
 // savestate format:
@@ -105,7 +107,8 @@ func Save(u Usercorn) ([]byte, error) {
 		s.Pack(uint64(m.Addr), uint64(m.Size), uint32(m.Prot))
 		mem, err := u.MemRead(m.Addr, m.Size)
 		if err != nil {
-			return nil, err
+			fmt.Fprintf(os.Stderr, "Warning: error saving memory at 0x%x-0x%x: %s\n", m.Addr, m.Addr+m.Size, err)
+			continue
 		}
 		buf.Write(mem)
 	}
