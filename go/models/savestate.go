@@ -2,7 +2,7 @@ package models
 
 import (
 	"bytes"
-	"compress/gzip"
+	"compress/zlib"
 	"encoding/binary"
 	"fmt"
 	"github.com/lunixbochs/struc"
@@ -13,14 +13,16 @@ import (
 // https://github.com/lunixbochs/usercorn/issues/176
 
 // file header
+// MAGIC = "UCSV"
 // uint32(savestate format version)
 // -- unicorn header --
 // uint32(unicorn major version, minor version)
 // uint32(unicorn arch enum, mode enum)
+// uint64(program counter)
 //
 // -- compressed data header --
 // uint64(length of compressed data)
-// remainder is gzip-compressed
+// remainder is zlib-compressed
 //
 // -- uncompressed data start --
 // registers
@@ -39,13 +41,15 @@ type SaveHeader struct {
 	UcMajor, UcMinor uint32
 	UcArch, UcMode   uint32
 
+	PC uint64
+
 	BodySize   uint64 `struc:"sizeof=Compressed"`
 	Compressed []byte
 }
 
 func (s *SaveHeader) PackBody(b *SaveBody) error {
 	var tmp bytes.Buffer
-	gz := gzip.NewWriter(&tmp)
+	gz := zlib.NewWriter(&tmp)
 	err := struc.PackWithOptions(gz, b, &struc.Options{Order: binary.BigEndian})
 	if err != nil {
 		return err
@@ -55,7 +59,7 @@ func (s *SaveHeader) PackBody(b *SaveBody) error {
 }
 
 func (s *SaveHeader) UnpackBody() (*SaveBody, error) {
-	gz, err := gzip.NewReader(bytes.NewReader(s.Compressed))
+	gz, err := zlib.NewReader(bytes.NewReader(s.Compressed))
 	if err != nil {
 		return nil, err
 	}
@@ -115,10 +119,12 @@ func Save(u Usercorn) ([]byte, error) {
 
 	// compress body
 	var tmp bytes.Buffer
-	gz := gzip.NewWriter(&tmp)
+	gz := zlib.NewWriter(&tmp)
 	buf.WriteTo(gz)
+	gz.Close()
 	buf.Reset()
 
+	pc, _ := u.RegRead(arch.PC)
 	// write header / combine everything
 	header := &SaveHeader{
 		Magic:   SAVE_MAGIC,
@@ -126,6 +132,7 @@ func Save(u Usercorn) ([]byte, error) {
 		// unicorn version isn't exposed by Go bindings yet (Unicorn PR #483)
 		UcMajor: 0, UcMinor: 0,
 		UcArch: uint32(arch.UC_ARCH), UcMode: uint32(arch.UC_MODE),
+		PC:         pc,
 		Compressed: tmp.Bytes(),
 	}
 	var final bytes.Buffer
