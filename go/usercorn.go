@@ -463,7 +463,7 @@ func (u *Usercorn) addHooks() error {
 				}
 			} else {
 				if changes.Count() > 0 {
-					changes.Print(blockIndent, true, true)
+					changes.Print(blockIndent, u.config.Color, true)
 				}
 				fmt.Fprintln(os.Stderr, blockLine)
 			}
