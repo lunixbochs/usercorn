@@ -100,6 +100,60 @@ func (u *Unicorn) MemProtect(addr, size uint64, prot int) error {
 	return u.Unicorn.MemProtect(addr, size, prot)
 }
 
+func (u *Unicorn) MemUnmap(addr, size uint64) error {
+	err := u.Unicorn.MemUnmap(addr, size)
+	if err != nil {
+		return err
+	}
+	for {
+		mmap := u.mapping(addr, size)
+		if mmap == nil {
+			break
+		}
+		left := mmap.Addr
+		right := left + mmap.Size
+		// if unmap overlaps an edge, shrink that edge
+		if addr <= left && addr+size > left {
+			left = addr + size
+		}
+		if addr < right && addr+size >= right {
+			right = addr
+		}
+		inMiddle := left < addr && right > addr+size
+		// if our mapping now has size <= 0, delete it
+		// also delete if the unmap was fully in the middle (as we'll split the mapping into each side)
+		if left >= right || inMiddle {
+			// delete by copying to a new array
+			tmp := make([]*models.Mmap, 0, len(u.memory)-1)
+			for _, v := range u.memory {
+				if v != mmap {
+					tmp = append(tmp, v)
+				}
+			}
+			u.memory = tmp
+		} else {
+			// otherwise resize our existing mapping
+			mmap.Addr = left
+			mmap.Size = right - left
+		}
+		// if unmap range is fully in the middle, split and create a new mapping for each side
+		if inMiddle {
+			left := &models.Mmap{
+				Addr: mmap.Addr, Size: addr - mmap.Addr,
+				Prot: mmap.Prot, File: mmap.File, Desc: mmap.Desc,
+			}
+			right := &models.Mmap{
+				Addr: addr + size, Size: (mmap.Addr + mmap.Size) - (addr + size),
+				Prot: mmap.Prot, File: mmap.File, Desc: mmap.Desc,
+			}
+			u.memory = append(u.memory, left)
+			u.memory = append(u.memory, right)
+		}
+
+	}
+	return err
+}
+
 func (u *Unicorn) Mappings() []*models.Mmap {
 	return u.memory
 }
