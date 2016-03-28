@@ -5,7 +5,12 @@ DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep
 
 build: get usercorn
 
-usercorn:
+export GOPATH := $(GOPATH):$(shell pwd)/.gopath
+.gopath:
+	mkdir -p .gopath/src/github.com/lunixbochs
+	ln -s ../../../.. .gopath/src/github.com/lunixbochs/usercorn
+
+usercorn: .gopath
 	go build -i -o usercorn ./go/usercorn
 
 get:
