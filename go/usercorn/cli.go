@@ -157,6 +157,14 @@ func main() {
 	}
 	env = envSet
 
+	// check permissions
+	if stat, err := os.Stat(args[0]); err != nil {
+		panic(err)
+	} else if stat.Mode().Perm()&1 != 1 {
+		fmt.Fprintf(os.Stderr, "%s: permission denied (no execute bit)\n", args[0])
+		os.Exit(1)
+	}
+
 	// prep usercorn
 	corn, err := usercorn.NewUsercorn(args[0], config)
 	if err != nil {
@@ -169,7 +177,7 @@ func main() {
 		addr := net.JoinHostPort("localhost", strconv.Itoa(*listen))
 		if err = debugger.Listen(addr); err != nil {
 			fmt.Fprintf(os.Stderr, "error listening on port %d: %v\n", *listen, err)
-			return
+			os.Exit(1)
 		}
 	}
 
