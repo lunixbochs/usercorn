@@ -222,9 +222,12 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		u.memlog = *models.NewMemLog(u.ByteOrder())
 	}
 	if u.config.SavePre != "" {
+		u.RegWrite(u.arch.PC, u.entry)
 		if err := u.save(u.config.SavePre); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to save pre-state: %s\n", err)
+			os.Exit(1)
 		}
+		os.Exit(0)
 	}
 	// handle savestate even under panic
 	if u.config.SavePost != "" {
