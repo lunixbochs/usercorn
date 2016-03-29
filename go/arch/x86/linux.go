@@ -14,6 +14,7 @@ var LinuxRegs = []int{uc.X86_REG_EBX, uc.X86_REG_ECX, uc.X86_REG_EDX, uc.X86_REG
 
 type LinuxKernel struct {
 	*linux.LinuxKernel
+	gdt *models.Mmap
 }
 
 var socketCallMap = map[int]string{
@@ -37,6 +38,24 @@ var socketCallMap = map[int]string{
 	18: "accept4",
 }
 
+// TODO: move this to arch.go or something
+func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) {
+	entry := uint64(limit & 0xFFFF)
+	entry |= uint64(((limit >> 16) & 0xF) << 48)
+	entry |= uint64((base & 0xFFFFFF) << 16)
+	entry |= uint64(((base >> 24) & 0xFF) << 56)
+	entry |= uint64((access & 0xFF) << 40)
+	entry |= uint64((flags & 0xFF) << 52)
+
+	if k.gdt == nil {
+		k.gdt, _ = k.U.Mmap(0, 0x1000)
+		k.U.RegWrite(uc.X86_REG_GDTR, k.gdt.Addr)
+	}
+	// this is fragile but we only call it once below in SetThreadArea
+	s := k.U.StrucAt(k.gdt.Addr + uint64(sel)*8)
+	s.Pack(entry)
+}
+
 func (k *LinuxKernel) Socketcall(index int, params co.Buf) uint64 {
 	if name, ok := socketCallMap[index]; ok {
 		if sys := co.Lookup(k.U, k, name); sys != nil {
@@ -54,12 +73,19 @@ func (k *LinuxKernel) Socketcall(index int, params co.Buf) uint64 {
 	return posix.UINT64_MAX // FIXME
 }
 
-func (k *LinuxKernel) SetThreadArea(addr uint64) error {
-	return k.U.RegWrite(uc.X86_REG_GS, addr)
+func (k *LinuxKernel) SetThreadArea(addr uint64) int {
+	s := k.U.StrucAt(addr)
+	var uaddr, limit uint32
+	s.Unpack(&uaddr) // burn one
+	s.Unpack(&uaddr, &limit)
+
+	k.gdtWrite(2, uaddr, limit, 0x12, 0)
+	k.U.RegWrite(uc.X86_REG_GS, 2)
+	return 2
 }
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	kernel := &LinuxKernel{linux.NewKernel()}
+	kernel := &LinuxKernel{LinuxKernel: linux.NewKernel()}
 	return []interface{}{kernel}
 }
 
