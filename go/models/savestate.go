@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/lunixbochs/struc"
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
 )
 
@@ -126,11 +127,11 @@ func Save(u Usercorn) ([]byte, error) {
 
 	pc, _ := u.RegRead(arch.PC)
 	// write header / combine everything
+	major, minor := uc.Version()
 	header := &SaveHeader{
 		Magic:   SAVE_MAGIC,
 		Version: 1,
-		// unicorn version isn't exposed by Go bindings yet (Unicorn PR #483)
-		UcMajor: 0, UcMinor: 0,
+		UcMajor: uint32(major), UcMinor: uint32(minor),
 		UcArch: uint32(arch.UC_ARCH), UcMode: uint32(arch.UC_MODE),
 		PC:         pc,
 		Compressed: tmp.Bytes(),

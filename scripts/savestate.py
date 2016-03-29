@@ -16,10 +16,8 @@ def read(filename):
     if ver != 1:
         raise Exception('Bad savefile version: %d != 1' % ver)
 
-    '''
     if ucmaj != unicorn.UC_API_MAJOR or ucmin != unicorn.UC_API_MINOR:
         raise Exception('Mismatched Unicorn version: %d.%d != %s' % (ucmaj, ucmin, unicorn.__version__))
-    '''
 
     rest = data[4 + HEADER.size:]
     if datalen < len(rest):
