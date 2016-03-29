@@ -20,7 +20,7 @@ def hook_mem_access(uc, access, addr, size, value, user_data):
     if access == UC_MEM_WRITE:
         print 'W @0x%x 0x%x = 0x%x' % (addr, size, value)
     else:
-        memhex = uc.mem_read(addr, size).encode('hex')
+        memhex = str(uc.mem_read(addr, size)).encode('hex')
         print 'R @0x%x 0x%x = %s' % (addr, size, memhex)
 
 def hook_syscall(uc, user_data):
