@@ -60,8 +60,15 @@ func initKernel(kf Kernel) {
 			in[j-1] = method.Type.In(j)
 		}
 		obufArr := false
-		if len(in) > 0 && in[0] == reflect.SliceOf(reflect.TypeOf(Obuf{})) {
-			obufArr = true
+		uintArr := false
+		if len(in) > 0 {
+			if in[0] == reflect.SliceOf(reflect.TypeOf(Obuf{})) {
+				obufArr = true
+			} else if in[0] == reflect.SliceOf(reflect.TypeOf(uint64(0))) {
+				uintArr = true
+			}
+		}
+		if obufArr || uintArr {
 			in = in[1:]
 		}
 		out := make([]reflect.Type, method.Type.NumOut())

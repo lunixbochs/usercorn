@@ -12,12 +12,13 @@ type Syscall struct {
 	In       []reflect.Type
 	Out      []reflect.Type
 	ObufArr  bool
+	UintArr  bool
 }
 
 // Call a syscall from the dispatch table. Will panic() if anything goes terribly wrong.
 func (sys Syscall) Call(args []uint64) uint64 {
 	extraArgs := 1
-	if sys.ObufArr {
+	if sys.ObufArr || sys.UintArr {
 		extraArgs += 1
 	}
 	in := make([]reflect.Value, len(sys.In)+extraArgs)
@@ -29,6 +30,8 @@ func (sys Syscall) Call(args []uint64) uint64 {
 			arr[i] = Obuf{NewBuf(sys.Kernel, args[i])}
 		}
 		in[1] = reflect.ValueOf(arr)
+	} else if sys.UintArr {
+		in[1] = reflect.ValueOf(args)
 	}
 	// convert syscall arguments
 	converted, err := sys.Kernel.Argjoy.Convert(sys.In, false, args)
