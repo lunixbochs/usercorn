@@ -15,7 +15,7 @@ func align(addr, size uint64, growl ...bool) (uint64, uint64) {
 	addr &= mask
 	size = right - addr
 	if len(growl) > 0 && growl[0] {
-		size = (size + to) & mask
+		size = (size + to - 1) & mask
 	}
 	return addr, size
 }
