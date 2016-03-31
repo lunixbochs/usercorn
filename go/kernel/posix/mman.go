@@ -17,10 +17,12 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 	var err error
 	var mmap *models.Mmap
 	if flags&MAP_FIXED != 0 {
-		err = k.U.MemMapProt(addrHint, size, int(prot))
-		mmap = &models.Mmap{Addr: addrHint}
+		mmap, err = k.U.MemReserve(addrHint, size, true)
 	} else {
-		mmap, err = k.U.Mmap(addrHint, size)
+		mmap, err = k.U.MemReserve(addrHint, size, false)
+	}
+	if err == nil {
+		err = k.U.MemMapProt(mmap.Addr, mmap.Size, int(prot))
 	}
 	if err != nil {
 		return UINT64_MAX // FIXME

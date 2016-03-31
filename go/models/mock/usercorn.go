@@ -23,13 +23,13 @@ func (u *Usercorn) Config() *models.Config                  { return nil }
 func (u *Usercorn) RegisterAddr(f *os.File, start, end uint64, off int64)     {}
 func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) { return "", nil }
 
-func (u *Usercorn) Brk(addr uint64) (uint64, error)                    { return 0, nil }
-func (u *Usercorn) Mappings() []*models.Mmap                           { return nil }
-func (u *Usercorn) MemReserve(addr, size uint64) (*models.Mmap, error) { return nil, nil }
-func (u *Usercorn) Mmap(addr, size uint64) (*models.Mmap, error)       { return nil, nil }
-func (u *Usercorn) MmapWrite(addr uint64, p []byte) (uint64, error)    { return 0, nil }
-func (u *Usercorn) Mem() memio.MemIO                                   { return nil }
-func (u *Usercorn) StrucAt(addr uint64) *models.StrucStream            { return nil }
+func (u *Usercorn) Brk(addr uint64) (uint64, error)                                { return 0, nil }
+func (u *Usercorn) Mappings() []*models.Mmap                                       { return nil }
+func (u *Usercorn) MemReserve(addr, size uint64, force bool) (*models.Mmap, error) { return nil, nil }
+func (u *Usercorn) Mmap(addr, size uint64) (*models.Mmap, error)                   { return nil, nil }
+func (u *Usercorn) MmapWrite(addr uint64, p []byte) (uint64, error)                { return 0, nil }
+func (u *Usercorn) Mem() memio.MemIO                                               { return nil }
+func (u *Usercorn) StrucAt(addr uint64) *models.StrucStream                        { return nil }
 
 func (u *Usercorn) PackAddr(buf []byte, n uint64) ([]byte, error) { return nil, nil }
 func (u *Usercorn) UnpackAddr(buf []byte) uint64                  { return 0 }

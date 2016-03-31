@@ -70,23 +70,12 @@ func (u *Unicorn) Disas(addr, size uint64) (string, error) {
 }
 
 func (u *Unicorn) MemMapProt(addr, size uint64, prot int) error {
-	m := u.mapping(addr, size)
-	for m != nil {
-		a, b := m.Addr, m.Addr+m.Size
-		if addr < a {
-			size = a - addr
-		} else if addr < b && addr+size > b {
-			right := addr + size
-			addr = b
-			size = right - addr
-		} else {
-			return nil
-		}
-		m = u.mapping(addr, size)
+	mmap, err := u.MemReserve(addr, size, true)
+	if err != nil {
+		return err
 	}
-	addr, size = align(addr, size, true)
-	u.memory = append(u.memory, &models.Mmap{Addr: addr, Size: size, Prot: prot})
-	return u.Unicorn.MemMapProt(addr, size, prot)
+	mmap.Prot = prot
+	return u.Unicorn.MemMapProt(mmap.Addr, mmap.Size, prot)
 }
 
 func (u *Unicorn) MemMap(addr, size uint64) error {
@@ -158,11 +147,17 @@ func (u *Unicorn) Mappings() []*models.Mmap {
 	return u.memory
 }
 
-func (u *Unicorn) MemReserve(addr, size uint64) (*models.Mmap, error) {
+func (u *Unicorn) MemReserve(addr, size uint64, force bool) (*models.Mmap, error) {
 	if addr == 0 {
 		addr = BASE
 	}
 	addr, size = align(addr, size, true)
+	if force {
+		u.MemUnmap(addr, size)
+		mmap := &models.Mmap{Addr: addr, Size: size, Prot: uc.PROT_ALL}
+		u.memory = append(u.memory, mmap)
+		return mmap, nil
+	}
 	for i := addr; i < uint64(1)<<uint64(u.bits-1); i += UC_MEM_ALIGN {
 		if u.mapping(i, size) == nil {
 			mmap := &models.Mmap{Addr: i, Size: size, Prot: uc.PROT_ALL}
@@ -174,7 +169,7 @@ func (u *Unicorn) MemReserve(addr, size uint64) (*models.Mmap, error) {
 }
 
 func (u *Unicorn) Mmap(addr, size uint64) (*models.Mmap, error) {
-	mmap, err := u.MemReserve(addr, size)
+	mmap, err := u.MemReserve(addr, size, false)
 	if err != nil {
 		return nil, err
 	}

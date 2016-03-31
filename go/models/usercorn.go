@@ -21,7 +21,7 @@ type Usercorn interface {
 
 	Brk(addr uint64) (uint64, error)
 	Mappings() []*Mmap
-	MemReserve(addr, size uint64) (*Mmap, error)
+	MemReserve(addr, size uint64, force bool) (*Mmap, error)
 	Mmap(addr, size uint64) (*Mmap, error)
 	MmapWrite(addr uint64, p []byte) (uint64, error)
 	Mem() memio.MemIO
