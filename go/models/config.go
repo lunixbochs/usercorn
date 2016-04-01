@@ -13,6 +13,7 @@ type Config struct {
 	ForceInterpBase uint64
 	LoadPrefix      string
 	LoopCollapse    int
+	NativeFallback  bool
 	SavePost        string
 	SavePre         string
 	SkipInterp      bool

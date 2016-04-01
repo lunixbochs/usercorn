@@ -57,6 +57,7 @@ func main() {
 	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
 	strsize := fs.Int("strsize", 30, "limited -strace'd strings to length (0 disables)")
 	skipinterp := fs.Bool("nointerp", false, "don't load binary's interpreter")
+	native := fs.Bool("native", false, "[stub] use native syscall override (only works if host/guest arch/ABI matches)")
 
 	savepre := fs.String("savepre", "", "save state to file and exit before emulation starts")
 	savepost := fs.String("savepost", "", "save state to file after emulation ends")
@@ -110,6 +111,7 @@ func main() {
 		ForceInterpBase: *ibase,
 		LoadPrefix:      absPrefix,
 		LoopCollapse:    *looproll,
+		NativeFallback:  *native,
 		SavePost:        *savepost,
 		SavePre:         *savepre,
 		SkipInterp:      *skipinterp,
