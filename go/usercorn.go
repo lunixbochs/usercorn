@@ -726,8 +726,8 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 	panic(fmt.Errorf("Kernel not found for syscall '%s'", name))
 }
 
-func (u *Usercorn) Exit(status int) {
-	u.exitStatus = models.ExitStatus(status)
+func (u *Usercorn) Exit(err error) {
+	u.exitStatus = err
 	u.Stop()
 }
 

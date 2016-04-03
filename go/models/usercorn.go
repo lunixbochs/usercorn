@@ -50,5 +50,5 @@ type Usercorn interface {
 	PrefixPath(s string, force bool) string
 	Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error)
 
-	Exit(status int)
+	Exit(err error)
 }

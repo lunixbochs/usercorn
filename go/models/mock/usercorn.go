@@ -59,4 +59,4 @@ func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error { return nil
 func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
 	return 0, nil
 }
-func (u *Usercorn) Exit(status int) {}
+func (u *Usercorn) Exit(err error) {}

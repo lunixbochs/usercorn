@@ -5,10 +5,11 @@ import (
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 func (k *PosixKernel) Exit(code int) {
-	k.U.Exit(code)
+	k.U.Exit(models.ExitStatus(code))
 }
 
 func (k *PosixKernel) ExitGroup(code int) {

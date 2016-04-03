@@ -1,6 +1,7 @@
 package x86_64
 
 import (
+	"errors"
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
@@ -65,6 +66,9 @@ func LinuxSyscall(u models.Usercorn) {
 }
 
 func LinuxInterrupt(u models.Usercorn, intno uint32) {
+	if intno == 0 {
+		u.Exit(errors.New("division by zero"))
+	}
 	if intno == 0x80 {
 		LinuxSyscall(u)
 	}
