@@ -239,10 +239,10 @@ func (k *PosixKernel) Readlink(path string, buf co.Obuf, size co.Len) uint64 {
 			return UINT64_MAX // FIXME
 		}
 	}
-	if len(name) > int(size)-1 {
-		name = name[:size-1]
+	if len(name) > int(size) {
+		name = name[:size]
 	}
-	if err := buf.Pack([]byte(name + "\x00")); err != nil {
+	if err := buf.Pack([]byte(name)); err != nil {
 		return UINT64_MAX // FIXME
 	}
 	return uint64(len(name))
