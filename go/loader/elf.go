@@ -133,6 +133,10 @@ func (e *ElfLoader) Segments() ([]models.SegmentData, error) {
 			DataFunc: func() ([]byte, error) {
 				data := make([]byte, filesz)
 				_, err := stream.Read(data)
+				// swallow EOF so we can still load broken binaries
+				if err == io.EOF {
+					err = nil
+				}
 				return data, err
 			},
 		})
@@ -143,7 +147,7 @@ func (e *ElfLoader) Segments() ([]models.SegmentData, error) {
 func (e *ElfLoader) getSymbols() ([]models.Symbol, error) {
 	syms, err := e.file.Symbols()
 	if err != nil {
-		return nil, err
+		return []models.Symbol{}, err
 	}
 	symbols := make([]models.Symbol, 0, len(syms))
 	for _, s := range syms {
