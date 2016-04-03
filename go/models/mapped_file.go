@@ -43,6 +43,19 @@ func (m *MappedFile) Symbolicate(addr uint64) (result Symbol, distance uint64) {
 	return
 }
 
+// TODO: Use a map for O(n) -> O(1)
+// TODO: Do I want this to just return addr?
+// Part of problem is adjusting for memory offset,
+// and it's gross if the caller needs to do that manually.
+func (m *MappedFile) SymbolLookup(name string) *Symbol {
+	for _, sym := range m.Symbols {
+		if sym.Name == name {
+			return &sym
+		}
+	}
+	return nil
+}
+
 func (m *MappedFile) FileLine(addr uint64) string {
 	getAddr := func(f *dwarf.Field) uint64 {
 		if f == nil {
