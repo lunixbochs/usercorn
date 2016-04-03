@@ -10,7 +10,13 @@ import (
 )
 
 func (s Syscall) traceArg(args ...interface{}) string {
-	hex := func(a interface{}) string { return fmt.Sprintf("0x%x", a) }
+	hex := func(a interface{}) string {
+		tmp := fmt.Sprintf("0x%x", a)
+		if strings.HasPrefix(tmp, "0x-") {
+			tmp = "-0x" + tmp[3:]
+		}
+		return tmp
+	}
 
 	switch arg := args[0].(type) {
 	case Obuf:
