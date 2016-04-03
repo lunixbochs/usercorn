@@ -23,13 +23,9 @@ func (s Syscall) traceArg(args ...interface{}) string {
 		return hex(arg.Addr)
 	case Buf:
 		if len(args) > 1 {
-			strsize := s.Kernel.U.Config().Strsize
 			if length, ok := args[1].(Len); ok {
-				if int(length) > strsize && strsize > 0 {
-					length = Len(strsize)
-				}
 				mem, _ := s.Kernel.U.MemRead(arg.Addr, uint64(length))
-				return models.Repr(mem)
+				return models.Repr(mem, s.Kernel.U.Config().Strsize)
 			}
 		}
 		return hex(arg.Addr)
@@ -40,11 +36,7 @@ func (s Syscall) traceArg(args ...interface{}) string {
 	case Fd:
 		return fmt.Sprintf("%d", int32(arg))
 	case string:
-		strsize := s.Kernel.U.Config().Strsize
-		if len(arg) > strsize && strsize > 0 {
-			arg = arg[:strsize]
-		}
-		return models.Repr([]byte(arg))
+		return models.Repr([]byte(arg), s.Kernel.U.Config().Strsize)
 	case uint64:
 		return hex(arg)
 	default:
@@ -78,12 +70,8 @@ func (s Syscall) TraceRet(args []uint64, ret uint64) {
 		if typ == reflect.TypeOf(Obuf{}) && len(args) > i+1 {
 			length := int(ret)
 			if uint64(length) <= args[i+1] && length >= 0 {
-				strsize := s.Kernel.U.Config().Strsize
-				if length > strsize && strsize > 0 {
-					length = strsize
-				}
 				mem, _ := s.Kernel.U.MemRead(args[i], uint64(length))
-				out = append(out, models.Repr(mem))
+				out = append(out, models.Repr(mem, s.Kernel.U.Config().Strsize))
 			}
 		}
 	}
