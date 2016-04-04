@@ -83,6 +83,8 @@ func (u *Unicorn) MemMap(addr, size uint64) error {
 }
 
 func (u *Unicorn) MemProtect(addr, size uint64, prot int) error {
+	// TODO: mapping a subregion should split the mapping?
+	addr, size = align(addr, size, true)
 	if mmap := u.mapping(addr, size); mmap != nil {
 		mmap.Prot = prot
 	}
@@ -90,10 +92,7 @@ func (u *Unicorn) MemProtect(addr, size uint64, prot int) error {
 }
 
 func (u *Unicorn) MemUnmap(addr, size uint64) error {
-	err := u.Unicorn.MemUnmap(addr, size)
-	if err != nil {
-		return err
-	}
+	// TODO: alignment check?
 	for {
 		mmap := u.mapping(addr, size)
 		if mmap == nil {
@@ -109,6 +108,17 @@ func (u *Unicorn) MemUnmap(addr, size uint64) error {
 			right = addr
 		}
 		inMiddle := left < addr && right > addr+size
+		// unmap in Unicorn
+		if left >= right {
+			u.Unicorn.MemUnmap(mmap.Addr, mmap.Size)
+		} else {
+			if left > mmap.Addr {
+				u.Unicorn.MemUnmap(mmap.Addr, left-mmap.Addr)
+			}
+			if right < mmap.Addr+mmap.Size {
+				u.Unicorn.MemUnmap(right, (mmap.Addr+mmap.Size)-right)
+			}
+		}
 		// if our mapping now has size <= 0, delete it
 		// also delete if the unmap was fully in the middle (as we'll split the mapping into each side)
 		if left >= right || inMiddle {
@@ -140,7 +150,7 @@ func (u *Unicorn) MemUnmap(addr, size uint64) error {
 		}
 
 	}
-	return err
+	return nil
 }
 
 func (u *Unicorn) Mappings() []*models.Mmap {
