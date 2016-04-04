@@ -162,7 +162,7 @@ func main() {
 	// check permissions
 	if stat, err := os.Stat(args[0]); err != nil {
 		panic(err)
-	} else if stat.Mode().Perm()&1 != 1 {
+	} else if stat.Mode().Perm()&0111 == 0 {
 		fmt.Fprintf(os.Stderr, "%s: permission denied (no execute bit)\n", args[0])
 		os.Exit(1)
 	}
