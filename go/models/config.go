@@ -33,19 +33,19 @@ type Config struct {
 func (c *Config) resolveSymlink(path, target string, force bool) string {
 	link, err := os.Lstat(path)
 	if err == nil && link.Mode()&os.ModeSymlink != 0 {
-		if linked, err := os.Readlink(path); err != nil {
-			if !strings.HasPrefix(linked, "/") {
+		if linked, err := os.Readlink(path); err == nil {
+			if !filepath.IsAbs(linked) {
 				linked = filepath.Join(filepath.Dir(path), linked)
-				return c.PrefixPath(path, false)
+				return c.PrefixPath(linked, false)
 			}
 			return c.PrefixPath(linked, force)
 		}
 	}
 	exists := !os.IsNotExist(err)
 	if force || exists {
-		return target
+		return path
 	}
-	return path
+	return target
 }
 
 func (c *Config) PrefixPath(path string, force bool) string {
@@ -53,8 +53,8 @@ func (c *Config) PrefixPath(path string, force bool) string {
 		return path
 	}
 	target := path
-	if filepath.IsAbs(path) {
+	if filepath.IsAbs(path) && !strings.HasPrefix(path, c.LoadPrefix) {
 		target = filepath.Join(c.LoadPrefix, path)
 	}
-	return c.resolveSymlink(path, target, force)
+	return c.resolveSymlink(target, path, force)
 }
