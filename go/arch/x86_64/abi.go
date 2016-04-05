@@ -12,5 +12,10 @@ func AbiInit(u models.Usercorn, syscall func(models.Usercorn)) error {
 	_, err := u.HookAdd(uc.HOOK_INSN, func(_ uc.Unicorn) {
 		syscall(u)
 	}, 1, 0, uc.X86_INS_SYSCALL)
+	if err == nil {
+		_, err = u.HookAdd(uc.HOOK_INSN, func(_ uc.Unicorn) {
+			syscall(u)
+		}, 1, 0, uc.X86_INS_SYSENTER)
+	}
 	return err
 }
