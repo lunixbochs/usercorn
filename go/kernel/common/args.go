@@ -6,17 +6,26 @@ import (
 
 func StackArgs(u models.Usercorn) func(n int) ([]uint64, error) {
 	return func(n int) ([]uint64, error) {
-		_, err := u.Pop()
-		if err != nil {
-			return nil, err
-		}
+		sp, _ := u.RegRead(u.Arch().SP)
+		// starts with an empty slot
+		s := u.StrucAt(sp + uint64(u.Bits()/8))
+
 		ret := make([]uint64, n)
 		for i := 0; i < n; i++ {
-			v, err := u.Pop()
+			var arg uint64
+			var err error
+			// TODO: simplify this when struc issue #47 is fixed
+			if u.Bits() == 64 {
+				err = s.Unpack(&arg)
+			} else {
+				var arg32 uint32
+				err = s.Unpack(&arg32)
+				arg = uint64(arg32)
+			}
 			if err != nil {
 				return nil, err
 			}
-			ret[i] = v
+			ret[i] = arg
 		}
 		return ret, nil
 	}

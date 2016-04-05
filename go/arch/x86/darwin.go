@@ -30,8 +30,6 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 }
 
 func DarwinSyscall(u models.Usercorn, class int) {
-	// TODO: read args from stack without modifying reg so we don't need to restore esp
-	esp, _ := u.RegRead(uc.X86_REG_ESP)
 	getArgs := common.StackArgs(u)
 
 	eax, _ := u.RegRead(uc.X86_REG_EAX)
@@ -40,7 +38,6 @@ func DarwinSyscall(u models.Usercorn, class int) {
 
 	ret, _ := u.Syscall(nr, name, getArgs)
 	u.RegWrite(uc.X86_REG_EAX, ret)
-	u.RegWrite(uc.X86_REG_ESP, esp)
 }
 
 func DarwinInterrupt(u models.Usercorn, intno uint32) {
