@@ -237,6 +237,30 @@ func (u *Usercorn) Run(args []string, env []string) error {
 			}
 		}()
 	}
+	// panic/exit handler
+	verboseExit := func() {
+		fmt.Fprintf(os.Stderr, "[memory map]\n")
+		for _, m := range u.Mappings() {
+			fmt.Fprintf(os.Stderr, "  %v\n", m.String())
+		}
+		fmt.Fprintln(os.Stderr, "[registers]")
+		u.status.Changes().Print("", u.config.Color, false)
+		fmt.Fprintln(os.Stderr, "[stacktrace]")
+		pc, _ := u.RegRead(u.arch.PC)
+		sp, _ := u.RegRead(u.arch.SP)
+		for _, frame := range u.stacktrace.Freeze(pc, sp) {
+			fmt.Fprintf(os.Stderr, "  %s\n", frame.Pretty(u))
+		}
+	}
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Fprintf(os.Stderr, "\n+++ panic dump +++\n")
+			verboseExit()
+			fmt.Fprintf(os.Stderr, "------------------\n\n")
+			panic(e)
+		}
+	}()
+
 	// loop to restart Unicorn if we need to call a trampoline function
 	pc := u.entry
 	var err error
@@ -263,18 +287,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		u.RegWrite(u.arch.SP, sp)
 	}
 	if err != nil || u.config.Verbose {
-		fmt.Fprintf(os.Stderr, "[memory map]\n")
-		for _, m := range u.Mappings() {
-			fmt.Fprintf(os.Stderr, "  %v\n", m.String())
-		}
-		fmt.Fprintln(os.Stderr, "[registers]")
-		u.status.Changes().Print("", u.config.Color, false)
-		fmt.Fprintln(os.Stderr, "[stacktrace]")
-		pc, _ := u.RegRead(u.arch.PC)
-		sp, _ := u.RegRead(u.arch.SP)
-		for _, frame := range u.stacktrace.Freeze(pc, sp) {
-			fmt.Fprintf(os.Stderr, "  %s\n", frame.Pretty(u))
-		}
+		verboseExit()
 	}
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus
