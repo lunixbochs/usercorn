@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/nfnt/resize"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"image"
 	"image/color/palette"
@@ -30,6 +29,9 @@ func drawFrame(u models.Usercorn, width, height int) image.Image {
 		}
 	}
 	dim := int(math.Ceil(math.Sqrt(float64(size))))
+	if dim%2 == 1 {
+		dim++
+	}
 	img := image.NewRGBA(image.Rect(0, 0, dim, dim))
 	offset := 0
 	for _, m := range maps {
@@ -57,7 +59,7 @@ func drawFrame(u models.Usercorn, width, height int) image.Image {
 			}
 		}
 	}
-	return resize.Resize(uint(width), uint(height), img, resize.NearestNeighbor)
+	return img
 }
 
 func main() {
