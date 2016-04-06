@@ -6,7 +6,7 @@ import (
 	"image"
 	"image/color"
 	"image/color/palette"
-	"image/jpeg"
+	"image/png"
 	"math"
 	"os"
 	"path"
@@ -54,15 +54,29 @@ func (p *imageProxy) traceMem(addr uint64, data []byte) {
 		p.resize()
 	}
 	off := (addr - m.Addr) * 4
-	dst := p.Pix[uint64(i*ImgLine)+off:]
+	line := p.Pix[i*ImgLine : (i+1)*ImgLine]
+	dst := line[off:]
 	for _, v := range data {
-		c := palette.Plan9[v].(color.RGBA)
-		dst[0] = uint8(c.R)
-		dst[1] = uint8(c.G)
-		dst[2] = uint8(c.B)
-		dst[3] = uint8(c.A)
+		if v == 0 {
+			dst[3] = 0
+		} else {
+			c := palette.Plan9[v].(color.RGBA)
+			dst[0] = uint8(c.R)
+			dst[1] = uint8(c.G)
+			dst[2] = uint8(c.B)
+			dst[3] = uint8(c.A)
+		}
 		dst = dst[4:]
 	}
+	// delete empty lines
+	for i := 3; i < len(line); i += 4 {
+		if line[i] > 0 {
+			return
+		}
+	}
+	p.maps = append(p.maps[:i], p.maps[i+1:]...)
+	p.Pix = append(p.Pix[:i*ImgLine], p.Pix[(i+1)*ImgLine:]...)
+	p.resize()
 }
 
 func main() {
@@ -70,9 +84,8 @@ func main() {
 	var width, height *int
 	var outdir *string
 
-	jpegOptions := &jpeg.Options{Quality: 70}
-
-	memImg := &imageProxy{RGBA: image.NewRGBA(image.Rect(0, 0, PageSize, 1))}
+	// height is overallocated to allow for sloppy resizing
+	memImg := &imageProxy{RGBA: image.NewRGBA(image.Rect(0, 0, PageSize, 16))}
 
 	frame := 0
 	memTrace := func(u uc.Unicorn, access int, addr uint64, size int, value int64) {
@@ -90,11 +103,11 @@ func main() {
 		memImg.dirty = false
 
 		frame++
-		file, err := os.Create(path.Join(*outdir, fmt.Sprintf("%d.jpg", frame)))
+		file, err := os.Create(path.Join(*outdir, fmt.Sprintf("%d.png", frame)))
 		if err != nil {
 			panic(err)
 		}
-		if err := jpeg.Encode(file, memImg, jpegOptions); err != nil {
+		if err := png.Encode(file, memImg); err != nil {
 			panic(err)
 		}
 		file.Close()
@@ -102,7 +115,7 @@ func main() {
 	c.SetupFlags = func() error {
 		width = c.Flags.Int("width", 1024, "video width")
 		height = c.Flags.Int("height", 768, "video height")
-		outdir = c.Flags.String("out", "out/", "jpg output directory")
+		outdir = c.Flags.String("out", "out/", "image output directory")
 		return nil
 	}
 	c.SetupUsercorn = func() error {
@@ -114,6 +127,15 @@ func main() {
 		}
 		if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
 			return err
+		}
+		// pre-fill memory with binary
+		for _, m := range c.Usercorn.Mappings() {
+			mem, err := c.Usercorn.MemRead(m.Addr, m.Size)
+			if err == nil {
+				for i := 0; i < len(mem); i += PageSize {
+					memImg.traceMem(m.Addr+uint64(i), mem[i:i+PageSize])
+				}
+			}
 		}
 		return nil
 	}
