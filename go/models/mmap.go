@@ -38,3 +38,9 @@ func (m *Mmap) String() string {
 	}
 	return desc
 }
+
+type MmapAddrSort []*Mmap
+
+func (m MmapAddrSort) Len() int           { return len(m) }
+func (m MmapAddrSort) Less(i, j int) bool { return m[i].Addr < m[j].Addr }
+func (m MmapAddrSort) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }

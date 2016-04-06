@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"flag"
@@ -37,11 +37,27 @@ func copyNotify(dst io.Writer, src io.Reader) chan int {
 	return ret
 }
 
-func main() {
+type UsercornCmd struct {
+	Config *models.Config
+
+	SetupFlags    func() error
+	SetupUsercorn func() error
+	Teardown      func()
+
+	Usercorn models.Usercorn
+	Flags    *flag.FlagSet
+}
+
+func NewUsercornCmd() *UsercornCmd {
+	fs := flag.NewFlagSet("cli", flag.ExitOnError)
+	return &UsercornCmd{Flags: fs}
+}
+
+func (c *UsercornCmd) Run(argv, env []string) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	fs := flag.NewFlagSet("cli", flag.ExitOnError)
+	fs := c.Flags
 	verbose := fs.Bool("v", false, "verbose output")
 	trace := fs.Bool("trace", false, "recommended tracing options: -loop 8 -strace -mtrace2 -etrace -rtrace")
 	strace := fs.Bool("strace", false, "trace syscalls")
@@ -75,7 +91,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Debug Client: %s -connect <port>\n", os.Args[0])
 		fs.PrintDefaults()
 	}
-	fs.Parse(os.Args[1:])
+	if c.SetupFlags != nil {
+		if err := c.SetupFlags(); err != nil {
+			panic(err)
+		}
+	}
+	fs.Parse(argv[1:])
 
 	// connect to debug server (skips rest of usercorn)
 	if *connect > 0 {
@@ -136,7 +157,6 @@ func main() {
 	}
 
 	// merge environment with flags
-	env := os.Environ()
 	envSkip := make(map[string]bool)
 	for _, v := range envSet {
 		if strings.Contains(v, "=") {
@@ -172,6 +192,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	c.Usercorn = corn
+	if c.SetupUsercorn != nil {
+		if err := c.SetupUsercorn(); err != nil {
+			panic(err)
+		}
+	}
+	if c.Teardown != nil {
+		// won't run on os.Exit(), so it's manually run below
+		defer c.Teardown()
+	}
 
 	// start debug server
 	if *listen > 0 {
@@ -179,6 +209,9 @@ func main() {
 		addr := net.JoinHostPort("localhost", strconv.Itoa(*listen))
 		if err = debugger.Listen(addr); err != nil {
 			fmt.Fprintf(os.Stderr, "error listening on port %d: %v\n", *listen, err)
+			if c.Teardown != nil {
+				c.Teardown()
+			}
 			os.Exit(1)
 		}
 	}
@@ -187,6 +220,9 @@ func main() {
 	err = corn.Run(args, env)
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {
+			if c.Teardown != nil {
+				c.Teardown()
+			}
 			os.Exit(int(e))
 		} else {
 			panic(err)
