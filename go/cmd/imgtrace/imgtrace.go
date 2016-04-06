@@ -4,6 +4,7 @@ import (
 	"fmt"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"image"
+	"image/color"
 	"image/color/palette"
 	"image/jpeg"
 	"math"
@@ -15,51 +16,58 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
-func drawFrame(u models.Usercorn, width, height int) image.Image {
-	maps := u.Mappings()
-	sort.Sort(models.MmapAddrSort(maps))
+const PageSize = 1024
+const ImgLine = PageSize * 4
 
-	sp, _ := u.RegRead(u.Arch().SP)
-	var size uint64
-	for _, m := range maps {
-		if m.Desc == "stack" {
-			size += (m.Addr + m.Size) - sp
-		} else {
-			size += m.Size
+type imageProxy struct {
+	*image.RGBA
+	maps  []*models.Mmap
+	dirty bool
+}
+
+func (p *imageProxy) resize() {
+	size := len(p.maps) * PageSize
+	dim := int(math.Ceil(math.Sqrt(float64(size)))) + 1
+	if dim > PageSize {
+		p.Rect = image.Rect(0, 0, PageSize, len(p.maps))
+		p.Stride = len(p.maps)
+	} else {
+		p.Rect = image.Rect(0, 0, dim, dim)
+		p.Stride = dim * 4
+	}
+}
+
+func (p *imageProxy) find(addr uint64) (int, *models.Mmap, bool) {
+	for i, m := range p.maps {
+		if m.Contains(addr) {
+			return i, m, true
 		}
 	}
-	dim := int(math.Ceil(math.Sqrt(float64(size))))
-	if dim%2 == 1 {
-		dim++
+	return 0, nil, false
+}
+
+func (p *imageProxy) traceMem(addr uint64, data []byte) {
+	i, m, had := p.find(addr)
+	if !had {
+		// TODO: copy desc/prot/etc from real mapping?
+		aligned := addr & ^uint64(PageSize-1)
+		p.maps = append(p.maps, &models.Mmap{Addr: aligned, Size: PageSize})
+		sort.Sort(models.MmapAddrSort(p.maps))
+
+		i, m, _ = p.find(addr)
+		p.Pix = append(append(p.Pix[:i*ImgLine], make([]byte, ImgLine)...), p.Pix[i*ImgLine:]...)
+		p.resize()
 	}
-	img := image.NewRGBA(image.Rect(0, 0, dim, dim))
-	offset := 0
-	for _, m := range maps {
-		var mem []byte
-		var err error
-		if m.Desc == "stack" {
-			spAligned := sp & ^uint64(0xFFF)
-			if spAligned < m.Addr {
-				spAligned = m.Addr
-			}
-			mem, err = u.MemRead(spAligned, m.Addr+m.Size-spAligned)
-		} else {
-			mem, err = u.MemRead(m.Addr, m.Size)
-		}
-		if err != nil {
-			panic(err)
-		} else {
-			for _, v := range mem {
-				if v != 0 {
-					x := offset % dim
-					y := offset / dim
-					img.Set(x, y, palette.Plan9[v])
-				}
-				offset++
-			}
-		}
+	off := (addr - m.Addr) * 4
+	dst := p.Pix[uint64(i*ImgLine)+off:]
+	for _, v := range data {
+		c := palette.Plan9[v].(color.RGBA)
+		dst[0] = uint8(c.R)
+		dst[1] = uint8(c.G)
+		dst[2] = uint8(c.B)
+		dst[3] = uint8(c.A)
+		dst = dst[4:]
 	}
-	return img
 }
 
 func main() {
@@ -69,15 +77,29 @@ func main() {
 
 	jpegOptions := &jpeg.Options{Quality: 70}
 
+	memImg := &imageProxy{RGBA: image.NewRGBA(image.Rect(0, 0, PageSize, 1))}
+
 	frame := 0
+	memTrace := func(u uc.Unicorn, access int, addr uint64, size int, value int64) {
+		var buf [8]byte
+		b, _ := c.Usercorn.PackAddr(buf[:], uint64(value))
+		memImg.traceMem(addr, b[:size])
+		if value != 0 {
+			memImg.dirty = true
+		}
+	}
 	blockTrace := func(u uc.Unicorn, addr uint64, size uint32) {
+		if !memImg.dirty {
+			return
+		}
+		memImg.dirty = false
+
 		frame++
-		img := drawFrame(c.Usercorn, *width, *height)
 		file, err := os.Create(path.Join(*outdir, fmt.Sprintf("%d.jpg", frame)))
 		if err != nil {
 			panic(err)
 		}
-		if err := jpeg.Encode(file, img, jpegOptions); err != nil {
+		if err := jpeg.Encode(file, memImg, jpegOptions); err != nil {
 			panic(err)
 		}
 		file.Close()
@@ -92,9 +114,10 @@ func main() {
 		if err := os.Mkdir(*outdir, 0755); err != nil {
 			return err
 		}
-
-		_, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0)
-		if err != nil {
+		if _, err := c.Usercorn.HookAdd(uc.HOOK_MEM_WRITE, memTrace, 1, 0); err != nil {
+			return err
+		}
+		if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
 			return err
 		}
 		return nil

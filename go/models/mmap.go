@@ -13,6 +13,10 @@ type Mmap struct {
 	Desc       string
 }
 
+func (m *Mmap) Contains(addr uint64) bool {
+	return m.Addr <= addr && addr < m.Addr+m.Size
+}
+
 func (m *Mmap) String() string {
 	desc := fmt.Sprintf("0x%x-0x%x", m.Addr, m.Addr+m.Size)
 
