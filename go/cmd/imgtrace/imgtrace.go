@@ -16,7 +16,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
-const PageSize = 1024
+const PageSize = 128
 const ImgLine = PageSize * 4
 
 type imageProxy struct {
@@ -27,14 +27,9 @@ type imageProxy struct {
 
 func (p *imageProxy) resize() {
 	size := len(p.maps) * PageSize
-	dim := int(math.Ceil(math.Sqrt(float64(size)))) + 1
-	if dim > PageSize {
-		p.Rect = image.Rect(0, 0, PageSize, len(p.maps))
-		p.Stride = len(p.maps)
-	} else {
-		p.Rect = image.Rect(0, 0, dim, dim)
-		p.Stride = dim * 4
-	}
+	dim := int(math.Ceil(math.Sqrt(float64(size))))
+	p.Rect = image.Rect(0, 0, dim, dim)
+	p.Stride = dim * 4
 }
 
 func (p *imageProxy) find(addr uint64) (int, *models.Mmap, bool) {
