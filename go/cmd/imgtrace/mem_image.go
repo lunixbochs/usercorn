@@ -15,7 +15,7 @@ type region struct {
 	Filename, Desc string
 
 	Prot      int
-	Pixels    []color.RGBA
+	Data      []byte
 	ByteCount int
 }
 
@@ -45,6 +45,14 @@ type memImage struct {
 
 	blockWidth, blockHeight int
 	blockSize               int
+}
+
+func byteToColor(b byte) color.Color {
+	if b == 0 {
+		return color.Transparent
+	} else {
+		return palette.WebSafe[b%216]
+	}
 }
 
 func NewMemImage(blockWidth, blockHeight, renderType int) *memImage {
@@ -102,7 +110,7 @@ func (p *memImage) At(x, y int) color.Color {
 		if pos >= len(p.maps) {
 			return color.Black
 		}
-		return p.maps[pos].Pixels[pix%p.blockSize]
+		return byteToColor(p.maps[pos].Data[pix%p.blockSize])
 	case RENDER_BLOCK:
 		// TODO: block render is broken when approaching bottom right
 		col := x / p.blockWidth
@@ -120,13 +128,44 @@ func (p *memImage) At(x, y int) color.Color {
 		if pix > p.blockSize {
 			return color.Black
 		}
-		return block.Pixels[pix]
+		return byteToColor(block.Data[pix])
 	default:
 		return color.Black
 	}
 }
 
 func (p *memImage) render() image.Image {
+	if p.renderType == RENDER_DIGRAM {
+		// TODO: one image per block?
+		// TODO: measure average intensity first?
+		tmp := image.NewGray(image.Rect(0, 0, 256, 256))
+		for _, m := range p.maps {
+			for i := 1; i < len(m.Data); i++ {
+				x, y := int(m.Data[i-1]), int(m.Data[i])
+				if x == 0 && y == 0 {
+					continue
+				}
+				inc := func(x, y int, by uint8) {
+					if x >= 0 && y >= 0 && x < 256 && y < 256 {
+						pix := &tmp.Pix[x+y*tmp.Stride]
+						if *pix < *pix+by {
+							*pix += by
+						}
+					}
+				}
+				inc(x, y, 50)
+				radius := 5
+				for xd := x - radius; xd < x+radius+1; xd++ {
+					for yd := y - radius; yd < y+radius+1; yd++ {
+						if xd != x || yd != y {
+							inc(xd, yd, 20)
+						}
+					}
+				}
+			}
+		}
+		return tmp
+	}
 	return p
 }
 
@@ -178,7 +217,11 @@ func (p *memImage) traceMem(u models.Usercorn, addr uint64, data []byte) {
 	i, m, had := p.find(addr)
 	if !had {
 		aligned := addr & ^uint64(p.blockSize-1)
-		r := &region{Addr: aligned, Size: uint64(p.blockSize), Pixels: make([]color.RGBA, p.blockSize)}
+		r := &region{
+			Addr: aligned,
+			Size: uint64(p.blockSize),
+			Data: make([]byte, p.blockSize),
+		}
 		for _, v := range u.Mappings() {
 			if v.Contains(addr) {
 				r.Desc = v.Desc
@@ -196,33 +239,16 @@ func (p *memImage) traceMem(u models.Usercorn, addr uint64, data []byte) {
 		p.resize()
 	}
 	off := (addr - m.Addr)
-	dst := m.Pixels[off:]
+	dst := m.Data[off:]
 	for i, v := range data {
-		if (dst[i].A == 0) != (v == 0) {
+		if (dst[i] == 0) != (v == 0) {
 			if v != 0 {
 				m.ByteCount++
 			} else {
 				m.ByteCount--
 			}
 		}
-		if v == 0 {
-			dst[i].A = 0
-		} else {
-			dst[i].A = 255
-			dst[i] = palette.WebSafe[v%216].(color.RGBA)
-			/*
-				if m.Desc == "interp" {
-					dst[i].R = v & 0x0F
-					dst[i].G = v & 0xF0
-				} else if m.Desc == "exe" {
-					dst[i].B = v
-				} else if m.Desc == "stack" {
-					dst[i].G = v
-				} else {
-					dst[i] = palette.WebSafe[v%216].(color.RGBA)
-				}
-			*/
-		}
+		dst[i] = v
 	}
 	if m.ByteCount == 0 {
 		p.maps = append(p.maps[:i], p.maps[i+1:]...)
