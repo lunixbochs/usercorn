@@ -3,95 +3,29 @@ package main
 import (
 	"fmt"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
-	"image"
-	"image/color"
-	"image/color/palette"
-	"image/png"
-	"math"
+	"image/jpeg"
 	"os"
 	"path"
-	"sort"
 
 	"github.com/lunixbochs/usercorn/go/cmd"
-	"github.com/lunixbochs/usercorn/go/models"
 )
-
-const PageSize = 128
-const ImgLine = PageSize * 4
-
-type imageProxy struct {
-	*image.RGBA
-	maps  []*models.Mmap
-	dirty bool
-}
-
-func (p *imageProxy) resize() {
-	size := len(p.maps) * PageSize
-	dim := int(math.Ceil(math.Sqrt(float64(size))))
-	p.Rect = image.Rect(0, 0, dim, dim)
-	p.Stride = dim * 4
-}
-
-func (p *imageProxy) find(addr uint64) (int, *models.Mmap, bool) {
-	for i, m := range p.maps {
-		if m.Contains(addr) {
-			return i, m, true
-		}
-	}
-	return 0, nil, false
-}
-
-func (p *imageProxy) traceMem(addr uint64, data []byte) {
-	i, m, had := p.find(addr)
-	if !had {
-		// TODO: copy desc/prot/etc from real mapping?
-		aligned := addr & ^uint64(PageSize-1)
-		p.maps = append(p.maps, &models.Mmap{Addr: aligned, Size: PageSize})
-		sort.Sort(models.MmapAddrSort(p.maps))
-
-		i, m, _ = p.find(addr)
-		p.Pix = append(append(p.Pix[:i*ImgLine], make([]byte, ImgLine)...), p.Pix[i*ImgLine:]...)
-		p.resize()
-	}
-	off := (addr - m.Addr) * 4
-	line := p.Pix[i*ImgLine : (i+1)*ImgLine]
-	dst := line[off:]
-	for _, v := range data {
-		if v == 0 {
-			dst[3] = 0
-		} else {
-			c := palette.Plan9[v].(color.RGBA)
-			dst[0] = uint8(c.R)
-			dst[1] = uint8(c.G)
-			dst[2] = uint8(c.B)
-			dst[3] = uint8(c.A)
-		}
-		dst = dst[4:]
-	}
-	// delete empty lines
-	for i := 3; i < len(line); i += 4 {
-		if line[i] > 0 {
-			return
-		}
-	}
-	p.maps = append(p.maps[:i], p.maps[i+1:]...)
-	p.Pix = append(p.Pix[:i*ImgLine], p.Pix[(i+1)*ImgLine:]...)
-	p.resize()
-}
 
 func main() {
 	c := cmd.NewUsercornCmd()
 	var width, height *int
+	var frameskip *int
 	var outdir *string
+	var binimg, imgblock *bool
 
-	// height is overallocated to allow for sloppy resizing
-	memImg := &imageProxy{RGBA: image.NewRGBA(image.Rect(0, 0, PageSize, 16))}
+	var memImg *memImage
+	jpegOptions := &jpeg.Options{Quality: 90}
 
 	frame := 0
+	skip := 0
 	memTrace := func(u uc.Unicorn, access int, addr uint64, size int, value int64) {
 		var buf [8]byte
 		b, _ := c.Usercorn.PackAddr(buf[:], uint64(value))
-		memImg.traceMem(addr, b[:size])
+		memImg.traceMem(c.Usercorn, addr, b[:size])
 		if value != 0 {
 			memImg.dirty = true
 		}
@@ -102,23 +36,34 @@ func main() {
 		}
 		memImg.dirty = false
 
+		if *frameskip > 0 {
+			if skip < *frameskip {
+				skip++
+				return
+			}
+			skip = 0
+		}
 		frame++
-		file, err := os.Create(path.Join(*outdir, fmt.Sprintf("%d.png", frame)))
+		file, err := os.Create(path.Join(*outdir, fmt.Sprintf("%d.jpg", frame)))
 		if err != nil {
 			panic(err)
 		}
-		if err := png.Encode(file, memImg); err != nil {
+		if err := jpeg.Encode(file, memImg, jpegOptions); err != nil {
 			panic(err)
 		}
 		file.Close()
 	}
 	c.SetupFlags = func() error {
-		width = c.Flags.Int("width", 1024, "video width")
-		height = c.Flags.Int("height", 768, "video height")
+		width = c.Flags.Int("w", 8, "block width")
+		height = c.Flags.Int("h", 8, "block height")
 		outdir = c.Flags.String("out", "out/", "image output directory")
+		binimg = c.Flags.Bool("binimg", false, "include binary+interpreter in trace")
+		imgblock = c.Flags.Bool("imgblock", false, "use tiled image output")
+		frameskip = c.Flags.Int("frameskip", 0, "only record every N image frames")
 		return nil
 	}
 	c.SetupUsercorn = func() error {
+		memImg = NewMemImage(*width, *height)
 		if err := os.Mkdir(*outdir, 0755); err != nil {
 			return err
 		}
@@ -128,12 +73,12 @@ func main() {
 		if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
 			return err
 		}
-		// pre-fill memory with binary
-		for _, m := range c.Usercorn.Mappings() {
-			mem, err := c.Usercorn.MemRead(m.Addr, m.Size)
-			if err == nil {
-				for i := 0; i < len(mem); i += PageSize {
-					memImg.traceMem(m.Addr+uint64(i), mem[i:i+PageSize])
+		if *binimg {
+			// pre-fill memory with binary
+			for _, m := range c.Usercorn.Mappings() {
+				mem, err := c.Usercorn.MemRead(m.Addr, m.Size)
+				if err == nil {
+					memImg.traceMem(c.Usercorn, m.Addr, mem)
 				}
 			}
 		}
