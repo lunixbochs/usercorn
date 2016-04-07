@@ -139,6 +139,14 @@ func (p *memImage) render() image.Image {
 		// TODO: one image per block?
 		// TODO: measure average intensity first?
 		tmp := image.NewGray(image.Rect(0, 0, 256, 256))
+		total := 0
+		for _, m := range p.maps {
+			total += m.ByteCount
+		}
+		intensity := uint8(30)
+		if total > (256 * 128) {
+			intensity = 1
+		}
 		for _, m := range p.maps {
 			for i := 1; i < len(m.Data); i++ {
 				x, y := int(m.Data[i-1]), int(m.Data[i])
@@ -153,12 +161,12 @@ func (p *memImage) render() image.Image {
 						}
 					}
 				}
-				inc(x, y, 50)
-				radius := 5
+				inc(x, y, intensity)
+				radius := 3
 				for xd := x - radius; xd < x+radius+1; xd++ {
 					for yd := y - radius; yd < y+radius+1; yd++ {
 						if xd != x || yd != y {
-							inc(xd, yd, 20)
+							inc(xd, yd, intensity/2)
 						}
 					}
 				}
