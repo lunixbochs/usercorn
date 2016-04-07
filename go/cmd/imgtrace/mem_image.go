@@ -29,22 +29,30 @@ func (r RegionAddrSort) Len() int           { return len(r) }
 func (r RegionAddrSort) Less(i, j int) bool { return r[i].Addr < r[j].Addr }
 func (r RegionAddrSort) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 
+const (
+	RENDER_LINEAR = iota
+	RENDER_BLOCK
+	RENDER_HILBERT
+	RENDER_DIGRAM
+)
+
 type memImage struct {
 	maps          []*region
 	lastMap       int
 	dirty         bool
 	width, height int
-	blocky        bool
+	renderType    int
 
 	blockWidth, blockHeight int
 	blockSize               int
 }
 
-func NewMemImage(blockWidth, blockHeight int) *memImage {
+func NewMemImage(blockWidth, blockHeight, renderType int) *memImage {
 	return &memImage{
 		blockWidth:  blockWidth,
 		blockHeight: blockHeight,
 		blockSize:   blockWidth * blockHeight,
+		renderType:  renderType,
 	}
 }
 
@@ -58,8 +66,45 @@ func (p *memImage) Bounds() image.Rectangle {
 
 func (p *memImage) At(x, y int) color.Color {
 	// TODO: borders?
-	if p.blocky {
-		// TODO: blocky is broken
+	rtype := p.renderType
+	if rtype == RENDER_HILBERT {
+		d := 0
+		hx, hy := x%p.blockWidth, y%p.blockHeight
+		// reset to block origin
+		x -= hx
+		y -= hy
+		var rotx, roty int
+		for s := p.blockWidth / 2; s > 0; s /= 2 {
+			if hx&s > 0 {
+				rotx = 1
+			}
+			if hy&s > 0 {
+				roty = 1
+			}
+			d += s * s * ((3 * rotx) ^ roty)
+			if roty == 0 {
+				if rotx == 1 {
+					hx = p.blockWidth - 1 - hx
+					hy = p.blockWidth - 1 - hy
+				}
+				hx, hy = hy, hx
+			}
+		}
+		rtype = RENDER_BLOCK
+		// reapply hilbert coords
+		x += hx
+		y += hy
+	}
+	switch rtype {
+	case RENDER_LINEAR:
+		pix := (x + y*p.blockWidth*p.width)
+		pos := pix / p.blockSize
+		if pos >= len(p.maps) {
+			return color.Black
+		}
+		return p.maps[pos].Pixels[pix%p.blockSize]
+	case RENDER_BLOCK:
+		// TODO: block render is broken when approaching bottom right
 		col := x / p.blockWidth
 		row := y / p.blockHeight
 		if col < 0 || col >= p.height || row < 0 || row >= p.width {
@@ -71,24 +116,25 @@ func (p *memImage) At(x, y int) color.Color {
 		}
 		// look up pixel in block
 		block := p.maps[pos]
-		pos = (x % p.blockWidth) + (y%p.blockHeight)*p.blockWidth
-		return block.Pixels[pos]
-	} else {
-		pix := (x + y*p.blockWidth*p.width)
-		pos := pix / p.blockSize
-		if pos >= len(p.maps) {
+		pix := (x % p.blockWidth) + (y%p.blockHeight)*p.blockWidth
+		if pix > p.blockSize {
 			return color.Black
 		}
-		return p.maps[pos].Pixels[pix%p.blockSize]
+		return block.Pixels[pix]
+	default:
+		return color.Black
 	}
 }
 
+func (p *memImage) render() image.Image {
+	return p
+}
+
 func (p *memImage) resize() {
-	// size for 8x8 blocks
 	// bias toward width over height
 	fcount := float64(len(p.maps))
-	p.width = int(math.Ceil(fcount / math.Ceil(math.Sqrt(fcount))))
-	p.height = int(math.Ceil(fcount / float64(p.width)))
+	p.height = int(math.Ceil(fcount / math.Sqrt(fcount)))
+	p.width = int(math.Ceil(fcount / float64(p.height)))
 }
 
 func (p *memImage) find(addr uint64) (int, *region, bool) {

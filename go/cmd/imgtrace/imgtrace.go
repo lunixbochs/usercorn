@@ -12,10 +12,11 @@ import (
 
 func main() {
 	c := cmd.NewUsercornCmd()
-	var width, height *int
+	var width *int
 	var frameskip *int
 	var outdir *string
-	var binimg, imgblock *bool
+	var binimg *bool
+	var render *string
 
 	var memImg *memImage
 	jpegOptions := &jpeg.Options{Quality: 90}
@@ -48,22 +49,34 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		if err := jpeg.Encode(file, memImg, jpegOptions); err != nil {
+		if err := jpeg.Encode(file, memImg.render(), jpegOptions); err != nil {
 			panic(err)
 		}
 		file.Close()
 	}
 	c.SetupFlags = func() error {
-		width = c.Flags.Int("w", 8, "block width")
-		height = c.Flags.Int("h", 8, "block height")
+		width = c.Flags.Int("size", 8, "block width (blocks are square)")
 		outdir = c.Flags.String("out", "out/", "image output directory")
 		binimg = c.Flags.Bool("binimg", false, "include binary+interpreter in trace")
-		imgblock = c.Flags.Bool("imgblock", false, "use tiled image output")
 		frameskip = c.Flags.Int("frameskip", 0, "only record every N image frames")
+		render = c.Flags.String("render", "linear", "render type {linear, block, hilbert, digram}")
 		return nil
 	}
 	c.SetupUsercorn = func() error {
-		memImg = NewMemImage(*width, *height)
+		var rtype int
+		switch *render {
+		case "linear":
+			rtype = RENDER_LINEAR
+		case "block":
+			rtype = RENDER_BLOCK
+		case "hilbert":
+			rtype = RENDER_HILBERT
+		case "digram":
+			rtype = RENDER_DIGRAM
+		default:
+			return fmt.Errorf("unknown render type: %s", *render)
+		}
+		memImg = NewMemImage(*width, *width, rtype)
 		if err := os.Mkdir(*outdir, 0755); err != nil {
 			return err
 		}
