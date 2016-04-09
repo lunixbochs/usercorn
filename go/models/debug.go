@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/bnagy/gapstone"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -29,7 +30,7 @@ func Demangle(name string) string {
 		return name
 	}
 	if err = cmd.Start(); err != nil {
-		fmt.Println("cmd error", err)
+		fmt.Fprintf(os.Stderr, "cmd error", err)
 		return name
 	}
 	stdin.Write([]byte(name + "\n"))
