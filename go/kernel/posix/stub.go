@@ -1,10 +1,14 @@
 package posix
 
-func (k *PosixKernel) Ioctl()         {}
+import (
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
+)
+
+func (k *PosixKernel) Ioctl(fd co.Fd, req uint64) {}
+func (k *PosixKernel) Fcntl(fd co.Fd, cmd int)    {}
+
 func (k *PosixKernel) RtSigprocmask() {}
 func (k *PosixKernel) RtSigaction()   {}
-func (k *PosixKernel) Futex()         {}
-func (k *PosixKernel) Fcntl()         {}
 func (k *PosixKernel) SchedYield()    {}
 func (k *PosixKernel) Madvise()       {}
 func (k *PosixKernel) Mlock()         {}

@@ -1,6 +1,7 @@
 package linux
 
 import (
+	"fmt"
 	"github.com/lunixbochs/argjoy"
 	"syscall"
 
@@ -22,6 +23,13 @@ func Unpack(k *LinuxKernel, arg interface{}, vals []interface{}) error {
 		*v = unpack.Sockaddr(buf, int(vals[1].(uint64)))
 	case **native.Fdset32:
 		tmp := &native.Fdset32{}
+		if err := buf.Unpack(tmp); err != nil {
+			return err
+		}
+		*v = tmp
+	case **native.Timespec:
+		fmt.Printf("0x%x\n", reg0)
+		tmp := &native.Timespec{}
 		if err := buf.Unpack(tmp); err != nil {
 			return err
 		}
