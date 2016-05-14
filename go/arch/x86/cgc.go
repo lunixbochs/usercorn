@@ -5,6 +5,7 @@ import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"syscall"
 
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/posix"
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/native"
@@ -12,10 +13,83 @@ import (
 
 const UINT32_MAX = 0xFFFFFFFF
 
-func writeAddr(u models.Usercorn, addr, val uint64) {
-	var buf [4]byte
-	u.PackAddr(buf[:], val)
-	u.MemWrite(addr, buf[:])
+var cgcSysNum = map[int]string{
+	1: "_terminate",
+	2: "transmit",
+	3: "receive",
+	4: "fdwait",
+	5: "allocate",
+	6: "deallocate",
+	7: "random",
+}
+
+type CgcKernel struct {
+	*co.KernelBase
+}
+
+func (k *CgcKernel) Literal_terminate(code int) {
+	k.U.Exit(models.ExitStatus(code))
+}
+
+func (k *CgcKernel) Transmit(fd co.Fd, buf co.Buf, size co.Len, ret co.Obuf) int {
+	mem, _ := k.U.MemRead(buf.Addr, uint64(size))
+	n, err := syscall.Write(int(fd), mem)
+	if err != nil {
+		return UINT32_MAX // FIXME
+	}
+	ret.Pack(int32(n))
+	return 0
+}
+
+func (k *CgcKernel) Receive(fd co.Fd, buf co.Obuf, size co.Len, ret co.Obuf) int {
+	tmp := make([]byte, size)
+	n, err := syscall.Read(int(fd), tmp)
+	if err != nil {
+		return UINT32_MAX // FIXME
+	}
+	buf.Pack(tmp[:n])
+	ret.Pack(int32(n))
+	return 0
+}
+
+func (k *CgcKernel) Fdwait(nfds int, reads, writes, timeoutBuf co.Buf, readyFds co.Obuf) int {
+	var readSet, writeSet *native.Fdset32
+	var timeout native.Timespec
+	reads.Unpack(&readSet)
+	writes.Unpack(&writeSet)
+	timeoutBuf.Unpack(&timeout)
+
+	readNative := readSet.Native()
+	writeNative := writeSet.Native()
+
+	n, err := native.Select(nfds, readNative, writeNative, &timeout)
+	if err != nil {
+		return UINT32_MAX // FIXME?
+	} else {
+		readyFds.Pack(int32(n))
+	}
+	return 0
+}
+
+func (k *CgcKernel) Allocate(size uint32, executable int32, ret co.Obuf) int {
+	mmap, _ := k.U.Mmap(0, uint64(size))
+	mmap.Desc = "heap"
+	if executable != 0 {
+		k.U.MemProtect(mmap.Addr, mmap.Size, uc.PROT_ALL)
+	}
+	ret.Pack(uint32(mmap.Addr))
+	return 0
+}
+
+func (k *CgcKernel) Deallocate(addr, size uint32) {
+}
+
+func (k *CgcKernel) Random(buf co.Obuf, size uint32, ret co.Obuf) {
+	tmp := make([]byte, size)
+	n, _ := rand.Read(tmp)
+	tmp = tmp[:n]
+	buf.Pack(tmp)
+	ret.Pack(uint32(n))
 }
 
 func CgcInit(u models.Usercorn, args, env []string) error {
@@ -25,53 +99,9 @@ func CgcInit(u models.Usercorn, args, env []string) error {
 }
 
 func CgcSyscall(u models.Usercorn) {
-	// TODO: handle errors or something
-	args, _ := u.ReadRegs(LinuxRegs)
 	eax, _ := u.RegRead(uc.X86_REG_EAX)
-	var ret uint64
-	switch eax {
-	case 1: // _terminate
-		syscall.Exit(int(args[0]))
-	case 2: // transmit
-		mem, _ := u.MemRead(args[1], args[2])
-		n, _ := syscall.Write(int(args[0]), mem)
-		writeAddr(u, args[3], uint64(n))
-	case 3: // receive
-		tmp := make([]byte, args[2])
-		n, _ := syscall.Read(int(args[0]), tmp)
-		u.MemWrite(args[1], tmp[:n])
-		writeAddr(u, args[3], uint64(n))
-	case 5: // allocate
-		mmap, _ := u.Mmap(0, args[0])
-		mmap.Desc = "heap"
-		// args[1] == is executable
-		writeAddr(u, args[2], mmap.Addr)
-	case 6: // fdwait
-		nfds := int(args[0])
-		var readSet, writeSet *native.Fdset32
-		var timeout native.Timespec
-		u.StrucAt(args[1]).Unpack(&readSet)
-		u.StrucAt(args[2]).Unpack(&writeSet)
-		u.StrucAt(args[3]).Unpack(&timeout)
-		readyFds := args[4]
-
-		readNative := readSet.Native()
-		writeNative := writeSet.Native()
-		n, err := native.Select(nfds, readNative, writeNative, &timeout)
-		if err != nil {
-			ret = UINT32_MAX // FIXME?
-		} else {
-			numReady := int32(n)
-			if readyFds != 0 {
-				u.StrucAt(readyFds).Pack(numReady)
-			}
-		}
-	case 7: // random
-		tmp := make([]byte, args[1])
-		rand.Read(tmp)
-		u.MemWrite(args[0], tmp)
-		writeAddr(u, args[2], args[1])
-	}
+	name, _ := cgcSysNum[int(eax)]
+	ret, _ := u.Syscall(int(eax), name, co.RegArgs(u, LinuxRegs))
 	u.RegWrite(uc.X86_REG_EAX, ret)
 }
 
@@ -81,10 +111,16 @@ func CgcInterrupt(u models.Usercorn, intno uint32) {
 	}
 }
 
+func CgcKernels(u models.Usercorn) []interface{} {
+	kernel := &CgcKernel{&co.KernelBase{}}
+	return []interface{}{kernel}
+}
+
 func init() {
 	Arch.RegisterOS(&models.OS{
 		Name:      "cgc",
 		Init:      CgcInit,
 		Interrupt: CgcInterrupt,
+		Kernels:   CgcKernels,
 	})
 }
