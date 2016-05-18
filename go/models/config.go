@@ -18,6 +18,7 @@ type Config struct {
 	SavePre         string
 	SkipInterp      bool
 	Strsize         int
+	TraceBlock      bool
 	TraceExec       bool
 	TraceMatch      []string
 	TraceMatchDepth int

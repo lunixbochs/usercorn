@@ -214,7 +214,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		fmt.Fprintln(os.Stderr, "==== Program output begins here. ====")
 		fmt.Fprintln(os.Stderr, "=====================================")
 	}
-	if u.config.TraceReg || u.config.TraceExec {
+	if u.config.TraceBlock || u.config.TraceReg || u.config.TraceExec {
 		sp, _ := u.RegRead(u.arch.SP)
 		u.stacktrace.Update(u.entry, sp)
 	}
@@ -432,6 +432,16 @@ func (u *Usercorn) checkTraceMatch(addr uint64, sym string) bool {
 }
 
 func (u *Usercorn) addHooks() error {
+	if u.config.TraceBlock {
+		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
+			if !u.trampolined && !(u.config.TraceExec || u.config.TraceReg) {
+				if sp, err := u.RegRead(u.arch.SP); err == nil {
+					u.stacktrace.Update(addr, sp)
+				}
+			}
+			fmt.Fprintf(os.Stderr, "0x%x %d %d\n", addr, size, u.stacktrace.Len())
+		}, 1, 0)
+	}
 	if u.config.TraceExec || u.config.TraceReg {
 		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
 			sym, _ := u.Symbolicate(addr, false)

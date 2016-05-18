@@ -63,6 +63,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	strace := fs.Bool("strace", false, "trace syscalls")
 	mtrace := fs.Bool("mtrace", false, "trace memory access (single)")
 	mtrace2 := fs.Bool("mtrace2", false, "trace memory access (batched)")
+	btrace := fs.Bool("btrace", false, "trace basic blocks")
 	etrace := fs.Bool("etrace", false, "trace execution")
 	rtrace := fs.Bool("rtrace", false, "trace register modification")
 	match := fs.String("match", "", "trace from specific function(s) (func[,func...][+depth]")
@@ -137,6 +138,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		SavePre:         *savepre,
 		SkipInterp:      *skipinterp,
 		Strsize:         *strsize,
+		TraceBlock:      *btrace,
 		TraceExec:       *etrace || *trace,
 		TraceMem:        *mtrace,
 		TraceMemBatch:   *mtrace2 || *trace,
