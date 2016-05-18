@@ -2,7 +2,6 @@ package common
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 
@@ -60,11 +59,11 @@ func (s Syscall) traceArgs(regs []uint64) string {
 	return strings.Join(ret, ", ")
 }
 
-func (s Syscall) Trace(regs []uint64) {
-	fmt.Fprintf(os.Stderr, "%s(%s)", s.Name, s.traceArgs(regs))
+func (s Syscall) Trace(regs []uint64) string {
+	return fmt.Sprintf("%s(%s)", s.Name, s.traceArgs(regs))
 }
 
-func (s Syscall) TraceRet(args []uint64, ret uint64) {
+func (s Syscall) TraceRet(args []uint64, ret uint64) string {
 	var out []string
 	for i, typ := range s.In {
 		if typ == reflect.TypeOf(Obuf{}) && len(args) > i+1 {
@@ -80,8 +79,8 @@ func (s Syscall) TraceRet(args []uint64, ret uint64) {
 		out = append(out, s.traceArg(ret))
 	}
 	if len(out) > 0 {
-		fmt.Fprintf(os.Stderr, " = %s\n", strings.Join(out, ", "))
+		return fmt.Sprintf(" = %s\n", strings.Join(out, ", "))
 	} else {
-		fmt.Fprintf(os.Stderr, "\n")
+		return "\n"
 	}
 }

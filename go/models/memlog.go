@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"os"
+	"strings"
 )
 
 type memDelta struct {
@@ -38,9 +38,10 @@ func (m *MemLog) Freeze() {
 	m.frozen = true
 }
 
-func (m *MemLog) Flush(indent string, bits int) {
-	m.Print(indent, bits)
+func (m *MemLog) Flush(indent string, bits int) string {
+	tmp := m.String(indent, bits)
 	m.Reset()
+	return tmp
 }
 
 func (m *MemLog) Adjacent(addr uint64, p []byte, write bool) (delta *memDelta, dup bool) {
@@ -116,7 +117,8 @@ func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
 	m.UpdateBytes(addr, tmp[:size], write)
 }
 
-func (m *MemLog) Print(indent string, bits int) {
+func (m *MemLog) String(indent string, bits int) string {
+	var out []string
 	for _, d := range m.log {
 		t := "R"
 		if d.write {
@@ -124,10 +126,11 @@ func (m *MemLog) Print(indent string, bits int) {
 		}
 		for i, line := range HexDump(d.addr, d.data, bits) {
 			if i == 0 {
-				fmt.Fprintf(os.Stderr, "%s%s%c%s %s%c\n", indent, t, d.tag, line, t, d.tag)
+				out = append(out, fmt.Sprintf("%s%s%c%s %s%c\n", indent, t, d.tag, line, t, d.tag))
 			} else {
-				fmt.Fprintf(os.Stderr, "%s  %s\n", indent, line)
+				out = append(out, fmt.Sprintf("%s  %s\n", indent, line))
 			}
 		}
 	}
+	return strings.Join(out, "")
 }

@@ -63,6 +63,9 @@ func NewUsercorn(exe string, config *models.Config) (*Usercorn, error) {
 	if config == nil {
 		config = &models.Config{}
 	}
+	if config.Output == nil {
+		config.Output = os.Stderr
+	}
 	f, err := os.Open(exe)
 	if err != nil {
 		return nil, err
@@ -102,7 +105,7 @@ func NewUsercorn(exe string, config *models.Config) (*Usercorn, error) {
 		traceMatching: true,
 		config:        config,
 	}
-	if readline.IsTerminal(int(os.Stderr.Fd())) {
+	if config.Output == os.Stderr && readline.IsTerminal(int(os.Stderr.Fd())) {
 		u.config.Color = true
 	}
 	u.memio = memio.NewMemIO(
@@ -182,12 +185,12 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		return err
 	}
 	if u.config.Verbose {
-		fmt.Fprintf(os.Stderr, "[entry @ 0x%x]\n", u.entry)
+		fmt.Fprintf(u.config.Output, "[entry @ 0x%x]\n", u.entry)
 		dis, err := u.Disas(u.entry, 64)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(u.config.Output, err)
 		} else {
-			fmt.Fprintln(os.Stderr, dis)
+			fmt.Fprintln(u.config.Output, dis)
 		}
 		sp, err := u.RegRead(u.arch.SP)
 		if err != nil {
@@ -197,22 +200,22 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		if err := u.MemReadInto(buf, sp); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "[stack @ 0x%x]\n", sp)
+		fmt.Fprintf(u.config.Output, "[stack @ 0x%x]\n", sp)
 		for _, line := range models.HexDump(sp, buf[:], u.arch.Bits) {
-			fmt.Fprintf(os.Stderr, "%s\n", line)
+			fmt.Fprintf(u.config.Output, "%s\n", line)
 		}
-		fmt.Fprintf(os.Stderr, "[memory map]\n")
+		fmt.Fprintf(u.config.Output, "[memory map]\n")
 		for _, m := range u.Mappings() {
-			fmt.Fprintf(os.Stderr, "  %v\n", m.String())
+			fmt.Fprintf(u.config.Output, "  %v\n", m.String())
 		}
 	}
 	if u.config.Verbose || u.config.TraceReg {
-		u.status.Changes().Print("", u.config.Color, false)
+		fmt.Fprintf(u.config.Output, "%s", u.status.Changes().String("", u.config.Color, false))
 	}
 	if u.config.Verbose {
-		fmt.Fprintln(os.Stderr, "=====================================")
-		fmt.Fprintln(os.Stderr, "==== Program output begins here. ====")
-		fmt.Fprintln(os.Stderr, "=====================================")
+		fmt.Fprintln(u.config.Output, "=====================================")
+		fmt.Fprintln(u.config.Output, "==== Program output begins here. ====")
+		fmt.Fprintln(u.config.Output, "=====================================")
 	}
 	if u.config.TraceBlock || u.config.TraceReg || u.config.TraceExec {
 		sp, _ := u.RegRead(u.arch.SP)
@@ -224,7 +227,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	if u.config.SavePre != "" {
 		u.RegWrite(u.arch.PC, u.entry)
 		if err := u.save(u.config.SavePre); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to save pre-state: %s\n", err)
+			fmt.Fprintf(u.config.Output, "failed to save pre-state: %s\n", err)
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -233,30 +236,30 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	if u.config.SavePost != "" {
 		defer func() {
 			if err := u.save(u.config.SavePost); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to save post-state: %s\n", err)
+				fmt.Fprintf(u.config.Output, "failed to save post-state: %s\n", err)
 			}
 		}()
 	}
 	// panic/exit handler
 	verboseExit := func() {
-		fmt.Fprintf(os.Stderr, "[memory map]\n")
+		fmt.Fprintf(u.config.Output, "[memory map]\n")
 		for _, m := range u.Mappings() {
-			fmt.Fprintf(os.Stderr, "  %v\n", m.String())
+			fmt.Fprintf(u.config.Output, "  %v\n", m.String())
 		}
-		fmt.Fprintln(os.Stderr, "[registers]")
-		u.status.Changes().Print("", u.config.Color, false)
-		fmt.Fprintln(os.Stderr, "[stacktrace]")
+		fmt.Fprintln(u.config.Output, "[registers]")
+		fmt.Fprintf(u.config.Output, "%s", u.status.Changes().String("", u.config.Color, false))
+		fmt.Fprintln(u.config.Output, "[stacktrace]")
 		pc, _ := u.RegRead(u.arch.PC)
 		sp, _ := u.RegRead(u.arch.SP)
 		for _, frame := range u.stacktrace.Freeze(pc, sp) {
-			fmt.Fprintf(os.Stderr, "  %s\n", frame.Pretty(u))
+			fmt.Fprintf(u.config.Output, "  %s\n", frame.Pretty(u))
 		}
 	}
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Fprintf(os.Stderr, "\n+++ panic dump +++\n")
+			fmt.Fprintf(u.config.Output, "\n+++ panic dump +++\n")
 			verboseExit()
-			fmt.Fprintf(os.Stderr, "------------------\n\n")
+			fmt.Fprintf(u.config.Output, "------------------\n\n")
 			panic(e)
 		}
 	}()
@@ -266,7 +269,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	var err error
 	for err == nil {
 		err = u.Start(pc, 0xffffffffffffffff)
-		u.memlog.Flush("", u.arch.Bits)
+		fmt.Fprintf(u.config.Output, "%s", u.memlog.Flush("", u.arch.Bits))
 		if err != nil || len(u.trampolines) == 0 {
 			break
 		}
@@ -439,7 +442,7 @@ func (u *Usercorn) addHooks() error {
 					u.stacktrace.Update(addr, sp)
 				}
 			}
-			fmt.Fprintf(os.Stderr, "0x%x %d %d\n", addr, size, u.stacktrace.Len())
+			fmt.Fprintf(u.config.Output, "0x%x %d %d\n", addr, size, u.stacktrace.Len())
 		}, 1, 0)
 	}
 	if u.config.TraceExec || u.config.TraceReg {
@@ -461,10 +464,10 @@ func (u *Usercorn) addHooks() error {
 					// TODO: maybe print a message when we start collapsing loops
 					// with the symbols or even all disassembly involved encapsulated
 					chain := u.blockloop.String(u, loop)
-					fmt.Fprintf(os.Stderr, indent+"- (%d) loops over %s\n", count, chain)
+					fmt.Fprintf(u.config.Output, indent+"- (%d) loops over %s\n", count, chain)
 				}
 			}
-			u.memlog.Flush(indent, u.arch.Bits)
+			fmt.Fprintf(u.config.Output, "%s", u.memlog.Flush(indent, u.arch.Bits))
 			if !u.trampolined {
 				if sp, err := u.RegRead(u.arch.SP); err == nil {
 					u.stacktrace.Update(addr, sp)
@@ -484,14 +487,14 @@ func (u *Usercorn) addHooks() error {
 				// if only registers are being traced, we don't need to print
 				// the block if no registers were modified
 				if changes.Count() > 0 {
-					fmt.Fprintln(os.Stderr, blockLine)
-					changes.Print(indent, u.config.Color, true)
+					fmt.Fprintln(u.config.Output, blockLine)
+					fmt.Fprintf(u.config.Output, "%s", changes.String(indent, u.config.Color, true))
 				}
 			} else {
 				if changes.Count() > 0 {
-					changes.Print(blockIndent, u.config.Color, true)
+					fmt.Fprintf(u.config.Output, "%s", changes.String(blockIndent, u.config.Color, true))
 				}
-				fmt.Fprintln(os.Stderr, blockLine)
+				fmt.Fprintln(u.config.Output, blockLine)
 			}
 		}, 1, 0)
 	}
@@ -505,9 +508,9 @@ func (u *Usercorn) addHooks() error {
 			if u.config.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 || u.trampolined {
 				changes := u.status.Changes()
 				dis, _ := u.Disas(addr, uint64(size))
-				fmt.Fprintf(os.Stderr, "%s", indent+dis)
+				fmt.Fprintf(u.config.Output, "%s", indent+dis)
 				if !u.config.TraceReg || changes.Count() == 0 {
-					fmt.Fprintln(os.Stderr)
+					fmt.Fprintln(u.config.Output)
 				} else {
 					dindent := ""
 					// TODO: I can count the max dis length in the block and reuse it here
@@ -515,7 +518,7 @@ func (u *Usercorn) addHooks() error {
 					if pad > 0 {
 						dindent = strings.Repeat(" ", pad)
 					}
-					changes.Print(dindent, u.config.Color, true)
+					fmt.Fprintf(u.config.Output, "%s", changes.String(dindent, u.config.Color, true))
 				}
 			}
 		}, 1, 0)
@@ -550,7 +553,7 @@ func (u *Usercorn) addHooks() error {
 				if u.stacktrace.Len() > 0 {
 					indent = strings.Repeat("  ", u.stacktrace.Len()-1)
 				}
-				fmt.Fprintf(os.Stderr, memFmt, indent, letter, addr, value)
+				fmt.Fprintf(u.config.Output, memFmt, indent, letter, addr, value)
 			}
 			if u.config.TraceMemBatch {
 				u.memlog.Update(addr, size, value, letter == "W")
@@ -561,15 +564,15 @@ func (u *Usercorn) addHooks() error {
 	u.HookAdd(invalid, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) bool {
 		switch access {
 		case uc.MEM_WRITE_UNMAPPED, uc.MEM_WRITE_PROT:
-			fmt.Fprintf(os.Stderr, "invalid write")
+			fmt.Fprintf(u.config.Output, "invalid write")
 		case uc.MEM_READ_UNMAPPED, uc.MEM_READ_PROT:
-			fmt.Fprintf(os.Stderr, "invalid read")
+			fmt.Fprintf(u.config.Output, "invalid read")
 		case uc.MEM_FETCH_UNMAPPED, uc.MEM_FETCH_PROT:
-			fmt.Fprintf(os.Stderr, "invalid fetch")
+			fmt.Fprintf(u.config.Output, "invalid fetch")
 		default:
-			fmt.Fprintf(os.Stderr, "unknown memory error")
+			fmt.Fprintf(u.config.Output, "unknown memory error")
 		}
-		fmt.Fprintf(os.Stderr, ": @0x%x, 0x%x = 0x%x\n", addr, size, uint64(value))
+		fmt.Fprintf(u.config.Output, ": @0x%x, 0x%x = 0x%x\n", addr, size, uint64(value))
 		return false
 	}, 1, 0)
 	u.HookAdd(uc.HOOK_INTR, func(_ uc.Unicorn, intno uint32) {
@@ -720,7 +723,7 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 	indent := ""
 	if u.config.TraceSys && u.stacktrace.Len() > 0 {
 		indent = strings.Repeat("  ", u.stacktrace.Len()-1)
-		u.memlog.Flush(indent, u.arch.Bits)
+		fmt.Fprintf(u.config.Output, "%s", u.memlog.Flush(indent, u.arch.Bits))
 	}
 	for _, k := range u.kernels {
 		if sys := co.Lookup(u, k, name); sys != nil {
@@ -729,9 +732,9 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 				return 0, err
 			}
 			if u.config.TraceSys {
-				fmt.Fprintf(os.Stderr, indent+"s ")
+				fmt.Fprintf(u.config.Output, indent+"s ")
 				// TODO: return string and print this manually here?
-				sys.Trace(args)
+				fmt.Fprintf(u.config.Output, "%s", sys.Trace(args))
 				// don't memlog our strace
 				u.memlog.Reset()
 			}
@@ -740,9 +743,9 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 				// don't memlog ret either
 				u.memlog.Freeze()
 				// TODO: print this manually?
-				sys.TraceRet(args, ret)
+				fmt.Fprintf(u.config.Output, "%s", sys.TraceRet(args, ret))
 			}
-			u.memlog.Flush(indent, u.arch.Bits)
+			fmt.Fprintf(u.config.Output, "%s", u.memlog.Flush(indent, u.arch.Bits))
 			return ret, nil
 		}
 	}

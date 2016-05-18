@@ -1,12 +1,15 @@
 package models
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
 type Config struct {
+	Output io.WriteCloser
+
 	Color           bool
 	Demangle        bool
 	ForceBase       uint64

@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/mgutz/ansi"
@@ -77,26 +76,28 @@ func (c *Change) Mask(bsz int) []ChangeMask {
 	return masks
 }
 
-func (c *Change) Print(bsz int, color bool) {
+func (c *Change) String(bsz int, color bool) string {
+	var out []string
 	hexFmt := fmt.Sprintf("%%0%dx", bsz)
 	lineStart := fmt.Sprintf(" %4s 0x", c.Name)
 	if c.Changed() {
 		if color {
-			fmt.Fprintf(os.Stderr, " %s 0x", colorPad(c.Name, chNew, 4))
+			out = append(out, fmt.Sprintf(" %s 0x", colorPad(c.Name, chNew, 4)))
 			for _, mask := range c.Mask(bsz) {
 				col := chSame
 				if mask.Changed {
 					col = chNew
 				}
-				fmt.Fprintf(os.Stderr, col+mask.New)
+				out = append(out, col+mask.New)
 			}
-			fmt.Fprintf(os.Stderr, ansi.Reset)
+			out = append(out, ansi.Reset)
 		} else {
-			fmt.Fprintf(os.Stderr, "+ "+lineStart+hexFmt, c.New)
+			out = append(out, fmt.Sprintf("+ "+lineStart+hexFmt, c.New))
 		}
 	} else {
-		fmt.Fprintf(os.Stderr, lineStart+hexFmt, c.New)
+		out = append(out, fmt.Sprintf(lineStart+hexFmt, c.New))
 	}
+	return strings.Join(out, "")
 }
 
 type Changes struct {
@@ -104,22 +105,23 @@ type Changes struct {
 	Changes []*Change
 }
 
-func (cs *Changes) Print(indent string, color, onlyChanged bool) {
+func (cs *Changes) String(indent string, color, onlyChanged bool) string {
+	var out []string
 	var printRow = func(changes []*Change, cols int) {
 		if len(changes) > 0 {
-			fmt.Fprintf(os.Stderr, "%s", indent)
+			out = append(out, indent)
 		}
 		if len(changes) < cols && len(changes) > 0 {
 			padLen := cs.Bsz + len(" regn 0x ")
 			pad := strings.Repeat(" ", padLen*(cols-len(changes)))
-			fmt.Fprintf(os.Stderr, pad)
+			out = append(out, pad)
 		}
 		for _, c := range changes {
-			c.Print(cs.Bsz, color)
-			fmt.Fprintf(os.Stderr, " ")
+			out = append(out, c.String(cs.Bsz, color))
+			out = append(out, " ")
 		}
 		if len(changes) > 0 {
-			fmt.Fprintln(os.Stderr)
+			out = append(out, "\n")
 		}
 	}
 	changes := cs.Changes
@@ -141,6 +143,7 @@ func (cs *Changes) Print(indent string, color, onlyChanged bool) {
 		cols = 0
 	}
 	printRow(lastRow, cols)
+	return strings.Join(out, "")
 }
 
 func (cs *Changes) Changed() []*Change {

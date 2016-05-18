@@ -76,6 +76,8 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	skipinterp := fs.Bool("nointerp", false, "don't load binary's interpreter")
 	native := fs.Bool("native", false, "[stub] use native syscall override (only works if host/guest arch/ABI matches)")
 
+	outfile := fs.String("o", "", "redirect debugging output to file (default stderr)")
+
 	savepre := fs.String("savepre", "", "save state to file and exit before emulation starts")
 	savepost := fs.String("savepost", "", "save state to file after emulation ends")
 
@@ -156,6 +158,14 @@ func (c *UsercornCmd) Run(argv, env []string) {
 			}
 		}
 		config.TraceMatch = strings.Split(split[0], ",")
+	}
+
+	if *outfile != "" {
+		out, err := os.OpenFile(*outfile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			panic(err)
+		}
+		config.Output = out
 	}
 
 	// merge environment with flags
