@@ -70,6 +70,8 @@ func (k *CgcKernel) Fdwait(nfds int, reads, writes, timeoutBuf co.Buf, readyFds 
 }
 
 func (k *CgcKernel) Allocate(size uint32, executable int32, ret co.Obuf) int {
+	// round up to nearest page
+	size = (size + 0x1000) & ^uint32(0x1000-1)
 	mmap, _ := k.U.Mmap(0, uint64(size))
 	mmap.Desc = "heap"
 	if executable != 0 {
