@@ -652,6 +652,9 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase
 	}
 	var low, high uint64
 	for _, seg := range segments {
+		if seg.Size == 0 {
+			continue
+		}
 		if seg.Addr < low {
 			low = seg.Addr
 		}
@@ -688,6 +691,9 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase
 	merged := make([]*models.Segment, 0, len(segments))
 outer:
 	for _, seg := range segments {
+		if seg.Size == 0 {
+			continue
+		}
 		addr, size := align(seg.Addr, seg.Size, true)
 		s := &models.Segment{addr, addr + size, seg.Prot}
 		for _, s2 := range merged {
