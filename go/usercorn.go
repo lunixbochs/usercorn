@@ -200,7 +200,7 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	return u, nil
 }
 
-func (u *Usercorn) Run(args []string, env []string) error {
+func (u *Usercorn) Run(args, env []string) error {
 	// PrefixArgs was added for shebang
 	if len(u.config.PrefixArgs) > 0 {
 		args = append(u.config.PrefixArgs, args...)
