@@ -95,6 +95,17 @@ func (k *CgcKernel) Random(buf co.Obuf, size uint32, ret co.Obuf) {
 func CgcInit(u models.Usercorn, args, env []string) error {
 	// TODO: does CGC even specify argv?
 	// TODO: also, I seem to remember something about mapping in 16kb of random data
+	secretPage := uint64(0x4347c000)
+	if err := u.MemMap(secretPage, 0x1000); err != nil {
+		return err
+	}
+	tmp := make([]byte, 0x1000)
+	if _, err := rand.Read(tmp); err != nil {
+		return err
+	}
+	if err := u.MemWrite(secretPage, tmp); err != nil {
+		return err
+	}
 	return posix.StackInit(u, args, env, nil)
 }
 
