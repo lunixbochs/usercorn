@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+	"io/ioutil"
 	"os"
 	"unsafe"
 
@@ -33,18 +35,24 @@ var FORKSRV_FD = 198
 var aflHello = []byte{1, 2, 3, 4}
 
 func main() {
-	c := cmd.NewUsercornCmd()
-	var forkAddr *uint64
-	var fuzzInterp *bool
+	message := []byte("In fuzz main")
+	ioutil.WriteFile("/tmp/outfile", message, 0444)
 
 	forksrvCtrl := os.NewFile(uintptr(FORKSRV_FD), "afl_ctrl")
 	forksrvStatus := os.NewFile(uintptr(FORKSRV_FD+1), "afl_status")
+
+	c := cmd.NewUsercornCmd()
+	var forkAddr *uint64
+	var fuzzInterp *bool
 
 	aflArea := C.afl_setup()
 	if aflArea == nil {
 		panic("could not set up AFL shared memory")
 	}
 	fuzzMap := []byte((*[1 << 30]byte)(unsafe.Pointer(aflArea))[:])
+
+	// Set one bit to true to go through successful count_bytes
+	fuzzMap[1] = 1
 
 	var lastPos uint64
 	blockTrace := func(_ uc.Unicorn, addr uint64, size uint32) {
@@ -69,7 +77,9 @@ func main() {
 		return nil
 	}
 	c.RunUsercorn = func(args, env []string) error {
+		fmt.Println("In RunUsercorn\n")
 		if _, err := forksrvStatus.Write(aflHello); err != nil {
+			fmt.Println("Write hello handshake failed")
 			return err
 		}
 		var aflMsg [4]byte
@@ -81,23 +91,50 @@ func main() {
 			// TODO: spawn a fake child so AFL has something other than us to kill
 			// monitor it and if afl kills it, stop the current emulation
 
-			// TODO: mixed endian?
-			binary.LittleEndian.PutUint32(aflMsg[:], uint32(os.Getpid()))
+			args := []string{"/bin/cat"}
+			var procAttr os.ProcAttr
+			proc, err := os.StartProcess(args[0], args, &procAttr)
+			if err != nil {
+				return err
+			}
+
+			binary.LittleEndian.PutUint32(aflMsg[:], uint32(proc.Pid))
 			if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
 				return err
 			}
 
-			status := 0
-			err := c.Usercorn.Run(args, env)
-			if err != nil {
-				status = 257
-			}
-			binary.LittleEndian.PutUint32(aflMsg[:], uint32(status))
-			if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
-				return err
-			}
+			// Goroutine to stop usercorn if afl-fuzz kills our fake process
+			go func() {
+				defer c.Usercorn.Stop()
+
+				_, err := proc.Wait()
+				if err != nil {
+					return
+				}
+
+				// TODO: Replace this with correct waitpid status
+				binary.LittleEndian.PutUint32(aflMsg[:], uint32(0))
+				if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
+					return
+				}
+			}()
+
+			// TODO: mixed endian?
+			//binary.LittleEndian.PutUint32(aflMsg[:], uint32(os.Getpid()))
+			//if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
+			//return err
+			//}
+
+			//err := c.Usercorn.Run(args, env)
+
+			c.Usercorn.Run(args, env)
+			//if err != nil {
+			//status = 257
+			//}
+			// binary.LittleEndian.PutUint32(aflMsg[:], uint32(status))
 
 		}
 	}
+
 	c.Run(os.Args, os.Environ())
 }
