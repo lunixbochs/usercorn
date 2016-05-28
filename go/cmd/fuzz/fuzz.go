@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"fmt"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io/ioutil"
 	"os"
@@ -79,46 +78,60 @@ func main() {
 		return nil
 	}
 	c.RunUsercorn = func(args, env []string) error {
-		fmt.Println("In RunUsercorn\n")
+		u := c.Usercorn
+		u.Println("Starting Usercorn")
 		if _, err := forksrvStatus.Write(aflHello); err != nil {
-			fmt.Println("Write hello handshake failed")
+			u.Println("AFL hello failed.")
 			return err
 		}
 		var aflMsg [4]byte
 		// afl forkserver loop
 		for {
 			if _, err := forksrvCtrl.Read(aflMsg[:]); err != nil {
+				u.Printf("Failed to receive control signal from AFL: %s\n", err)
 				return err
 			}
+			u.Println("AFL requested new child")
 			// spawn a fake child so AFL has something other than us to kill
 			// monitor it and if afl kills it, stop the current emulation
 			args := []string{"/bin/cat"}
 			var procAttr os.ProcAttr
 			proc, err := os.StartProcess(args[0], args, &procAttr)
 			if err != nil {
+				u.Printf("Failed to spawn child: %s\n", err)
 				return err
 			}
+			u.Printf("Spawned child %v = %d\n", args, proc.Pid)
 
 			binary.LittleEndian.PutUint32(aflMsg[:], uint32(proc.Pid))
 			if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
+				u.Printf("Failed to send pid to AFL: %s\n", err)
 				return err
 			}
+			u.Println("Sent child pid to AFL")
 
 			// Goroutine to stop usercorn if afl-fuzz kills our fake process
 			go func() {
 				proc.Wait()
-				c.Usercorn.Stop()
+				u.Stop()
+				u.Println("Child+Usercorn stopped")
 			}()
 
 			status := 0
-			err = c.Usercorn.Run(args, env)
+			err = u.Run(args, env)
 			if err != nil {
+				u.Printf("Usercorn err: %s\n", err)
 				status = 257
 			}
 			binary.LittleEndian.PutUint32(aflMsg[:], uint32(status))
+			if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
+				u.Printf("Failed to send status to AFL: %s\n", err)
+				return err
+			}
 
 			proc.Kill()
 			proc.Wait()
+			u.Println("Fuzz loop ended")
 		}
 	}
 
