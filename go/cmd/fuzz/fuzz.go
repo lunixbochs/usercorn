@@ -134,6 +134,7 @@ func main() {
 
 			proc.Kill()
 			proc.Wait()
+			tmp.Close()
 		}
 	}
 

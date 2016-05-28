@@ -57,6 +57,7 @@ type Usercorn struct {
 	blockloop  *models.LoopDetect
 	memlog     models.MemLog
 
+	final      sync.Once
 	exitStatus error
 	insnCount  uint64
 
@@ -814,6 +815,14 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 func (u *Usercorn) Exit(err error) {
 	u.exitStatus = err
 	u.Stop()
+}
+
+func (u *Usercorn) Close() error {
+	var err error
+	u.final.Do(func() {
+		err = u.Unicorn.Close()
+	})
+	return err
 }
 
 func (u *Usercorn) Mem() memio.MemIO {
