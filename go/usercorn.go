@@ -57,9 +57,9 @@ type Usercorn struct {
 	blockloop  *models.LoopDetect
 	memlog     models.MemLog
 
-	final      sync.Once
-	exitStatus error
-	insnCount  uint64
+	init, final sync.Once
+	exitStatus  error
+	insnCount   uint64
 
 	running     bool
 	trampolines []tramp
@@ -212,6 +212,13 @@ func (u *Usercorn) Run(args, env []string) error {
 			return err
 		}
 	}
+	var err error
+	u.init.Do(func() {
+		err = u.addHooks()
+	})
+	if err != nil {
+		return err
+	}
 	if u.config.Verbose {
 		u.Printf("[entry @ 0x%x]\n", u.entry)
 		dis, err := u.Disas(u.entry, 64)
@@ -296,7 +303,6 @@ func (u *Usercorn) Run(args, env []string) error {
 
 	// loop to restart Unicorn if we need to call a trampoline function
 	pc := u.entry
-	var err error
 	for err == nil {
 		// well there's a huge pile of sync here to make sure everyone's ready to go...
 		u.gate.Start()

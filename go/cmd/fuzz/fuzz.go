@@ -7,7 +7,6 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/lunixbochs/usercorn/go"
 	"github.com/lunixbochs/usercorn/go/cmd"
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -69,8 +68,39 @@ func main() {
 		fuzzInterp = c.Flags.Bool("fuzzinterp", false, "controls whether fuzzing is delayed until program's main entry point")
 		return nil
 	}
+	c.SetupUsercorn = func() error {
+		if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
+			return err
+		}
+		return nil
+	}
 	c.RunUsercorn = func(args, env []string) error {
 		u := c.Usercorn
+		u.Println("Saving Usercorn state...")
+
+		var savedRegEnums []int
+		for _, enum := range u.Arch().Regs {
+			savedRegEnums = append(savedRegEnums, enum)
+		}
+		savedRegs, _ := u.RegReadBatch(savedRegEnums)
+
+		type serialMem struct {
+			Addr, Size uint64
+			Prot       int
+			Data       []byte
+		}
+		var savedMem []serialMem
+		for _, m := range u.Mappings() {
+			mem, err := u.MemRead(m.Addr, m.Size)
+			if err != nil {
+				u.Printf("Warning: error saving memory at 0x%x-0x%x: %s\n", m.Addr, m.Addr+m.Size, err)
+				continue
+			}
+			savedMem = append(savedMem, serialMem{
+				Addr: m.Addr, Size: m.Size, Prot: m.Prot, Data: mem,
+			})
+		}
+
 		u.Println("Starting Usercorn")
 		if _, err := forksrvStatus.Write(aflHello); err != nil {
 			u.Println("AFL hello failed.")
@@ -79,22 +109,12 @@ func main() {
 		var aflMsg [4]byte
 		// afl forkserver loop
 		for {
+			lastPos = 0
 			if _, err := forksrvCtrl.Read(aflMsg[:]); err != nil {
 				u.Printf("Failed to receive control signal from AFL: %s\n", err)
 				return err
 			}
 			u.Println("AFL requested new child")
-
-			tmp, err := usercorn.NewUsercorn(u.Exe(), u.Config())
-			if err != nil {
-				u.Printf("Usercorn creation failed: %s\n", err)
-				return err
-			}
-			lastPos = 0
-			if _, err := tmp.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
-				u.Printf("Failed to add hook to tmp Usercorn: %s\n", err)
-				return err
-			}
 
 			// spawn a fake child so AFL has something other than us to kill
 			// monitor it and if afl kills it, stop the current emulation
@@ -104,6 +124,16 @@ func main() {
 			if err != nil {
 				u.Printf("Failed to spawn child: %s\n", err)
 				return err
+			}
+
+			// restore register and memory state
+			u.RegWriteBatch(savedRegEnums, savedRegs)
+			for _, m := range u.Mappings() {
+				u.MemUnmap(m.Addr, m.Size)
+			}
+			for _, m := range savedMem {
+				u.MemMapProt(m.Addr, m.Size, m.Prot)
+				u.MemWrite(m.Addr, m.Data)
 			}
 
 			binary.LittleEndian.PutUint32(aflMsg[:], uint32(proc.Pid))
@@ -120,7 +150,7 @@ func main() {
 			}()
 
 			status := 0
-			err = tmp.Run(args, env)
+			err = u.Run(args, env)
 			if _, ok := err.(models.ExitStatus); ok {
 			} else if err != nil {
 				u.Printf("Usercorn err: %s\n", err)
@@ -134,7 +164,6 @@ func main() {
 
 			proc.Kill()
 			proc.Wait()
-			tmp.Close()
 		}
 	}
 
