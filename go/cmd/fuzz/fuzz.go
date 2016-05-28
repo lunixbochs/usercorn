@@ -14,6 +14,7 @@ import (
 /*
 #include <stdlib.h>
 #include <sys/shm.h>
+#include <string.h>
 
 void *afl_setup() {
 	char *id = getenv("__AFL_SHM_ID");
@@ -24,6 +25,7 @@ void *afl_setup() {
 	if (afl_area == (void *)-1) {
 		return NULL;
 	}
+	memset(afl_area, 1, 1 << 16);
 	return afl_area;
 }
 
@@ -88,9 +90,8 @@ func main() {
 			if _, err := forksrvCtrl.Read(aflMsg[:]); err != nil {
 				return err
 			}
-			// TODO: spawn a fake child so AFL has something other than us to kill
+			// spawn a fake child so AFL has something other than us to kill
 			// monitor it and if afl kills it, stop the current emulation
-
 			args := []string{"/bin/cat"}
 			var procAttr os.ProcAttr
 			proc, err := os.StartProcess(args[0], args, &procAttr)
@@ -105,34 +106,19 @@ func main() {
 
 			// Goroutine to stop usercorn if afl-fuzz kills our fake process
 			go func() {
-				defer c.Usercorn.Stop()
-
-				_, err := proc.Wait()
-				if err != nil {
-					return
-				}
-
-				// TODO: Replace this with correct waitpid status
-				binary.LittleEndian.PutUint32(aflMsg[:], uint32(0))
-				if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
-					return
-				}
+				proc.Wait()
+				c.Usercorn.Stop()
 			}()
 
-			// TODO: mixed endian?
-			//binary.LittleEndian.PutUint32(aflMsg[:], uint32(os.Getpid()))
-			//if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
-			//return err
-			//}
+			status := 0
+			err = c.Usercorn.Run(args, env)
+			if err != nil {
+				status = 257
+			}
+			binary.LittleEndian.PutUint32(aflMsg[:], uint32(status))
 
-			//err := c.Usercorn.Run(args, env)
-
-			c.Usercorn.Run(args, env)
-			//if err != nil {
-			//status = 257
-			//}
-			// binary.LittleEndian.PutUint32(aflMsg[:], uint32(status))
-
+			proc.Kill()
+			proc.Wait()
 		}
 	}
 
