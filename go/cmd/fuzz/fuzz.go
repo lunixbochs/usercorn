@@ -7,7 +7,9 @@ import (
 	"os"
 	"unsafe"
 
+	"github.com/lunixbochs/usercorn/go"
 	"github.com/lunixbochs/usercorn/go/cmd"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 /*
@@ -92,6 +94,14 @@ func main() {
 				return err
 			}
 			u.Println("AFL requested new child")
+
+			u.Println("Creating new Usercorn instance")
+			tmp, err := usercorn.NewUsercorn(u.Exe(), u.Config())
+			if err != nil {
+				u.Printf("Usercorn creation failed: %s", err)
+				return err
+			}
+
 			// spawn a fake child so AFL has something other than us to kill
 			// monitor it and if afl kills it, stop the current emulation
 			args := []string{"/bin/cat"}
@@ -118,8 +128,9 @@ func main() {
 			}()
 
 			status := 0
-			err = u.Run(args, env)
-			if err != nil {
+			err = tmp.Run(args, env)
+			if _, ok := err.(models.ExitStatus); ok {
+			} else if err != nil {
 				u.Printf("Usercorn err: %s\n", err)
 				status = 257
 			}
