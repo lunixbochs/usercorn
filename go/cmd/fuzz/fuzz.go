@@ -73,12 +73,6 @@ func main() {
 		fuzzInterp = c.Flags.Bool("fuzzinterp", false, "controls whether fuzzing is delayed until program's main entry point")
 		return nil
 	}
-	c.SetupUsercorn = func() error {
-		if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
-			return err
-		}
-		return nil
-	}
 	c.RunUsercorn = func(args, env []string) error {
 		u := c.Usercorn
 		u.Println("Starting Usercorn")
@@ -98,7 +92,12 @@ func main() {
 			u.Println("Creating new Usercorn instance")
 			tmp, err := usercorn.NewUsercorn(u.Exe(), u.Config())
 			if err != nil {
-				u.Printf("Usercorn creation failed: %s", err)
+				u.Printf("Usercorn creation failed: %s\n", err)
+				return err
+			}
+			lastPos = 0
+			if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
+				u.Printf("Failed to add hook to tmp Usercorn: %s\n", err)
 				return err
 			}
 
