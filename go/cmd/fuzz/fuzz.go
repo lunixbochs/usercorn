@@ -26,7 +26,6 @@ void *afl_setup() {
 	if (afl_area == (void *)-1) {
 		return NULL;
 	}
-	memset(afl_area, 1, 1 << 16);
 	return afl_area;
 }
 
@@ -53,9 +52,6 @@ func main() {
 		panic("could not set up AFL shared memory")
 	}
 	fuzzMap := []byte((*[1 << 30]byte)(unsafe.Pointer(aflArea))[:])
-
-	// Set one bit to true to go through successful count_bytes
-	fuzzMap[1] = 1
 
 	var lastPos uint64
 	blockTrace := func(_ uc.Unicorn, addr uint64, size uint32) {
@@ -89,14 +85,13 @@ func main() {
 			}
 			u.Println("AFL requested new child")
 
-			u.Println("Creating new Usercorn instance")
 			tmp, err := usercorn.NewUsercorn(u.Exe(), u.Config())
 			if err != nil {
 				u.Printf("Usercorn creation failed: %s\n", err)
 				return err
 			}
 			lastPos = 0
-			if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
+			if _, err := tmp.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
 				u.Printf("Failed to add hook to tmp Usercorn: %s\n", err)
 				return err
 			}
@@ -110,14 +105,12 @@ func main() {
 				u.Printf("Failed to spawn child: %s\n", err)
 				return err
 			}
-			u.Printf("Spawned child %v = %d\n", args, proc.Pid)
 
 			binary.LittleEndian.PutUint32(aflMsg[:], uint32(proc.Pid))
 			if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
 				u.Printf("Failed to send pid to AFL: %s\n", err)
 				return err
 			}
-			u.Println("Sent child pid to AFL")
 
 			// Goroutine to stop usercorn if afl-fuzz kills our fake process
 			go func() {
@@ -141,7 +134,6 @@ func main() {
 
 			proc.Kill()
 			proc.Wait()
-			u.Println("Fuzz loop ended")
 		}
 	}
 
