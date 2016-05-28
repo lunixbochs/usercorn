@@ -284,7 +284,9 @@ func (u *Usercorn) Run(args, env []string) error {
 	}
 	defer func() {
 		if e := recover(); e != nil {
-			u.Printf("\n+++ panic dump +++\n")
+			u.Printf("\n+++ caught panic +++\n")
+			u.Printf("%s\n", e)
+			u.Printf("------------------\n")
 			verboseExit()
 			u.Printf("------------------\n\n")
 			panic(e)
