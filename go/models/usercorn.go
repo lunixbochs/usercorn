@@ -16,6 +16,9 @@ type Usercorn interface {
 	Disas(addr, size uint64) (string, error)
 	Config() *Config
 
+	Printf(fmt string, args ...interface{})
+	Println(s interface{})
+
 	RegisterAddr(f *os.File, addr, size uint64, off int64)
 	Symbolicate(addr uint64, includeFile bool) (string, error)
 

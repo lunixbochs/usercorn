@@ -20,6 +20,9 @@ func (u *Usercorn) ByteOrder() binary.ByteOrder             { return binary.BigE
 func (u *Usercorn) Disas(addr, size uint64) (string, error) { return "", nil }
 func (u *Usercorn) Config() *models.Config                  { return nil }
 
+func (u *Usercorn) Printf(fmt string, args ...interface{}) {}
+func (u *Usercorn) Println(s interface{})                  {}
+
 func (u *Usercorn) RegisterAddr(f *os.File, start, end uint64, off int64)     {}
 func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) { return "", nil }
 
