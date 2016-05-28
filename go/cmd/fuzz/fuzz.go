@@ -114,7 +114,6 @@ func main() {
 				u.Printf("Failed to receive control signal from AFL: %s\n", err)
 				return err
 			}
-			u.Println("AFL requested new child")
 
 			// spawn a fake child so AFL has something other than us to kill
 			// monitor it and if afl kills it, stop the current emulation
@@ -146,7 +145,6 @@ func main() {
 			go func() {
 				proc.Wait()
 				u.Stop()
-				u.Println("Child+Usercorn stopped")
 			}()
 
 			status := 0
