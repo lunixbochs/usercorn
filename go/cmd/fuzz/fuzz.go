@@ -44,7 +44,7 @@ func main() {
 
 	c := cmd.NewUsercornCmd()
 	var forkAddr *uint64
-	var fuzzInterp *bool
+	var fuzzInterp, nofork *bool
 
 	aflArea := C.afl_setup()
 	if aflArea == nil {
@@ -64,6 +64,7 @@ func main() {
 		lastPos = addr >> 1
 	}
 	c.SetupFlags = func() error {
+		nofork = c.Flags.Bool("nofork", false, "disable forkserver")
 		forkAddr = c.Flags.Uint64("forkaddr", 0, "wait until this address to fork and begin fuzzing")
 		fuzzInterp = c.Flags.Bool("fuzzinterp", false, "controls whether fuzzing is delayed until program's main entry point")
 		return nil
@@ -75,8 +76,18 @@ func main() {
 		return nil
 	}
 	c.RunUsercorn = func(args, env []string) error {
+		var err error
 		u := c.Usercorn
-		u.Println("Saving Usercorn state...")
+		if *nofork {
+			status := 0
+			err = u.Run(args, env)
+			if _, ok := err.(models.ExitStatus); ok {
+			} else if err != nil {
+				u.Printf("Usercorn err: %s\n", err)
+				status = 257
+			}
+			os.Exit(status)
+		}
 
 		var savedRegEnums []int
 		for _, enum := range u.Arch().Regs {
@@ -101,7 +112,6 @@ func main() {
 			})
 		}
 
-		u.Println("Starting Usercorn")
 		if _, err := forksrvStatus.Write(aflHello); err != nil {
 			u.Println("AFL hello failed.")
 			return err
