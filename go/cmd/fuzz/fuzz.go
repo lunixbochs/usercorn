@@ -44,7 +44,9 @@ func main() {
 
 	c := cmd.NewUsercornCmd()
 	var forkAddr *uint64
-	var fuzzInterp, nofork *bool
+	var fuzzInterp *bool
+
+	nofork := os.Getenv("AFL_NO_FORKSRV") == "1"
 
 	aflArea := C.afl_setup()
 	if aflArea == nil {
@@ -64,7 +66,6 @@ func main() {
 		lastPos = addr >> 1
 	}
 	c.SetupFlags = func() error {
-		nofork = c.Flags.Bool("nofork", false, "disable forkserver")
 		forkAddr = c.Flags.Uint64("forkaddr", 0, "wait until this address to fork and begin fuzzing")
 		fuzzInterp = c.Flags.Bool("fuzzinterp", false, "controls whether fuzzing is delayed until program's main entry point")
 		return nil
@@ -78,7 +79,7 @@ func main() {
 	c.RunUsercorn = func(args, env []string) error {
 		var err error
 		u := c.Usercorn
-		if *nofork {
+		if nofork {
 			status := 0
 			err = u.Run(args, env)
 			if _, ok := err.(models.ExitStatus); ok {
