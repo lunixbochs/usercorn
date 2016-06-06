@@ -42,6 +42,8 @@ type UsercornCmd struct {
 
 	SetupFlags    func() error
 	SetupUsercorn func() error
+	MakeUsercorn  func(exe string) (models.Usercorn, error)
+	RunUsercorn   func(args, env []string) error
 	Teardown      func()
 
 	Usercorn models.Usercorn
@@ -50,7 +52,17 @@ type UsercornCmd struct {
 
 func NewUsercornCmd() *UsercornCmd {
 	fs := flag.NewFlagSet("cli", flag.ExitOnError)
-	return &UsercornCmd{Flags: fs}
+	cmd := &UsercornCmd{Flags: fs}
+	cmd.MakeUsercorn = func(exe string) (models.Usercorn, error) {
+		// check permissions
+		if stat, err := os.Stat(exe); err != nil {
+			return nil, err
+		} else if stat.Mode().Perm()&0111 == 0 {
+			return nil, fmt.Errorf("%s: permission denied (no execute bit)\n", exe)
+		}
+		return usercorn.NewUsercorn(exe, cmd.Config)
+	}
+	return cmd
 }
 
 func (c *UsercornCmd) Run(argv, env []string) {
@@ -191,16 +203,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	}
 	env = envSet
 
-	// check permissions
-	if stat, err := os.Stat(args[0]); err != nil {
-		panic(err)
-	} else if stat.Mode().Perm()&0111 == 0 {
-		fmt.Fprintf(os.Stderr, "%s: permission denied (no execute bit)\n", args[0])
-		os.Exit(1)
-	}
-
-	// prep usercorn
-	corn, err := usercorn.NewUsercorn(args[0], config)
+	corn, err := c.MakeUsercorn(args[0])
 	if err != nil {
 		panic(err)
 	}
@@ -229,7 +232,11 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	}
 
 	// start executable
-	err = corn.Run(args, env)
+	if c.RunUsercorn != nil {
+		err = c.RunUsercorn(args, env)
+	} else {
+		err = corn.Run(args, env)
+	}
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {
 			if c.Teardown != nil {
