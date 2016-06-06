@@ -127,8 +127,9 @@ func (a *Arch) SmokeTest(t *testing.T) {
 }
 
 func (a *Arch) RegDump(u uc.Unicorn) ([]RegVal, error) {
-	ret := make([]RegVal, len(a.Regs))
-	for i, r := range a.getRegList() {
+	regList := a.getRegList()
+	ret := make([]RegVal, len(regList))
+	for i, r := range regList {
 		val, err := u.RegRead(r.Enum)
 		if err != nil {
 			return nil, err
