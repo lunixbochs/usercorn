@@ -76,7 +76,7 @@ func NewUsercornRaw(archStr, osStr string, order binary.ByteOrder, config *model
 		config:        config,
 	}
 	if config.Output == os.Stderr && readline.IsTerminal(int(os.Stderr.Fd())) {
-		u.config.Color = true
+		config.Color = true
 	}
 	u.memio = memio.NewMemIO(
 		// ReadAt() callback

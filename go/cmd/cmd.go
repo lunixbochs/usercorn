@@ -160,6 +160,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		TraceSys:        *strace || *trace,
 		Verbose:         *verbose,
 	}
+	c.Config = config
 	if *match != "" {
 		split := strings.SplitN(*match, "+", 2)
 		if len(split) > 1 {
