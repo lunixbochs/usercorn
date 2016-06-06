@@ -9,7 +9,7 @@ import (
 
 type StatusDiff struct {
 	U       Usercorn
-	oldRegs []RegVal
+	oldRegs map[int]uint64
 }
 
 var chSame = ansi.ColorCode("default:default")
@@ -105,7 +105,7 @@ type Changes struct {
 	Changes []*Change
 }
 
-func (cs *Changes) String(indent string, color, onlyChanged bool) string {
+func (cs *Changes) String(indent string, color bool) string {
 	var out []string
 	var printRow = func(changes []*Change, cols int) {
 		if len(changes) > 0 {
@@ -125,9 +125,6 @@ func (cs *Changes) String(indent string, color, onlyChanged bool) string {
 		}
 	}
 	changes := cs.Changes
-	if onlyChanged {
-		changes = cs.Changed()
-	}
 	// print column-wise output
 	cols := 4
 	rows := len(changes) / cols
@@ -175,16 +172,25 @@ func (cs *Changes) Find(enum int) *Change {
 	return nil
 }
 
-func (s *StatusDiff) Changes() *Changes {
+func (s *StatusDiff) Changes(onlyChanged bool) *Changes {
 	regs, _ := s.U.RegDump()
 	cs := make([]*Change, 0, len(regs))
-	for i, reg := range regs {
-		var oldReg RegVal
-		if s.oldRegs != nil {
-			oldReg = s.oldRegs[i]
+	for _, reg := range regs {
+		if onlyChanged && !reg.Default {
+			continue
 		}
-		cs = append(cs, NewChange(reg.Name, reg.Val, oldReg.Val))
+		var oldReg uint64
+		if s.oldRegs != nil {
+			oldReg = s.oldRegs[reg.Enum]
+		}
+		change := NewChange(reg.Name, reg.Val, oldReg)
+		if !onlyChanged || change.Changed() {
+			cs = append(cs, change)
+		}
 	}
-	s.oldRegs = regs
+	s.oldRegs = make(map[int]uint64, len(regs))
+	for _, r := range regs {
+		s.oldRegs[r.Enum] = r.Val
+	}
 	return &Changes{Bsz: int(s.U.Bits() / 4), Changes: cs}
 }

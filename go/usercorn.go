@@ -221,7 +221,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		}
 	}
 	if u.config.Verbose || u.config.TraceReg {
-		u.Printf("%s", u.status.Changes().String("", u.config.Color, false))
+		u.Printf("%s", u.status.Changes(false).String("", u.config.Color))
 	}
 	if u.config.Verbose {
 		u.Println("=====================================")
@@ -258,7 +258,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 			u.Printf("  %v\n", m.String())
 		}
 		u.Println("[registers]")
-		u.Printf("%s", u.status.Changes().String("", u.config.Color, false))
+		u.Printf("%s", u.status.Changes(false).String("", u.config.Color))
 		u.Println("[stacktrace]")
 		pc, _ := u.RegRead(u.arch.PC)
 		sp, _ := u.RegRead(u.arch.SP)
@@ -303,7 +303,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	if err != nil || u.config.Verbose {
 		verboseExit()
 	} else if u.config.TraceReg {
-		u.Printf("\n%s", u.status.Changes().String("", u.config.Color, false))
+		u.Printf("\n%s", u.status.Changes(false).String("", u.config.Color))
 	}
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus
@@ -503,17 +503,17 @@ func (u *Usercorn) addHooks() error {
 				sym = " (" + sym + ")"
 			}
 			blockLine := fmt.Sprintf("\n%s+ block%s @0x%x", blockIndent, sym, addr)
-			changes := u.status.Changes()
+			changes := u.status.Changes(true)
 			if !u.config.TraceExec && u.config.TraceReg {
 				// if only registers are being traced, we don't need to print
 				// the block if no registers were modified
 				if changes.Count() > 0 {
 					u.Println(blockLine)
-					u.Printf("%s", changes.String(indent, u.config.Color, true))
+					u.Printf("%s", changes.String(indent, u.config.Color))
 				}
 			} else {
 				if changes.Count() > 0 {
-					u.Printf("%s", changes.String(blockIndent, u.config.Color, true))
+					u.Printf("%s", changes.String(blockIndent, u.config.Color))
 				}
 				u.Println(blockLine)
 			}
@@ -527,7 +527,7 @@ func (u *Usercorn) addHooks() error {
 			}
 			indent := strings.Repeat("  ", u.stacktrace.Len())
 			if u.config.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 || u.trampolined {
-				changes := u.status.Changes()
+				changes := u.status.Changes(true)
 				dis, _ := u.Disas(addr, uint64(size))
 				u.Printf("%s", indent+dis)
 				if !u.config.TraceReg || changes.Count() == 0 {
@@ -539,7 +539,7 @@ func (u *Usercorn) addHooks() error {
 					if pad > 0 {
 						dindent = strings.Repeat(" ", pad)
 					}
-					u.Printf("%s", changes.String(dindent, u.config.Color, true))
+					u.Printf("%s", changes.String(dindent, u.config.Color))
 				}
 			}
 		}, 1, 0)

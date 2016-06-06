@@ -12,8 +12,9 @@ import (
 )
 
 type Reg struct {
-	Enum int
-	Name string
+	Enum    int
+	Name    string
+	Default bool
 }
 
 type RegVal struct {
@@ -44,7 +45,7 @@ type regMap map[string]int
 func (r regMap) Items() regList {
 	ret := make(regList, 0, len(r))
 	for name, enum := range r {
-		ret = append(ret, Reg{enum, name})
+		ret = append(ret, Reg{enum, name, false})
 	}
 	return ret
 }
@@ -64,8 +65,10 @@ type Arch struct {
 	DefaultRegs []string
 
 	// sorted for RegDump
-	regList regList
-	cs      *cs.Engine
+	regList  regList
+	regEnums []int
+
+	cs *cs.Engine
 }
 
 func (a *Arch) RegisterOS(os *OS) {
@@ -82,18 +85,16 @@ func (a *Arch) getRegList() regList {
 	if a.regList == nil {
 		rl := a.Regs.Items()
 		sort.Sort(rl)
-
-		filtered := make(regList, 0, len(a.DefaultRegs))
 		for _, reg := range rl {
 			// O(N) but it's a small list and only searched once
 			for _, match := range a.DefaultRegs {
 				if reg.Name == match {
-					filtered = append(filtered, reg)
+					reg.Default = true
 					break
 				}
 			}
 		}
-		a.regList = filtered
+		a.regList = rl
 	}
 	return a.regList
 }
@@ -128,13 +129,19 @@ func (a *Arch) SmokeTest(t *testing.T) {
 
 func (a *Arch) RegDump(u uc.Unicorn) ([]RegVal, error) {
 	regList := a.getRegList()
+	if a.regEnums == nil {
+		a.regEnums = make([]int, len(regList))
+		for i, r := range regList {
+			a.regEnums[i] = r.Enum
+		}
+	}
+	regs, err := u.RegReadBatch(a.regEnums)
+	if err != nil {
+		return nil, err
+	}
 	ret := make([]RegVal, len(regList))
 	for i, r := range regList {
-		val, err := u.RegRead(r.Enum)
-		if err != nil {
-			return nil, err
-		}
-		ret[i] = RegVal{r, val}
+		ret[i] = RegVal{r, regs[i]}
 	}
 	return ret, nil
 }
