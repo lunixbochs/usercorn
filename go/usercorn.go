@@ -59,7 +59,7 @@ type Usercorn struct {
 	trampolined bool
 }
 
-func NewUsercorn(exe string, config *models.Config) (*Usercorn, error) {
+func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	if config == nil {
 		config = &models.Config{}
 	}
