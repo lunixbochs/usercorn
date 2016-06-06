@@ -19,6 +19,7 @@ func (u *Usercorn) Bits() uint                              { return 0 }
 func (u *Usercorn) ByteOrder() binary.ByteOrder             { return binary.BigEndian }
 func (u *Usercorn) Disas(addr, size uint64) (string, error) { return "", nil }
 func (u *Usercorn) Config() *models.Config                  { return nil }
+func (u *Usercorn) Run(args, env []string) error            { return nil }
 
 func (u *Usercorn) Printf(fmt string, args ...interface{}) {}
 func (u *Usercorn) Println(s interface{})                  {}

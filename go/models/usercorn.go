@@ -15,6 +15,7 @@ type Usercorn interface {
 	ByteOrder() binary.ByteOrder
 	Disas(addr, size uint64) (string, error)
 	Config() *Config
+	Run(args, env []string) error
 
 	Printf(fmt string, args ...interface{})
 	Println(s interface{})
