@@ -34,6 +34,16 @@ type Config struct {
 	PrefixArgs []string
 }
 
+func (c *Config) Init() *Config {
+	if c == nil {
+		return (&Config{}).Init()
+	}
+	if c.Output == nil {
+		c.Output = os.Stderr
+	}
+	return c
+}
+
 func (c *Config) resolveSymlink(path, target string, force bool) string {
 	link, err := os.Lstat(path)
 	if err == nil && link.Mode()&os.ModeSymlink != 0 {

@@ -2,6 +2,7 @@ package usercorn
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/memio"
@@ -59,49 +60,18 @@ type Usercorn struct {
 	trampolined bool
 }
 
-func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
-	if config == nil {
-		config = &models.Config{}
-	}
-	if config.Output == nil {
-		config.Output = os.Stderr
-	}
-	f, err := os.Open(exe)
+func NewUsercornRaw(archStr, osStr string, order binary.ByteOrder, config *models.Config) (*Usercorn, error) {
+	config = config.Init()
+	a, OS, err := arch.GetArch(archStr, osStr)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	l, err := loader.Load(f)
-	if err == loader.UnknownMagic {
-		f.Seek(0, 0)
-		scanner := bufio.NewScanner(f)
-		if scanner.Scan() {
-			line := scanner.Text()
-			if strings.HasPrefix(line, "#!") && len(line) > 2 {
-				args := strings.Split(line[2:], " ")
-				prefix := append(args[1:], exe)
-				config.PrefixArgs = append(prefix, config.PrefixArgs...)
-				shell := config.PrefixPath(args[0], false)
-				return NewUsercorn(shell, config)
-			}
-		}
-	}
+	unicorn, err := NewUnicorn(a, OS, order)
 	if err != nil {
 		return nil, err
 	}
-	a, OS, err := arch.GetArch(l.Arch(), l.OS())
-	if err != nil {
-		return nil, err
-	}
-	unicorn, err := NewUnicorn(a, OS, l.ByteOrder())
-	if err != nil {
-		return nil, err
-	}
-	exe, _ = filepath.Abs(exe)
 	u := &Usercorn{
 		Unicorn:       unicorn,
-		exe:           exe,
-		loader:        l,
 		traceMatching: true,
 		config:        config,
 	}
@@ -140,13 +110,51 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 		}
 		u.kernels = kernels
 	}
-	// map binary (and interp) into memory
 	u.status = models.StatusDiff{U: u}
+	return u, nil
+}
+
+func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
+	config = config.Init()
+
+	f, err := os.Open(exe)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	l, err := loader.Load(f)
+	if err == loader.UnknownMagic {
+		f.Seek(0, 0)
+		scanner := bufio.NewScanner(f)
+		if scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "#!") && len(line) > 2 {
+				args := strings.Split(line[2:], " ")
+				prefix := append(args[1:], exe)
+				config.PrefixArgs = append(prefix, config.PrefixArgs...)
+				shell := config.PrefixPath(args[0], false)
+				return NewUsercorn(shell, config)
+			}
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	u, err := NewUsercornRaw(l.Arch(), l.OS(), l.ByteOrder(), config)
+	if err != nil {
+		return nil, err
+	}
+	exe, _ = filepath.Abs(exe)
+	u.exe = exe
+	u.loader = l
+
+	// map binary (and interp) into memory
 	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(f, false, l.Arch())
 	if err != nil {
 		return nil, err
 	}
 	// find data segment for brk
+	u.brk = 0
 	segments, err := l.Segments()
 	if err != nil {
 		return nil, err
@@ -160,6 +168,7 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 		}
 	}
 	// TODO: have a "host page size", maybe arch.Align()
+	// TODO: allow setting brk addr for raw Usercorn?
 	mask := uint64(4096 - 1)
 	u.Brk((u.brk + mask) & ^mask)
 	return u, nil
