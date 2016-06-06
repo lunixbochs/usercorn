@@ -1,4 +1,4 @@
-.PHONY: get test usercorn imgtrace
+.PHONY: get test usercorn imgtrace shellcode
 .DEFAULT_GOAL := build
 
 DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
@@ -15,6 +15,9 @@ usercorn: .gopath
 
 imgtrace: .gopath
 	go build -i -o imgtrace ./go/cmd/imgtrace
+
+shellcode: .gopath
+	go build -i -o shellcode ./go/cmd/shellcode
 
 get:
 	go get -u ${DEPS}

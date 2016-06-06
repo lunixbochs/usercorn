@@ -2,7 +2,6 @@ package usercorn
 
 import (
 	"bufio"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/memio"
@@ -40,6 +39,7 @@ type Usercorn struct {
 	base       uint64
 	interpBase uint64
 	entry      uint64
+	exit       uint64
 	binEntry   uint64
 
 	StackBase uint64
@@ -60,13 +60,13 @@ type Usercorn struct {
 	trampolined bool
 }
 
-func NewUsercornRaw(archStr, osStr string, order binary.ByteOrder, config *models.Config) (*Usercorn, error) {
+func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	config = config.Init()
-	a, OS, err := arch.GetArch(archStr, osStr)
+	a, OS, err := arch.GetArch(l.Arch(), l.OS())
 	if err != nil {
 		return nil, err
 	}
-	unicorn, err := NewUnicorn(a, OS, order)
+	unicorn, err := NewUnicorn(a, OS, l.ByteOrder())
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +74,8 @@ func NewUsercornRaw(archStr, osStr string, order binary.ByteOrder, config *model
 		Unicorn:       unicorn,
 		traceMatching: true,
 		config:        config,
+		loader:        l,
+		exit:          0xffffffffffffffff,
 	}
 	if config.Output == os.Stderr && readline.IsTerminal(int(os.Stderr.Fd())) {
 		config.Color = true
@@ -140,7 +142,7 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
-	u, err := NewUsercornRaw(l.Arch(), l.OS(), l.ByteOrder(), config)
+	u, err := NewUsercornRaw(l, config)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +221,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		}
 	}
 	if u.config.Verbose || u.config.TraceReg {
-		u.Println(u.status.Changes().String("", u.config.Color, false))
+		u.Printf("%s", u.status.Changes().String("", u.config.Color, false))
 	}
 	if u.config.Verbose {
 		u.Println("=====================================")
@@ -277,7 +279,7 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	pc := u.entry
 	var err error
 	for err == nil {
-		err = u.Start(pc, 0xffffffffffffffff)
+		err = u.Start(pc, u.exit)
 		u.Printf("%s", u.memlog.Flush("", u.arch.Bits))
 		if err != nil || len(u.trampolines) == 0 {
 			break
@@ -300,6 +302,8 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	}
 	if err != nil || u.config.Verbose {
 		verboseExit()
+	} else if u.config.TraceReg {
+		u.Printf("\n%s", u.status.Changes().String("", u.config.Color, false))
 	}
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus
@@ -343,6 +347,14 @@ func (u *Usercorn) Base() uint64 {
 func (u *Usercorn) Entry() uint64 {
 	// points to effective program entry: either an interpreter or the binary
 	return u.entry
+}
+
+func (u *Usercorn) SetEntry(entry uint64) {
+	u.entry = entry
+}
+
+func (u *Usercorn) SetExit(exit uint64) {
+	u.exit = exit
 }
 
 func (u *Usercorn) BinEntry() uint64 {

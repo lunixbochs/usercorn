@@ -57,6 +57,8 @@ func (u *Usercorn) InterpBase() uint64    { return 0 }
 func (u *Usercorn) Base() uint64          { return 0 }
 func (u *Usercorn) Entry() uint64         { return 0 }
 func (u *Usercorn) BinEntry() uint64      { return 0 }
+func (u *Usercorn) SetEntry(entry uint64) {}
+func (u *Usercorn) SetExit(exit uint64)   {}
 
 func (u *Usercorn) PrefixPath(s string, force bool) string          { return "" }
 func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error { return nil }
