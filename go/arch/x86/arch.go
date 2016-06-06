@@ -19,6 +19,7 @@ var Arch = &models.Arch{
 	Regs: map[string]int{
 		"eip": uc.X86_REG_EIP,
 		"esp": uc.X86_REG_ESP,
+		"ebp": uc.X86_REG_EBP,
 		"eax": uc.X86_REG_EAX,
 		"ebx": uc.X86_REG_EBX,
 		"ecx": uc.X86_REG_ECX,
@@ -27,6 +28,6 @@ var Arch = &models.Arch{
 		"edi": uc.X86_REG_EDI,
 	},
 	DefaultRegs: []string{
-		"eax", "ebx", "ecx", "edx", "esi", "edi",
+		"eax", "ebx", "ecx", "edx", "esi", "edi", "ebp",
 	},
 }
