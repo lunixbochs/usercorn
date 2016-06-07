@@ -2,6 +2,7 @@ package arm64
 
 import (
 	cs "github.com/bnagy/gapstone"
+	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -12,6 +13,8 @@ var Arch = &models.Arch{
 	Radare:  "arm64",
 	CS_ARCH: cs.CS_ARCH_ARM64,
 	CS_MODE: cs.CS_MODE_ARM,
+	KS_ARCH: ks.ARCH_ARM64,
+	KS_MODE: ks.MODE_ARM,
 	UC_ARCH: uc.ARCH_ARM64,
 	UC_MODE: uc.MODE_ARM,
 	PC:      uc.ARM64_REG_PC,

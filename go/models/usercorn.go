@@ -13,6 +13,7 @@ type Usercorn interface {
 	OS() string
 	Bits() uint
 	ByteOrder() binary.ByteOrder
+	Assemble(asm string, addr uint64) ([]byte, error)
 	Disas(addr, size uint64) (string, error)
 	Config() *Config
 	Run(args, env []string) error

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	cs "github.com/bnagy/gapstone"
+	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	"github.com/lunixbochs/fvbommel-util/sortorder"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 )
@@ -55,6 +56,8 @@ type Arch struct {
 	Radare  string
 	CS_ARCH int
 	CS_MODE uint
+	KS_ARCH ks.Architecture
+	KS_MODE ks.Mode
 	UC_ARCH int
 	UC_MODE int
 	PC      int
@@ -69,6 +72,7 @@ type Arch struct {
 	regEnums []int
 
 	cs *cs.Engine
+	ks *ks.Keystone
 }
 
 func (a *Arch) RegisterOS(os *OS) {
@@ -85,11 +89,11 @@ func (a *Arch) getRegList() regList {
 	if a.regList == nil {
 		rl := a.Regs.Items()
 		sort.Sort(rl)
-		for _, reg := range rl {
+		for i, reg := range rl {
 			// O(N) but it's a small list and only searched once
 			for _, match := range a.DefaultRegs {
 				if reg.Name == match {
-					reg.Default = true
+					rl[i].Default = true
 					break
 				}
 			}

@@ -46,6 +46,8 @@ type UsercornCmd struct {
 	RunUsercorn   func(args, env []string) error
 	Teardown      func()
 
+	NoExe, NoArgs bool
+
 	Usercorn models.Usercorn
 	Flags    *flag.FlagSet
 }
@@ -102,7 +104,15 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	fs.Var(&envUnset, "unset", "unset environment variable")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [options] <exe> [args...]\n", os.Args[0])
+		usage := "Usage: %s [options]"
+		if !c.NoExe {
+			usage += " <exe>"
+		}
+		if !c.NoExe || !c.NoArgs {
+			usage += " [args...]"
+		}
+		usage += "\n"
+		fmt.Fprintf(os.Stderr, usage, os.Args[0])
 		fmt.Fprintf(os.Stderr, "Debug Client: %s -connect <port>\n", os.Args[0])
 		fs.PrintDefaults()
 	}
@@ -122,11 +132,16 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		return
 	}
 
-	// make sure we were passed an executable
-	args := fs.Args()
-	if len(args) < 1 {
-		fs.Usage()
-		os.Exit(1)
+	var args []string
+	if !c.NoExe {
+		// make sure we were passed an executable
+		args = fs.Args()
+		if len(args) < 1 {
+			fs.Usage()
+			os.Exit(1)
+		}
+	} else {
+		args = []string{""}
 	}
 
 	// build configuration

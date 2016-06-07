@@ -2,6 +2,7 @@ package m68k
 
 import (
 	// cs "github.com/bnagy/gapstone"
+	// ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -13,6 +14,8 @@ var Arch = &models.Arch{
 	// no capstone support for m68k
 	CS_ARCH: 0,
 	CS_MODE: 0,
+	KS_ARCH: 0,
+	KS_MODE: 0,
 	UC_ARCH: uc.ARCH_M68K,
 	UC_MODE: uc.MODE_BIG_ENDIAN,
 	PC:      uc.M68K_REG_PC,

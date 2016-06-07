@@ -2,6 +2,7 @@ package sparc
 
 import (
 	cs "github.com/bnagy/gapstone"
+	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -12,6 +13,8 @@ var Arch = &models.Arch{
 	Radare:  "sparc",
 	CS_ARCH: cs.CS_ARCH_SPARC,
 	CS_MODE: cs.CS_MODE_32,
+	KS_ARCH: ks.ARCH_SPARC,
+	KS_MODE: ks.MODE_SPARC32,
 	UC_ARCH: uc.ARCH_SPARC,
 	UC_MODE: uc.MODE_SPARC32 | uc.MODE_BIG_ENDIAN,
 	PC:      uc.SPARC_REG_PC,

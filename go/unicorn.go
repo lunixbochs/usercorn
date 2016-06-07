@@ -61,6 +61,10 @@ func (u *Unicorn) mapping(addr, size uint64) *models.Mmap {
 	return nil
 }
 
+func (u *Unicorn) Assemble(asm string, addr uint64) ([]byte, error) {
+	return models.Assemble(asm, addr, u.arch)
+}
+
 func (u *Unicorn) Disas(addr, size uint64) (string, error) {
 	mem, err := u.MemRead(addr, size)
 	if err != nil {

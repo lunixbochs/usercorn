@@ -2,6 +2,7 @@ package mips
 
 import (
 	cs "github.com/bnagy/gapstone"
+	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -12,6 +13,8 @@ var Arch = &models.Arch{
 	Radare:  "mips",
 	CS_ARCH: cs.CS_ARCH_MIPS,
 	CS_MODE: cs.CS_MODE_MIPS32 + cs.CS_MODE_LITTLE_ENDIAN,
+	KS_ARCH: ks.ARCH_MIPS,
+	KS_MODE: ks.MODE_MIPS32 + ks.MODE_LITTLE_ENDIAN,
 	UC_ARCH: uc.ARCH_MIPS,
 	UC_MODE: uc.MODE_MIPS32 + uc.MODE_LITTLE_ENDIAN,
 	PC:      uc.MIPS_REG_PC,

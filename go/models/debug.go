@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/bnagy/gapstone"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/bnagy/gapstone"
+	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 )
 
 var demangleRe = regexp.MustCompile(`^[^(]+`)
@@ -43,6 +45,21 @@ func Demangle(name string) string {
 	cmd.Wait()
 	out = demangleRe.FindSubmatch(out)[0]
 	return string(out)
+}
+
+func Assemble(asm string, addr uint64, arch *Arch) ([]byte, error) {
+	if arch.ks == nil {
+		engine, err := ks.New(arch.KS_ARCH, arch.KS_MODE)
+		if err != nil {
+			return nil, err
+		}
+		arch.ks = engine
+	}
+	out, _, ok := arch.ks.Assemble(asm, addr)
+	if !ok {
+		return nil, arch.ks.LastError()
+	}
+	return out, nil
 }
 
 var discache = make(map[string]string)

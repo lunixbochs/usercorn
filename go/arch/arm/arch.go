@@ -2,6 +2,7 @@ package arm
 
 import (
 	cs "github.com/bnagy/gapstone"
+	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -12,6 +13,8 @@ var Arch = &models.Arch{
 	Radare:  "arm",
 	CS_ARCH: cs.CS_ARCH_ARM,
 	CS_MODE: cs.CS_MODE_ARM,
+	KS_ARCH: ks.ARCH_ARM,
+	KS_MODE: ks.MODE_ARM,
 	UC_ARCH: uc.ARCH_ARM,
 	UC_MODE: uc.MODE_ARM,
 	PC:      uc.ARM_REG_PC,

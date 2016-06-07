@@ -58,6 +58,7 @@ type Usercorn struct {
 	running     bool
 	trampolines []tramp
 	trampolined bool
+	stackinit   bool
 }
 
 func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
@@ -113,6 +114,17 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 		u.kernels = kernels
 	}
 	u.status = models.StatusDiff{U: u}
+	if u.config.LoopCollapse > 0 {
+		u.blockloop = models.NewLoopDetect(u.config.LoopCollapse)
+	}
+	// TODO: if we error, should close Usercorn/Unicorn instance?
+	// GC might take its time
+	if err := u.mapStack(); err != nil {
+		return nil, err
+	}
+	if err := u.addHooks(); err != nil {
+		return nil, err
+	}
 	return u, nil
 }
 
@@ -181,19 +193,11 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	if len(u.config.PrefixArgs) > 0 {
 		args = append(u.config.PrefixArgs, args...)
 	}
-	if u.config.LoopCollapse > 0 {
-		u.blockloop = models.NewLoopDetect(u.config.LoopCollapse)
-	}
-	if err := u.mapStack(); err != nil {
-		return err
-	}
-	if u.os.Init != nil {
+	if u.os.Init != nil && !u.stackinit {
+		u.stackinit = true
 		if err := u.os.Init(u, args, env); err != nil {
 			return err
 		}
-	}
-	if err := u.addHooks(); err != nil {
-		return err
 	}
 	if u.config.Verbose {
 		u.Printf("[entry @ 0x%x]\n", u.entry)
