@@ -1,5 +1,6 @@
 language: go
 sudo: true
+dist: trusty
 
 before_install:
   - date
