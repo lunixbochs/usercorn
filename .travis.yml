@@ -10,6 +10,8 @@ before_install:
   - cd unicorn && git pull
   - sed -e 's/@cd samples && $(MAKE)$//g' -i. Makefile
   - make -j2 && sudo make install && cd ..
+  - git clone https://github.com/keystone-engine/keystone.git
+  - cd keystone && mkdir build && cd build && ../make-share.sh && sudo make install && cd ../..
   - popd
   - git checkout -b tmp && (git branch -d master || true) && git branch master
   - make get
