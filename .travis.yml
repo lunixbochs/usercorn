@@ -12,7 +12,9 @@ before_install:
   - sed -e 's/@cd samples && $(MAKE)$//g' -i. Makefile
   - make -j2 && sudo make install && cd ..
   - git clone https://github.com/keystone-engine/keystone.git
-  - cd keystone && mkdir build && cd build && ../make-share.sh && sudo make install && cd ../..
+  - cd keystone && mkdir build && cd build && ../make-share.sh
+  - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLLVM_TARGETS_TO_BUILD="all" -G "Unix Makefiles" ..
+  - sudo make install && cd ../..
   - popd
   - git checkout -b tmp && (git branch -d master || true) && git branch master
   - make get
