@@ -3,7 +3,6 @@ usercorn
 
 [![Build Status](https://travis-ci.org/lunixbochs/usercorn.svg?branch=master)](https://travis-ci.org/lunixbochs/usercorn)
 
-
 Dependencies
 ---
 
@@ -16,9 +15,7 @@ Dependencies
 Building
 ---
 
-Simply `go get -u github.com/lunixbochs/usercorn/go/cmd/usercorn`.
-
-To do a source tree build, you can also run `make` or `go build -i -o usercorn ./go/usercorn`
+From the source tree, run `make`. There are several bonus targets, which can be built with `make usercorn imgtrace shellcode repl`.
 
 Examples
 ---
@@ -33,17 +30,22 @@ Examples
 What.
 ----
 
-- User-space system emulator.
+- Userspace and kernel emulator.
 - Backed by [Unicorn](http://www.unicorn-engine.org/).
 - Similar to qemu-user.
 - Unlike qemu-user, __does not require the same OS for which the binary was built__.
-- Wait, __what?__ What does that mean?
-- Syscalls are coerced into the Go language APIs using persuasive fit techniques. Syscalls s/should/might/ work almost anywhere the language does.
-- This means Usercorn will eventually work anywhere Unicorn and Go work (but currently means Linux, BSD, and OS X)
+- Usercorn has an abstract kernel interface making it very easy to build kernel and syscall emulation.
+
+Usercorn could be used to emulate 32-bit and 64-bit arm/mips/x86/sparc binaries on linux, darwin, bsd, DECREE, and even toy OSes like Redux.
+
+Right now, x86\_64 linux and DECREE are the best supported guests.
 
 Why?
 ----
 
+- Usercorn aims to be a framework to simplify emulating and deeply hooking a userspace environment for many target architectures and kernel ABIs.
+- I regularly build new tools on top of Usercorn, which can be found in the cmd/ directory. I'm also always willing to talk about it in great depth if you want to track me down on [Twitter](https://twitter.com/lunixbochs).
+- Seriously go look at the [tool source](https://github.com/lunixbochs/usercorn/tree/master/go/cmd). It's really easy to build interesting tools on top of Usercorn, so go make my day by submitting a PR out of the blue or asking questions.
 - Debug stubborn binaries. I had a binary gdb refused to debug ("Program exited during startup."). No problem. Usercorn can single-step into the program for you.
 - Debug foreign architecture and OS binaries. You don't need a MIPS box. You don't need qemu-user. You don't even need Linux.
 - Write tools, like fuzzers, static analyzers, recompilers, memory and register tracing...
@@ -55,6 +57,7 @@ Caveats
 
 - Your userspace might be incredibly confusing to the target binary.
 - No API for memory mapped files yet (kinda, if mmap() currently gets a file descriptor argument it will manually copy the file into memory).
+- I only have maybe 20% of the posix syscalls implemented, which is enough to run basic binaries. Busybox works great. Dynamically linked stuff not so much. I keep breaking this, and I probably need to rework the TLS and x86 segment stuff again.
 
 [See Also](https://xkcd.com/1406/)
 ----
