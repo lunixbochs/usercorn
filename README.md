@@ -8,6 +8,7 @@ Dependencies
 ---
 
 - Latest master build of [Unicorn](http://www.unicorn-engine.org/). Both Usercorn and Unicorn are rapidly changing, so make sure both are completely up-to-date before submitting a bug report.
+- Latest master build of [Keystone](http://www.keystone-engine.org/).
 - Stable version of [Capstone](http://www.capstone-engine.org/)
 - Go 1.5 or newer
 - Make sure you have the GOPATH environment variable pointed at a directory like `$HOME/go`, and `$GOPATH/bin` is in your PATH
