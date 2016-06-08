@@ -15,6 +15,7 @@ before_install:
   - cd keystone && mkdir build && cd build && ../make-share.sh
   - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLLVM_TARGETS_TO_BUILD="all" -G "Unix Makefiles" ..
   - sudo make install && cd ../..
+  - sudo ldconfig
   - popd
   - git checkout -b tmp && (git branch -d master || true) && git branch master
   - make get
