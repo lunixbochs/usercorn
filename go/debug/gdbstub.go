@@ -10,9 +10,10 @@ import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"net"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -76,7 +77,7 @@ type Gdbstub struct {
 func NewGdbstub(first models.Usercorn, extra ...models.Usercorn) *Gdbstub {
 	instances := append([]models.Usercorn{first}, extra...)
 	for _, u := range instances {
-		u.Lock()
+		u.Gate().Lock()
 	}
 	return &Gdbstub{instances}
 }
@@ -89,6 +90,8 @@ func (d *Gdbstub) Run(c net.Conn) {
 		u:    d.instances[0],
 
 		breakpoints: make(map[uint64]uc.Hook),
+
+		verbose: false,
 	}).Run()
 }
 
@@ -104,13 +107,8 @@ type gdbClient struct {
 	regList  []int
 
 	breakpoints map[uint64]uc.Hook
-}
 
-func (c *gdbClient) Send(s string) error {
-	data := escape([]byte(s))
-	data = []byte("$" + string(data) + "#" + string(checksum(data)))
-	_, err := c.Write(data)
-	return err
+	verbose bool
 }
 
 func (c *gdbClient) fmtaddr(addr uint64) string {
@@ -119,18 +117,26 @@ func (c *gdbClient) fmtaddr(addr uint64) string {
 	return hex.EncodeToString(packed)
 }
 
+func (c *gdbClient) Send(s string) error {
+	if c.verbose {
+		fmt.Printf("sending %v\n", s)
+	}
+	data := escape([]byte(s))
+	data = []byte("$" + string(data) + "#" + string(checksum(data)))
+	_, err := c.Write(data)
+	return err
+}
+
 func (c *gdbClient) Wait() {
-	// u := c.u
-	// a := u.Arch()
-	// pc, _ := u.RegRead(a.PC)
-	// status := fmt.Sprintf("T%02x%s:%s;thread:1;", 0, a.RegNames()[a.PC], c.fmtaddr(pc))
-	// c.Send(status)
-	// the above code is throwing a malformed packet for some reason
-	c.Send("S00")
-	// TODO: should wait for lock too
+	u := c.u
+	pc, _ := u.RegRead(u.Arch().PC)
+	c.Send(fmt.Sprintf("T%02xpc:%s;thread:1;", 0, c.fmtaddr(pc)))
 }
 
 func (c *gdbClient) Handle(cmdb []byte) error {
+	if c.verbose {
+		fmt.Printf("handling %v\n", string(cmdb))
+	}
 	u := c.u
 	if len(cmdb) == 0 {
 		return nil
@@ -144,13 +150,6 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		cmd = rest
 	}
 	switch b {
-	case '\x03':
-		u.Stop()
-		fmt.Println("interrupt!")
-		runtime.Gosched() // TODO: stop lock
-		fmt.Println("locking...")
-		u.Lock()
-		c.Wait()
 	case 'q': // query
 		switch cmd {
 		case "Supported":
@@ -174,7 +173,9 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 					c.Send("l")
 				}
 			} else {
-				fmt.Println("unknown q Xfer:", args)
+				if c.verbose {
+					fmt.Println("unknown q Xfer:", args)
+				}
 			}
 		/*
 			case "TStatus":
@@ -182,11 +183,15 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		*/
 		case "Rcmd":
 			tmp := strings.SplitN(cmd, ",", 2)
-			fmt.Println("would send input:", tmp[1])
+			if c.verbose {
+				fmt.Println("would send input:", tmp[1])
+			}
 			// c.Send("O" + (output + "\n").encode("hex"))
 			c.Send("OK")
 		default:
-			fmt.Println("unknown cmd q", cmd, args)
+			if c.verbose {
+				fmt.Println("unknown cmd q", cmd, args)
+			}
 			c.Send("")
 		}
 	case 'Q': // set query
@@ -194,7 +199,9 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		case "StartNoAckMode":
 			c.noAckTest = true
 		default:
-			fmt.Println("unknown cmd Q", cmd, args)
+			if c.verbose {
+				fmt.Println("unknown cmd Q", cmd, args)
+			}
 			c.Send("")
 		}
 	case 'v': // resume
@@ -217,7 +224,9 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		// FIXME
 		c.Send("00000000")
 	case 'G': // write regs
-		fmt.Println("should write regs")
+		if c.verbose {
+			fmt.Println("should write regs")
+		}
 	case 'p': // read one reg
 		i, _ := strconv.ParseUint(cmd, 16, 0)
 		if int(i) < len(c.regList) {
@@ -235,7 +244,9 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		a, b := parseRange(rest)
 		mem, err := u.MemRead(a, b)
 		if err != nil {
-			fmt.Println("error reading mem", err)
+			if c.verbose {
+				fmt.Println("error reading mem", err)
+			}
 			c.Send("")
 		} else {
 			c.Send(hex.EncodeToString(mem))
@@ -244,12 +255,16 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		a, _ := parseRange(rest)
 		data, err := hex.DecodeString(rest)
 		if err != nil {
-			fmt.Println("error parsing hex", rest, err)
+			if c.verbose {
+				fmt.Println("error parsing hex", rest, err)
+			}
 			c.Send("")
 		} else {
 			err := u.MemWrite(a, data)
 			if err != nil {
-				fmt.Println("error writing mem", err)
+				if c.verbose {
+					fmt.Println("error writing mem", err)
+				}
 			}
 		}
 	case 'Z': // add breakpoint
@@ -263,7 +278,7 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 			break
 		}
 		h, _ := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
-			fmt.Printf("breakpoint hit: 0x%x\n", addr)
+			u.Trampoline(func() error { return nil })
 			u.Stop()
 		}, addr, addr+1)
 		c.breakpoints[addr] = h
@@ -277,21 +292,15 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		addr, _ := strconv.ParseUint(args[1], 16, 0)
 		if h, ok := c.breakpoints[addr]; ok {
 			u.HookDel(h)
-			break
 		}
 		c.Send("OK")
 	case 'c': // continue
-		u.Unlock()
-		runtime.Gosched() // TODO: should have both start and stop locks
-		// TODO: ^C doesn't happen because we're blocking on a lock, so we need more concurrency here
-		u.Lock()
+		u.Gate().UnlockStopRelock()
 		c.Wait()
 	case 's': // step
 		first := true
-		sig := make(chan int)
 		h, _ := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
 			if first {
-				sig <- 1
 				first = false
 			} else {
 				u.Trampoline(func() error { return nil })
@@ -299,20 +308,22 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 				return
 			}
 		}, 1, 0)
-		u.Unlock()
-		<-sig
-		u.Lock()
+		u.Gate().UnlockStopRelock()
 		u.HookDel(h)
 		c.Wait()
 	case '?': // last signal
 		c.Wait()
 	case 'H': // do thread op
-		fmt.Println("thread op", b, cmd, args)
+		if c.verbose {
+			fmt.Println("thread op", b, cmd, args)
+		}
 		c.Send("OK")
 	case 'D': // detach
 		return errors.New("detached")
 	default:
-		fmt.Printf("unknown command %c %s %s\n", b, cmd, args)
+		if c.verbose {
+			fmt.Printf("unknown command %c %s %s\n", b, cmd, args)
+		}
 	}
 	return nil
 }
@@ -367,15 +378,36 @@ func (c *gdbClient) Run() {
 
 	input := bufio.NewReader(c)
 	var err error
+
+	var loop sync.Mutex
+	go func() {
+		for {
+			loop.Lock()
+			b, err := input.Peek(1)
+			if err != nil {
+				break
+			}
+			// TODO: this won't interrupt pending syscalls
+			if b[0] == '\x03' {
+				input.Discard(1)
+				c.u.Trampoline(func() error { return nil })
+				c.u.Stop()
+			}
+			loop.Unlock()
+			<-time.After(100 * time.Millisecond)
+		}
+	}()
+
 	for {
+		loop.Lock()
 		var b, chk []byte
+
 		b, err = input.Peek(1)
 		if err != nil {
 			break
 		} else if b[0] == 0x03 {
-			// ^C
-			input.Discard(1)
-			c.Handle(b)
+			loop.Unlock()
+			continue
 		} else if b[0] == '+' || b[0] == '-' {
 			// ack
 			input.Discard(1)
@@ -391,19 +423,20 @@ func (c *gdbClient) Run() {
 			break
 		}
 		input.Discard(2)
-		// FIXME verbose output
-		// fmt.Println(string(b), string(chk))
 
 		data := b[1 : len(b)-1]
 		if bytes.Equal(checksum(data), chk) {
 			c.ack('+')
+			loop.Unlock()
 			if err = c.Handle(unescape(data)); err != nil {
 				break
 			}
 		} else {
 			c.ack('-')
+			loop.Unlock()
 		}
 	}
+	loop.Unlock()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "GDB stub error: %v\n", err)
 	}

@@ -24,8 +24,7 @@ func (u *Usercorn) Assemble(asm string, addr uint64) ([]byte, error) { return ni
 func (u *Usercorn) Config() *models.Config       { return nil }
 func (u *Usercorn) Run(args, env []string) error { return nil }
 
-func (u *Usercorn) Lock()   {}
-func (u *Usercorn) Unlock() {}
+func (u *Usercorn) Gate() *models.Gate { return nil }
 
 func (u *Usercorn) Trampoline(func() error) error {}
 

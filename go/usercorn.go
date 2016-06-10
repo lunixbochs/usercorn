@@ -61,6 +61,8 @@ type Usercorn struct {
 	trampolines []tramp
 	trampolined bool
 	stackinit   bool
+
+	gate models.Gate
 }
 
 func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
@@ -287,12 +289,11 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	pc := u.entry
 	var err error
 	for err == nil {
-		// this gives other goroutines a chance to acquire the run lock
-		// maybe should use a different sync primitive, or separate run/stop locks?
-		runtime.Gosched()
-		u.Lock()
+		// well there's a huge pile of sync here to make sure everyone's ready to go...
+		u.gate.Start()
 		err = u.Start(pc, u.exit)
-		u.Unlock()
+		u.gate.Stop()
+
 		u.Printf("%s", u.memlog.Flush("", u.arch.Bits))
 		if err != nil || len(u.trampolines) == 0 {
 			break
@@ -322,6 +323,10 @@ func (u *Usercorn) Run(args []string, env []string) error {
 		err = u.exitStatus
 	}
 	return err
+}
+
+func (u *Usercorn) Gate() *models.Gate {
+	return &u.gate
 }
 
 func (u *Usercorn) save(filename string) error {
