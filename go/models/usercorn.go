@@ -19,6 +19,7 @@ type Usercorn interface {
 	Run(args, env []string) error
 	Lock()
 	Unlock()
+	Trampoline(func() error) error
 
 	Printf(fmt string, args ...interface{})
 	Println(s interface{})

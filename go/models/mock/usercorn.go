@@ -27,6 +27,8 @@ func (u *Usercorn) Run(args, env []string) error { return nil }
 func (u *Usercorn) Lock()   {}
 func (u *Usercorn) Unlock() {}
 
+func (u *Usercorn) Trampoline(func() error) error {}
+
 func (u *Usercorn) Printf(fmt string, args ...interface{}) {}
 func (u *Usercorn) Println(s interface{})                  {}
 

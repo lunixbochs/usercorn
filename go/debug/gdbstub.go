@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/xml"
 	"fmt"
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"net"
 	"os"
 	"strconv"
@@ -181,6 +182,10 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 			fmt.Println("unknown cmd Q", cmd, args)
 			c.Send("")
 		}
+	case 'v': // resume
+		if cmd == "Cont?" {
+			c.Send("")
+		}
 	case 'g': // read regs
 		/*
 			var vals []string
@@ -194,7 +199,7 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 			c.Send(strings.Repeat("0", 8))
 			// c.Send(strings.Join(vals, ""))
 		*/
-		c.Send("00000000")
+		c.Send("")
 	case 'G': // write regs
 		fmt.Println("should write regs")
 	case 'p': // read one reg
@@ -212,7 +217,6 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		}
 	case 'm': // read memory
 		a, b := parseRange(rest)
-		fmt.Printf("readmem 0x%x - 0x%x\n", a, b)
 		mem, err := u.MemRead(a, b)
 		if err != nil {
 			fmt.Println("error reading mem", err)
@@ -237,9 +241,25 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 	case 'z': // remove breakpoint
 		fmt.Println("should remove breakpoint")
 	case 'c': // continue
-		fmt.Println("should continue")
+		u.Unlock()
 	case 's': // step
-		fmt.Println("should step")
+		first := true
+		sig := make(chan int)
+		h, _ := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+			if first {
+				sig <- 1
+				first = false
+			} else {
+				u.Trampoline(func() error { return nil })
+				u.Stop()
+				return
+			}
+		}, 1, 0)
+		u.Unlock()
+		<-sig
+		u.Lock()
+		u.HookDel(h)
+		c.Wait()
 	case '?': // last signal
 		c.Wait()
 	case 'H': // set the thread
@@ -325,7 +345,8 @@ func (c *gdbClient) Run() {
 			break
 		}
 		input.Discard(2)
-		fmt.Println(string(b), string(chk))
+		// FIXME verbose output
+		// fmt.Println(string(b), string(chk))
 
 		data := b[1 : len(b)-1]
 		if bytes.Equal(checksum(data), chk) {

@@ -287,6 +287,9 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	pc := u.entry
 	var err error
 	for err == nil {
+		// this gives other goroutines a chance to acquire the run lock
+		// maybe should use a different sync primitive, or separate run/stop locks?
+		runtime.Gosched()
 		u.Lock()
 		err = u.Start(pc, u.exit)
 		u.Unlock()
@@ -811,7 +814,7 @@ func (u *Usercorn) Println(s interface{}) {
 	u.Printf("%s\n", s)
 }
 
-func (u *Usercorn) trampoline(fun func() error) error {
+func (u *Usercorn) Trampoline(fun func() error) error {
 	if u.running {
 		desc := ""
 		if _, file, line, ok := runtime.Caller(1); ok {
@@ -829,7 +832,7 @@ func (u *Usercorn) trampoline(fun func() error) error {
 
 // like RunShellcode but you're expected to map memory yourself
 func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
-	return u.trampoline(func() error {
+	return u.Trampoline(func() error {
 		if regsClobbered == nil {
 			regsClobbered = make([]int, len(setRegs))
 			pos := 0
@@ -875,7 +878,7 @@ func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64
 	if err != nil {
 		return err
 	}
-	defer u.trampoline(func() error {
+	defer u.Trampoline(func() error {
 		return u.MemUnmap(mmap.Addr, mmap.Size)
 	})
 	return u.RunShellcodeMapped(mmap, code, setRegs, regsClobbered)
