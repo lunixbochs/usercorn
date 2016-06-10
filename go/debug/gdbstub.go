@@ -5,10 +5,12 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"net"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -81,7 +83,13 @@ func NewGdbstub(first models.Usercorn, extra ...models.Usercorn) *Gdbstub {
 
 func (d *Gdbstub) Run(c net.Conn) {
 	fmt.Fprintf(os.Stderr, "GDB stub connected from %s\n", c.RemoteAddr())
-	(&gdbClient{Conn: c, stub: d, u: d.instances[0]}).Run()
+	(&gdbClient{
+		Conn: c,
+		stub: d,
+		u:    d.instances[0],
+
+		breakpoints: make(map[uint64]uc.Hook),
+	}).Run()
 }
 
 type gdbClient struct {
@@ -94,6 +102,8 @@ type gdbClient struct {
 	regData  map[int]gdbReg
 	regEnums map[int]int
 	regList  []int
+
+	breakpoints map[uint64]uc.Hook
 }
 
 func (c *gdbClient) Send(s string) error {
@@ -135,7 +145,12 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 	}
 	switch b {
 	case '\x03':
-		fmt.Println("^C-")
+		u.Stop()
+		fmt.Println("interrupt!")
+		runtime.Gosched() // TODO: stop lock
+		fmt.Println("locking...")
+		u.Lock()
+		c.Wait()
 	case 'q': // query
 		switch cmd {
 		case "Supported":
@@ -199,7 +214,8 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 			c.Send(strings.Repeat("0", 8))
 			// c.Send(strings.Join(vals, ""))
 		*/
-		c.Send("")
+		// FIXME
+		c.Send("00000000")
 	case 'G': // write regs
 		fmt.Println("should write regs")
 	case 'p': // read one reg
@@ -237,11 +253,39 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 			}
 		}
 	case 'Z': // add breakpoint
-		fmt.Println("should add breakpoint")
+		args := strings.Split(rest, ",")
+		if len(args) != 3 {
+			break
+		}
+		addr, _ := strconv.ParseUint(args[1], 16, 0)
+		if _, ok := c.breakpoints[addr]; ok {
+			c.Send("OK")
+			break
+		}
+		h, _ := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+			fmt.Printf("breakpoint hit: 0x%x\n", addr)
+			u.Stop()
+		}, addr, addr+1)
+		c.breakpoints[addr] = h
+		c.Send("OK")
 	case 'z': // remove breakpoint
-		fmt.Println("should remove breakpoint")
+		// TODO: this seems to freeze gdb
+		args := strings.Split(rest, ",")
+		if len(args) != 3 {
+			break
+		}
+		addr, _ := strconv.ParseUint(args[1], 16, 0)
+		if h, ok := c.breakpoints[addr]; ok {
+			u.HookDel(h)
+			break
+		}
+		c.Send("OK")
 	case 'c': // continue
 		u.Unlock()
+		runtime.Gosched() // TODO: should have both start and stop locks
+		// TODO: ^C doesn't happen because we're blocking on a lock, so we need more concurrency here
+		u.Lock()
+		c.Wait()
 	case 's': // step
 		first := true
 		sig := make(chan int)
@@ -262,9 +306,11 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		c.Wait()
 	case '?': // last signal
 		c.Wait()
-	case 'H': // set the thread
-		fmt.Println("set thread", b, cmd, args)
+	case 'H': // do thread op
+		fmt.Println("thread op", b, cmd, args)
 		c.Send("OK")
+	case 'D': // detach
+		return errors.New("detached")
 	default:
 		fmt.Printf("unknown command %c %s %s\n", b, cmd, args)
 	}
