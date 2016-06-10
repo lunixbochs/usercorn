@@ -14,25 +14,23 @@ type Debugger struct {
 	instances []models.Usercorn
 }
 
+func Accept(host, port string) (net.Conn, error) {
+	addr := net.JoinHostPort(host, port)
+	fmt.Fprintf(os.Stderr, "Waiting for connection on %s\n", addr)
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	defer ln.Close()
+	return ln.Accept()
+}
+
 func NewDebugger(first models.Usercorn, extra ...models.Usercorn) *Debugger {
 	instances := append([]models.Usercorn{first}, extra...)
 	return &Debugger{instances}
 }
 
-func (d *Debugger) Listen(addr string) error {
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-	conn, err := ln.Accept()
-	if err != nil {
-		return err
-	}
-	go d.Handle(conn)
-	return nil
-}
-
-func (d *Debugger) Handle(c net.Conn) {
+func (d *Debugger) Run(c net.Conn) {
 	fmt.Fprintf(os.Stderr, "Debug connection from %s\n", c.RemoteAddr())
 
 	stdin, err := c.(*net.TCPConn).File()

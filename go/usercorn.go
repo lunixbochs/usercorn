@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/lunixbochs/usercorn/go/arch"
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
@@ -28,6 +29,7 @@ type tramp struct {
 
 type Usercorn struct {
 	*Unicorn
+	sync.Mutex
 	config       *models.Config
 	exe          string
 	loader       models.Loader
@@ -185,6 +187,8 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	// TODO: allow setting brk addr for raw Usercorn?
 	mask := uint64(4096 - 1)
 	u.Brk((u.brk + mask) & ^mask)
+	// make sure PC is set to entry point for debuggers
+	u.RegWrite(u.Arch().PC, u.Entry())
 	return u, nil
 }
 
@@ -283,7 +287,9 @@ func (u *Usercorn) Run(args []string, env []string) error {
 	pc := u.entry
 	var err error
 	for err == nil {
+		u.Lock()
 		err = u.Start(pc, u.exit)
+		u.Unlock()
 		u.Printf("%s", u.memlog.Flush("", u.arch.Bits))
 		if err != nil || len(u.trampolines) == 0 {
 			break

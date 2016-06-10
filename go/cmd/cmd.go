@@ -95,6 +95,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	savepre := fs.String("savepre", "", "save state to file and exit before emulation starts")
 	savepost := fs.String("savepost", "", "save state to file after emulation ends")
 
+	gdb := fs.Int("gdb", -1, "listen for gdb connection on localhost:<port>")
 	listen := fs.Int("listen", -1, "listen for debug connection on localhost:<port>")
 	connect := fs.Int("connect", -1, "connect to remote usercorn debugger on localhost:<port>")
 
@@ -234,17 +235,31 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		defer c.Teardown()
 	}
 
-	// start debug server
-	if *listen > 0 {
-		debugger := debug.NewDebugger(corn)
-		addr := net.JoinHostPort("localhost", strconv.Itoa(*listen))
-		if err = debugger.Listen(addr); err != nil {
-			fmt.Fprintf(os.Stderr, "error listening on port %d: %v\n", *listen, err)
+	// start gdb server
+	// TODO: code duplication here
+	if *gdb > 0 {
+		conn, err := debug.Accept("localhost", strconv.Itoa(*gdb))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error accepting conn on port %d: %v\n", *gdb, err)
 			if c.Teardown != nil {
 				c.Teardown()
 			}
 			os.Exit(1)
 		}
+		go debug.NewGdbstub(corn).Run(conn)
+	}
+
+	// start cli debug server
+	if *listen > 0 {
+		conn, err := debug.Accept("localhost", strconv.Itoa(*listen))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error accepting conn on port %d: %v\n", *listen, err)
+			if c.Teardown != nil {
+				c.Teardown()
+			}
+			os.Exit(1)
+		}
+		go debug.NewDebugger(corn).Run(conn)
 	}
 
 	// start executable

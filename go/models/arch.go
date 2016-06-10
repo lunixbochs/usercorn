@@ -64,15 +64,27 @@ type Arch struct {
 	SP      int
 	OS      map[string]*OS
 	Regs    regMap
+	GdbXml  string
 
 	DefaultRegs []string
 
+	regNames map[int]string
 	// sorted for RegDump
 	regList  regList
 	regEnums []int
 
 	cs *cs.Engine
 	ks *ks.Keystone
+}
+
+func (a *Arch) RegNames() map[int]string {
+	if a.regNames == nil {
+		a.regNames = make(map[int]string, len(a.Regs))
+		for name, enum := range a.Regs {
+			a.regNames[enum] = name
+		}
+	}
+	return a.regNames
 }
 
 func (a *Arch) RegisterOS(os *OS) {

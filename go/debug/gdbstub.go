@@ -1,0 +1,350 @@
+package debug
+
+import (
+	"bufio"
+	"bytes"
+	"encoding/hex"
+	"encoding/xml"
+	"fmt"
+	"net"
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/lunixbochs/usercorn/go/models"
+)
+
+func escape(p []byte) []byte {
+	out := make([]byte, 0, len(p))
+	for _, c := range p {
+		if c == '#' || c == '$' || c == '}' {
+			out = append(out, '}')
+			out = append(out, c^0x20)
+		} else {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func unescape(p []byte) []byte {
+	out := make([]byte, 0, len(p))
+	escaped := false
+	for i, c := range p {
+		if escaped {
+			continue
+		}
+		if c == '{' && i < len(p)-1 {
+			escaped = true
+			out = append(out, p[i+1]^0x20)
+		} else {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func checksum(p []byte) []byte {
+	chk := 0
+	for _, c := range p {
+		chk = (chk + int(c)) % 256
+	}
+	return []byte(fmt.Sprintf("%02x", chk))
+}
+
+func parseRange(s string) (uint64, uint64) {
+	tmp := strings.Split(s, ":")
+	if len(tmp) == 0 {
+		tmp = []string{s}
+	}
+	tmp = strings.Split(tmp[len(tmp)-1], ",")
+	if len(tmp) != 2 {
+		return 0, 0
+	}
+	a, _ := strconv.ParseUint(tmp[0], 16, 0)
+	b, _ := strconv.ParseUint(tmp[1], 16, 0)
+	return a, b
+}
+
+type Gdbstub struct {
+	instances []models.Usercorn
+}
+
+func NewGdbstub(first models.Usercorn, extra ...models.Usercorn) *Gdbstub {
+	instances := append([]models.Usercorn{first}, extra...)
+	for _, u := range instances {
+		u.Lock()
+	}
+	return &Gdbstub{instances}
+}
+
+func (d *Gdbstub) Run(c net.Conn) {
+	fmt.Fprintf(os.Stderr, "GDB stub connected from %s\n", c.RemoteAddr())
+	(&gdbClient{Conn: c, stub: d, u: d.instances[0]}).Run()
+}
+
+type gdbClient struct {
+	net.Conn
+	noAck     bool
+	noAckTest bool
+	stub      *Gdbstub
+	u         models.Usercorn
+
+	regData  map[int]gdbReg
+	regEnums map[int]int
+	regList  []int
+}
+
+func (c *gdbClient) Send(s string) error {
+	data := escape([]byte(s))
+	data = []byte("$" + string(data) + "#" + string(checksum(data)))
+	_, err := c.Write(data)
+	return err
+}
+
+func (c *gdbClient) fmtaddr(addr uint64) string {
+	var tmp [8]byte
+	packed, _ := c.u.PackAddr(tmp[:], addr)
+	return hex.EncodeToString(packed)
+}
+
+func (c *gdbClient) Wait() {
+	// u := c.u
+	// a := u.Arch()
+	// pc, _ := u.RegRead(a.PC)
+	// status := fmt.Sprintf("T%02x%s:%s;thread:1;", 0, a.RegNames()[a.PC], c.fmtaddr(pc))
+	// c.Send(status)
+	// the above code is throwing a malformed packet for some reason
+	c.Send("S00")
+	// TODO: should wait for lock too
+}
+
+func (c *gdbClient) Handle(cmdb []byte) error {
+	u := c.u
+	if len(cmdb) == 0 {
+		return nil
+	}
+	b, rest := cmdb[0], string(cmdb[1:])
+	var cmd, args string
+	if strings.Contains(rest, ":") {
+		tmp := strings.SplitN(rest, ":", 2)
+		cmd, args = tmp[0], tmp[1]
+	} else {
+		cmd = rest
+	}
+	switch b {
+	case '\x03':
+		fmt.Println("^C-")
+	case 'q': // query
+		switch cmd {
+		case "Supported":
+			c.Send("PacketSize=4000;qXfer:features:read+") // ;qXfer:memory-map:read+
+		case "Attached":
+			c.Send("1")
+		case "Symbol":
+			c.Send("OK")
+		case "C":
+			c.Send("OK")
+		case "Xfer":
+			if strings.HasPrefix(args, "features:read:target.xml:") {
+				a, b := parseRange(args)
+				tdesc := u.Arch().GdbXml
+				if a >= 0 && a < uint64(len(tdesc)) {
+					if a+b > uint64(len(tdesc)) {
+						b = uint64(len(tdesc)) - a
+					}
+					c.Send("m" + tdesc[a:a+b])
+				} else {
+					c.Send("l")
+				}
+			} else {
+				fmt.Println("unknown q Xfer:", args)
+			}
+		/*
+			case "TStatus":
+				c.Send("T0")
+		*/
+		case "Rcmd":
+			tmp := strings.SplitN(cmd, ",", 2)
+			fmt.Println("would send input:", tmp[1])
+			// c.Send("O" + (output + "\n").encode("hex"))
+			c.Send("OK")
+		default:
+			fmt.Println("unknown cmd q", cmd, args)
+			c.Send("")
+		}
+	case 'Q': // set query
+		switch cmd {
+		case "StartNoAckMode":
+			c.noAckTest = true
+		default:
+			fmt.Println("unknown cmd Q", cmd, args)
+			c.Send("")
+		}
+	case 'g': // read regs
+		/*
+			var vals []string
+			for _, v := range c.regList {
+				if v > 0 {
+					enum := v - 1
+					r, _ := u.RegRead(enum)
+					vals = append(vals, c.fmtaddr(r))
+				}
+			}
+			c.Send(strings.Repeat("0", 8))
+			// c.Send(strings.Join(vals, ""))
+		*/
+		c.Send("00000000")
+	case 'G': // write regs
+		fmt.Println("should write regs")
+	case 'p': // read one reg
+		i, _ := strconv.ParseUint(cmd, 16, 0)
+		if int(i) < len(c.regList) {
+			v := c.regList[i]
+			if v > 0 {
+				val, _ := u.RegRead(v - 1)
+				c.Send(c.fmtaddr(val))
+			} else {
+				c.Send("00000000")
+			}
+		} else {
+			c.Send("")
+		}
+	case 'm': // read memory
+		a, b := parseRange(rest)
+		fmt.Printf("readmem 0x%x - 0x%x\n", a, b)
+		mem, err := u.MemRead(a, b)
+		if err != nil {
+			fmt.Println("error reading mem", err)
+			c.Send("")
+		} else {
+			c.Send(hex.EncodeToString(mem))
+		}
+	case 'M': // write memory
+		a, _ := parseRange(rest)
+		data, err := hex.DecodeString(rest)
+		if err != nil {
+			fmt.Println("error parsing hex", rest, err)
+			c.Send("")
+		} else {
+			err := u.MemWrite(a, data)
+			if err != nil {
+				fmt.Println("error writing mem", err)
+			}
+		}
+	case 'Z': // add breakpoint
+		fmt.Println("should add breakpoint")
+	case 'z': // remove breakpoint
+		fmt.Println("should remove breakpoint")
+	case 'c': // continue
+		fmt.Println("should continue")
+	case 's': // step
+		fmt.Println("should step")
+	case '?': // last signal
+		c.Wait()
+	case 'H': // set the thread
+		fmt.Println("set thread", b, cmd, args)
+		c.Send("OK")
+	default:
+		fmt.Printf("unknown command %c %s %s\n", b, cmd, args)
+	}
+	return nil
+}
+
+type gdbReg struct {
+	XMLName xml.Name `xml:"reg"`
+	Name    string   `xml:"name,attr"`
+	Bitsize int      `xml:"bitsize,attr"`
+	Type    string   `xml:"type,attr"`
+	Regnum  int      `xml:"regnum,attr"`
+}
+
+type gdbTarget struct {
+	XMLName xml.Name `xml:"target"`
+	Regs    []gdbReg `xml:"feature>reg"`
+}
+
+func (c *gdbClient) parseXml(x string) {
+	regLookup := make(map[string]int)
+	c.regData = make(map[int]gdbReg)
+	c.regEnums = make(map[int]int)
+
+	var target gdbTarget
+	xml.Unmarshal([]byte(x), &target)
+	base := 0
+	for i, v := range target.Regs {
+		if v.Regnum > 0 {
+			base = v.Regnum - i
+		}
+		c.regData[base+i] = v
+		regLookup[v.Name] = base + i
+	}
+	a := c.u.Arch()
+	regNames := a.RegNames()
+	max := 0
+	for enum, name := range regNames {
+		if i, ok := regLookup[name]; ok {
+			c.regEnums[i] = enum
+			if i > max {
+				max = i
+			}
+		}
+	}
+	c.regList = make([]int, max+1)
+	for i, v := range c.regEnums {
+		c.regList[i] = v + 1
+	}
+}
+
+func (c *gdbClient) Run() {
+	c.parseXml(c.u.Arch().GdbXml)
+
+	input := bufio.NewReader(c)
+	var err error
+	for {
+		var b, chk []byte
+		b, err = input.Peek(1)
+		if err != nil {
+			break
+		} else if b[0] == 0x03 {
+			// ^C
+			input.Discard(1)
+			c.Handle(b)
+		} else if b[0] == '+' || b[0] == '-' {
+			// ack
+			input.Discard(1)
+			if c.noAckTest && b[0] == '+' {
+				c.noAck = true
+			}
+			c.noAckTest = false
+		}
+		if b, err = input.ReadBytes('#'); err != nil {
+			break
+		}
+		if chk, err = input.Peek(2); err != nil {
+			break
+		}
+		input.Discard(2)
+		fmt.Println(string(b), string(chk))
+
+		data := b[1 : len(b)-1]
+		if bytes.Equal(checksum(data), chk) {
+			c.ack('+')
+			if err = c.Handle(unescape(data)); err != nil {
+				break
+			}
+		} else {
+			c.ack('-')
+		}
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "GDB stub error: %v\n", err)
+	}
+	c.Close()
+}
+
+func (c *gdbClient) ack(b byte) {
+	if !c.noAck {
+		c.Write([]byte{b})
+	}
+}

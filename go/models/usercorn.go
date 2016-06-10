@@ -17,6 +17,8 @@ type Usercorn interface {
 	Disas(addr, size uint64) (string, error)
 	Config() *Config
 	Run(args, env []string) error
+	Lock()
+	Unlock()
 
 	Printf(fmt string, args ...interface{})
 	Println(s interface{})

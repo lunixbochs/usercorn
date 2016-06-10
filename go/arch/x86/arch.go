@@ -33,4 +33,5 @@ var Arch = &models.Arch{
 	DefaultRegs: []string{
 		"eax", "ebx", "ecx", "edx", "esi", "edi", "ebp",
 	},
+	GdbXml: gdbXml,
 }
