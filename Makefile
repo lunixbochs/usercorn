@@ -57,14 +57,14 @@ deps/lib/libunicorn.1.$(LIBEXT):
 	cd deps/build && \
 	git clone https://github.com/unicorn-engine/unicorn.git && git --git-dir unicorn fetch; \
 	cd unicorn && git clean -fdx && git reset --hard origin/master && \
-	sed -e '/samples/d' -i. Makefile && \
+	sed -e "/samples/d" -i. Makefile && \
 	make -j2 PREFIX=$(DEST) install
 
 deps/lib/libcapstone.3.$(LIBEXT):
 	cd deps/build && \
 	git clone https://github.com/aquynh/capstone.git && git --git-dir capstone pull; \
 	cd capstone && git clean -fdx && git reset --hard origin/master && \
-	sed -e '/cd tests/d' -i. Makefile && \
+	sed -e "/cd tests/d" -i. Makefile && \
 	make -j2 PREFIX=$(DEST) install
 
 deps/lib/libkeystone.0.$(LIBEXT):
@@ -81,12 +81,11 @@ deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/
 	mkdir -p .gopath/src/github.com/lunixbochs
 	ln -s ../../../.. .gopath/src/github.com/lunixbochs/usercorn
 
-GO_LDF := -ldflags '-extldflags "-Wl,-rpath=$$ORIGIN/deps/lib:$$ORIGIN/lib"'
+GO_LDF := -ldflags '-extldflags -Wl,-rpath=$$ORIGIN/deps/lib:$$ORIGIN/lib'
 GOBUILD := go build -i $(GO_LDF)
 export CGO_CFLAGS = -I$(DEST)/include
 export CGO_LDFLAGS = -L$(DEST)/lib
-PATH := "$(DEST)/$(GODIR)/bin:$(PATH)"
-SHELL := env PATH=$(PATH) /bin/bash
+PATHX := "$(DEST)/$(GODIR)/bin:$(PATH)"
 
 ifneq ($(wildcard $(DEST)/$(GODIR)/.),)
 	export GOROOT := $(DEST)/$(GODIR)
@@ -96,28 +95,28 @@ ifneq ($(GOPATH),)
 else
 	export GOPATH := $(DEST)/gopath:$(shell pwd)/.gopath
 endif
-DEPS=$(shell env GOROOT=$(GOROOT) GOPATH=$(GOPATH) go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
+DEPS=$(shell env PATH=$(PATHX) GOROOT=$(GOROOT) GOPATH=$(GOPATH) go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
 
 usercorn: .gopath
-	$(GOBUILD) -o usercorn ./go/cmd/usercorn
+	sh -c "PATH=$(PATHX) $(GOBUILD) -o usercorn ./go/cmd/usercorn"
 	$(FIXRPATH) usercorn
 
 imgtrace: .gopath
-	$(GOBUILD) -o imgtrace ./go/cmd/imgtrace
+	sh -c "PATH=$(PATHX) $(GOBUILD) -o imgtrace ./go/cmd/imgtrace"
 	$(FIXRPATH) imgtrace
 
 shellcode: .gopath
-	$(GOBUILD) -o shellcode ./go/cmd/shellcode
+	sh -c "PATH=$(PATHX) $(GOBUILD) -o shellcode ./go/cmd/shellcode"
 	$(FIXRPATH) shellcode
 
 repl: .gopath
-	$(GOBUILD) -o repl ./go/cmd/repl
+	sh -c "PATH=$(PATHX) $(GOBUILD) -o repl ./go/cmd/repl"
 	$(FIXRPATH) repl
 
-get:
-	go get $(GO_LDF) -u ${DEPS}
+get: .gopath
+	sh -c "PATH=$(PATHX) go get $(GO_LDF) -u ${DEPS}"
 
-test:
-	go test -ldflags '-extldflags -Wl,-rpath=$(DEST)/lib' -v ./go/...
+test: .gopath
+	sh -c "PATH=$(PATHX) go test -ldflags '-extldflags -Wl,-rpath=$(DEST)/lib' -v ./go/..."
 
 all: usercorn imgtrace shellcode repl

@@ -1,23 +1,11 @@
-language: go
+language: c
 sudo: true
 dist: trusty
+cache: ccache
 
 before_install:
   - date
-  - mkdir /tmp/build && pushd /tmp/build
-  - git clone https://github.com/aquynh/capstone.git
-  - cd capstone && git pull && make -j2 && sudo make install && cd ..
-  - git clone https://github.com/unicorn-engine/unicorn.git
-  - cd unicorn && git pull
-  - sed -e 's/@cd samples && $(MAKE)$//g' -i. Makefile
-  - make -j2 && sudo make install && cd ..
-  - git clone https://github.com/keystone-engine/keystone.git
-  - cd keystone && mkdir build && cd build && ../make-share.sh
-  - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLLVM_TARGETS_TO_BUILD="all" -G "Unix Makefiles" ..
-  - sudo make install && cd ../..
-  - sudo ldconfig
-  - popd
-  - git checkout -b tmp && (git branch -d master || true) && git branch master
+  - make deps
   - make get
 
 script: 'make test'
