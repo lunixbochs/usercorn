@@ -11,8 +11,6 @@ import (
 	"github.com/lunixbochs/usercorn/go/native"
 )
 
-const UINT32_MAX = 0xFFFFFFFF
-
 var cgcSysNum = map[int]string{
 	1: "_terminate",
 	2: "transmit",
@@ -35,7 +33,7 @@ func (k *CgcKernel) Transmit(fd co.Fd, buf co.Buf, size co.Len, ret co.Obuf) int
 	mem, _ := k.U.MemRead(buf.Addr, uint64(size))
 	n, err := syscall.Write(int(fd), mem)
 	if err != nil {
-		return UINT32_MAX // FIXME
+		return -1 // FIXME
 	}
 	ret.Pack(int32(n))
 	return 0
@@ -45,7 +43,7 @@ func (k *CgcKernel) Receive(fd co.Fd, buf co.Obuf, size co.Len, ret co.Obuf) int
 	tmp := make([]byte, size)
 	n, err := syscall.Read(int(fd), tmp)
 	if err != nil {
-		return UINT32_MAX // FIXME
+		return -1 // FIXME
 	}
 	buf.Pack(tmp[:n])
 	ret.Pack(int32(n))
@@ -64,7 +62,7 @@ func (k *CgcKernel) Fdwait(nfds int, reads, writes, timeoutBuf co.Buf, readyFds 
 
 	n, err := native.Select(nfds, readNative, writeNative, &timeout)
 	if err != nil {
-		return UINT32_MAX // FIXME?
+		return -1 // FIXME?
 	} else {
 		readyFds.Pack(int32(n))
 	}
