@@ -1,8 +1,6 @@
 .PHONY: get test deps usercorn imgtrace shellcode repl
 .DEFAULT_GOAL := build
 
-DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
-
 build: get usercorn
 
 # dependency targets
@@ -43,17 +41,17 @@ endif
 ifeq ($(GOURL),)
 	GOMSG = "Go 1.5 or later is required. Visit https://golang.org/dl/ to download."
 else
-	GODIR = deps/go-$(ARCH)-$(OS)
+	GODIR = go-$(ARCH)-$(OS)
 endif
 
-$(GODIR):
+deps/$(GODIR):
 	echo $(GOMSG)
-	[[ -n $(GOURL) ]] && \
-	mkdir -p deps/build && \
+	[ -n $(GOURL) ] && \
+	mkdir -p deps/build deps/gopath && \
 	cd deps/build && \
 	curl -o go-dist.tar.gz "$(GOURL)" && \
 	cd .. && tar -xf build/go-dist.tar.gz && \
-	mv go ../$(GODIR)
+	mv go $(GODIR)
 
 deps/lib/libunicorn.1.$(LIBEXT):
 	cd deps/build && \
@@ -76,15 +74,29 @@ deps/lib/libkeystone.0.$(LIBEXT):
 	cmake -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLLVM_TARGETS_TO_BUILD="all" -G "Unix Makefiles" .. && \
 	make -j2 install
 
-deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/libkeystone.0.$(LIBEXT) $(GODIR)
+deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/libkeystone.0.$(LIBEXT) deps/$(GODIR)
 
 # Go executable targets
-export GOPATH := $(GOPATH):$(shell pwd)/.gopath
 .gopath:
 	mkdir -p .gopath/src/github.com/lunixbochs
 	ln -s ../../../.. .gopath/src/github.com/lunixbochs/usercorn
 
-GOBUILD := go build -i -ldflags '-extldflags -L$(DEST)/lib'
+GO_LDF := -ldflags '-extldflags "-Wl,-rpath=$$ORIGIN/deps/lib:$$ORIGIN/lib"'
+GOBUILD := go build -i $(GO_LDF)
+export CGO_CFLAGS = -I$(DEST)/include
+export CGO_LDFLAGS = -L$(DEST)/lib
+PATH := "$(DEST)/$(GODIR)/bin:$(PATH)"
+SHELL := env PATH=$(PATH) /bin/bash
+
+ifneq ($(wildcard $(DEST)/$(GODIR)/.),)
+	export GOROOT := $(DEST)/$(GODIR)
+endif
+ifneq ($(GOPATH),)
+	export GOPATH := $(GOPATH):$(shell pwd)/.gopath
+else
+	export GOPATH := $(DEST)/gopath:$(shell pwd)/.gopath
+endif
+DEPS=$(shell env GOROOT=$(GOROOT) GOPATH=$(GOPATH) go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
 
 usercorn: .gopath
 	$(GOBUILD) -o usercorn ./go/cmd/usercorn
@@ -103,9 +115,9 @@ repl: .gopath
 	$(FIXRPATH) repl
 
 get:
-	go get -u ${DEPS}
+	go get $(GO_LDF) -u ${DEPS}
 
 test:
-	go test -v ./go/...
+	go test -ldflags '-extldflags -Wl,-rpath=$(DEST)/lib' -v ./go/...
 
 all: usercorn imgtrace shellcode repl
