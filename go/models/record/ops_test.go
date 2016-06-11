@@ -2,7 +2,6 @@ package record
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 )
 
@@ -21,11 +20,8 @@ func TestOpFrame(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fmt.Println(buf.Bytes())
-
-	op, _, err := Unpack(&buf)
+	_, _, err := Unpack(&buf)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(op)
 }
