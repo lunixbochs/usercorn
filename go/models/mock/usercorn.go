@@ -26,7 +26,7 @@ func (u *Usercorn) Run(args, env []string) error { return nil }
 
 func (u *Usercorn) Gate() *models.Gate { return nil }
 
-func (u *Usercorn) Trampoline(func() error) error {}
+func (u *Usercorn) Trampoline(func() error) error { return nil }
 
 func (u *Usercorn) Printf(fmt string, args ...interface{}) {}
 func (u *Usercorn) Println(s interface{})                  {}
