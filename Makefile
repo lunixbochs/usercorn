@@ -81,7 +81,9 @@ deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/
 	mkdir -p .gopath/src/github.com/lunixbochs
 	ln -s ../../../.. .gopath/src/github.com/lunixbochs/usercorn
 
-GO_LDF := -ldflags '-extldflags -Wl,-rpath=$$ORIGIN/deps/lib:$$ORIGIN/lib'
+ifeq "$(OS)" "Darwin"
+	GO_LDF = -ldflags '-extldflags -Wl,-rpath=$$ORIGIN/deps/lib:$$ORIGIN/lib'
+endif
 GOBUILD := go build -i $(GO_LDF)
 export CGO_CFLAGS = -I$(DEST)/include
 export CGO_LDFLAGS = -L$(DEST)/lib
