@@ -137,7 +137,9 @@ func (a *Arch) SmokeTest(t *testing.T) {
 		}
 	}
 	for _, r := range a.getRegList() {
-		testReg(r.Name, r.Enum)
+		if r.Default {
+			testReg(r.Name, r.Enum)
+		}
 	}
 	testReg("PC", a.PC)
 	testReg("SP", a.SP)
