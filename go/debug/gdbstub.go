@@ -177,10 +177,8 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 					fmt.Println("unknown q Xfer:", args)
 				}
 			}
-		/*
-			case "TStatus":
-				c.Send("T0")
-		*/
+		case "TStatus":
+			c.Send("T0")
 		case "Rcmd":
 			tmp := strings.SplitN(cmd, ",", 2)
 			if c.verbose {
@@ -320,6 +318,8 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		c.Send("OK")
 	case 'D': // detach
 		return errors.New("detached")
+	case 'T': // thread
+		c.Send("OK")
 	default:
 		if c.verbose {
 			fmt.Printf("unknown command %c %s %s\n", b, cmd, args)
