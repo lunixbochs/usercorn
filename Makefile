@@ -81,8 +81,13 @@ deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/
 	mkdir -p .gopath/src/github.com/lunixbochs
 	ln -s ../../../.. .gopath/src/github.com/lunixbochs/usercorn
 
-ifeq "$(OS)" "Darwin"
+LD_LIBRARY_PATH=
+DYLD_LIBRARY_PATH=
+ifneq "$(OS)" "Darwin"
 	GO_LDF = -ldflags '-extldflags -Wl,-rpath=$$ORIGIN/deps/lib:$$ORIGIN/lib'
+	LD_LIBRARY_PATH := "$(LD_LIBRARY_PATH):$(DEST)/lib"
+else
+	DYLD_LIBRARY_PATH := "$(DYLD_LIBRARY_PATH):$(DEST)/lib"
 endif
 GOBUILD := go build -i $(GO_LDF)
 export CGO_CFLAGS = -I$(DEST)/include
@@ -119,6 +124,6 @@ get: .gopath
 	sh -c "PATH=$(PATHX) go get $(GO_LDF) -u ${DEPS}"
 
 test: .gopath
-	sh -c "PATH=$(PATHX) go test -ldflags '-extldflags -Wl,-rpath=$(DEST)/lib' -v ./go/..."
+	sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test $(GO_LDF) -v ./go/..."
 
 all: usercorn imgtrace shellcode repl
