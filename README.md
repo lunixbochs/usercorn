@@ -3,19 +3,16 @@ usercorn
 
 [![Build Status](https://travis-ci.org/lunixbochs/usercorn.svg?branch=master)](https://travis-ci.org/lunixbochs/usercorn)
 
-Dependencies
----
-
-- Latest master build of [Unicorn](http://www.unicorn-engine.org/). Both Usercorn and Unicorn are rapidly changing, so make sure both are completely up-to-date before submitting a bug report.
-- Latest master build of [Keystone](http://www.keystone-engine.org/).
-- Stable version of [Capstone](http://www.capstone-engine.org/)
-- Go 1.5 or newer
-- Make sure you have the GOPATH environment variable pointed at a directory like `$HOME/go`, and `$GOPATH/bin` is in your PATH
-
 Building
 ---
 
-From the source tree, run `make`. There are several bonus targets, which can be built with `make usercorn imgtrace shellcode repl`.
+Usercorn depends on Go 1.5 or newer, as well as the latest unstable versions of Capstone, Unicorn, and Keystone.
+
+`make deps` will attempt to install all of the above into the source tree.
+
+`make` will update Go packages and build `usercorn`
+
+Additional binaries such as `repl`, `imgtrace`, and `shellcode` can be built with `make all`
 
 Examples
 ---
