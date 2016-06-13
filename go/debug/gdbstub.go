@@ -277,7 +277,6 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		}
 		h, _ := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
 			u.Trampoline(func() error { return nil })
-			u.Stop()
 		}, addr, addr+1)
 		c.breakpoints[addr] = h
 		c.Send("OK")
@@ -302,7 +301,6 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 				first = false
 			} else {
 				u.Trampoline(func() error { return nil })
-				u.Stop()
 				return
 			}
 		}, 1, 0)
@@ -391,7 +389,6 @@ func (c *gdbClient) Run() {
 			if b[0] == '\x03' {
 				input.Discard(1)
 				c.u.Trampoline(func() error { return nil })
-				c.u.Stop()
 			}
 			loop.Unlock()
 			<-time.After(100 * time.Millisecond)
