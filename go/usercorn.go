@@ -22,6 +22,9 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+// #cgo LDFLAGS: -Wl,-rpath -Wl,$ORIGIN/deps/lib:$ORIGIN/lib
+import "C"
+
 type tramp struct {
 	desc string
 	fun  func() error
