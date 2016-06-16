@@ -84,15 +84,14 @@ deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/
 LD_LIBRARY_PATH=
 DYLD_LIBRARY_PATH=
 ifneq "$(OS)" "Darwin"
-	GO_LDF = -ldflags '-extldflags -Wl,-rpath=$$ORIGIN/deps/lib:$$ORIGIN/lib'
 	LD_LIBRARY_PATH := "$(LD_LIBRARY_PATH):$(DEST)/lib"
 else
 	DYLD_LIBRARY_PATH := "$(DYLD_LIBRARY_PATH):$(DEST)/lib"
 endif
-GOBUILD := go build -i $(GO_LDF)
+GOBUILD := go build -i
+PATHX := '$(DEST)/$(GODIR)/bin:$(PATH)'
 export CGO_CFLAGS = -I$(DEST)/include
 export CGO_LDFLAGS = -L$(DEST)/lib
-PATHX := "$(DEST)/$(GODIR)/bin:$(PATH)"
 
 ifneq ($(wildcard $(DEST)/$(GODIR)/.),)
 	export GOROOT := $(DEST)/$(GODIR)
@@ -121,9 +120,9 @@ repl: .gopath
 	$(FIXRPATH) repl
 
 get: .gopath
-	sh -c "PATH=$(PATHX) go get $(GO_LDF) -u ${DEPS}"
+	sh -c "PATH=$(PATHX) go get -u ${DEPS}"
 
 test: .gopath
-	sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test $(GO_LDF) -v ./go/..."
+	sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test -v ./go/..."
 
 all: usercorn imgtrace shellcode repl
