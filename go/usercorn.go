@@ -130,9 +130,6 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	if err := u.mapStack(); err != nil {
 		return nil, err
 	}
-	if err := u.addHooks(); err != nil {
-		return nil, err
-	}
 	return u, nil
 }
 
