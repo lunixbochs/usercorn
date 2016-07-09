@@ -190,8 +190,11 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	}
 	// TODO: have a "host page size", maybe arch.Align()
 	// TODO: allow setting brk addr for raw Usercorn?
-	mask := uint64(4096 - 1)
-	u.Brk((u.brk + mask) & ^mask)
+	if u.brk > 0 {
+		mask := uint64(4096)
+		u.brk = (u.brk + mask) & ^(mask - 1)
+	}
+	u.Brk(0)
 	// make sure PC is set to entry point for debuggers
 	u.RegWrite(u.Arch().PC, u.Entry())
 	return u, nil
@@ -732,11 +735,18 @@ outer:
 			return
 		}
 		defer f.Close()
+		// reserve space at end of bin for brk
+		mmap, _ := u.MemReserve(0, 24*1024*1024, false)
+
 		var interpBias, interpEntry uint64
 		_, _, interpBias, interpEntry, err = u.mapBinary(f, true, l.Arch())
 		if u.interpLoader.Arch() != l.Arch() {
 			err = fmt.Errorf("Interpreter arch mismatch: %s != %s", l.Arch(), u.interpLoader.Arch())
 			return
+		}
+		// delete reserved space
+		if mmap != nil {
+			u.MemUnmap(mmap.Addr, mmap.Size)
 		}
 		return interpBias, interpEntry, loadBias, entry, err
 	} else {
