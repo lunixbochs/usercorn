@@ -72,6 +72,8 @@ func (u *Usercorn) BinEntry() uint64      { return 0 }
 func (u *Usercorn) SetEntry(entry uint64) {}
 func (u *Usercorn) SetExit(exit uint64)   {}
 
+func (u *Usercorn) SetStackBase(base uint64) {}
+
 func (u *Usercorn) PrefixPath(s string, force bool) string          { return "" }
 func (u *Usercorn) PosixInit(args, env []string, auxv []byte) error { return nil }
 func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {

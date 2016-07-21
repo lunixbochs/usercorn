@@ -55,6 +55,7 @@ type Usercorn interface {
 	BinEntry() uint64
 	SetEntry(entry uint64)
 	SetExit(exit uint64)
+	SetStackBase(base uint64)
 
 	// TODO: PrefixPath will be replaced by a full VFS subsystem
 	PrefixPath(s string, force bool) string

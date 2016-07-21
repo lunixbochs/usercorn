@@ -387,6 +387,10 @@ func (u *Usercorn) SetExit(exit uint64) {
 	u.exit = exit
 }
 
+func (u *Usercorn) SetStackBase(base uint64) {
+	u.StackBase = base
+}
+
 func (u *Usercorn) BinEntry() uint64 {
 	// points to binary entry, even if an interpreter is used
 	return u.binEntry

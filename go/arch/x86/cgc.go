@@ -6,7 +6,6 @@ import (
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
-	"github.com/lunixbochs/usercorn/go/kernel/posix"
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/native"
 )
@@ -106,7 +105,26 @@ func CgcInit(u models.Usercorn, args, env []string) error {
 	if err := u.MemWrite(secretPage, tmp); err != nil {
 		return err
 	}
-	return posix.StackInit(u, args, env, nil)
+
+	for _, m := range u.Mappings() {
+		if m.Desc == "stack" {
+			u.MemUnmap(m.Addr, m.Size)
+			break
+		}
+	}
+	base := uint64(0xbaaab000 - 0x800000)
+	if err := u.MemMapProt(base, 0x800000, uc.PROT_ALL); err != nil {
+		return err
+	}
+	for _, m := range u.Mappings() {
+		if m.Addr == base {
+			m.Desc = "stack"
+			break
+		}
+	}
+	u.RegWrite(u.Arch().SP, 0xbaaaaffc)
+	u.SetStackBase(base)
+	return nil
 }
 
 func CgcSyscall(u models.Usercorn) {
