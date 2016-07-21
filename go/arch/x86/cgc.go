@@ -80,7 +80,24 @@ func (k *CgcKernel) Allocate(size uint32, executable int32, ret co.Obuf) int {
 	return 0
 }
 
-func (k *CgcKernel) Deallocate(addr, size uint32) {
+func (k *CgcKernel) Deallocate(addr, size uint32) int {
+	// addr must be multiple of page size
+	if addr&(0x1000-1) > 0 {
+		return -1 // FIXME
+	}
+	// all pages containing a part of the range are unmapped
+	var pages []*models.Mmap
+	for _, mmap := range k.U.Mappings() {
+		// does addr overlap mapping?
+		if (uint64(addr) >= mmap.Addr && uint64(addr) < mmap.Addr+mmap.Size) ||
+			(uint64(addr) < mmap.Addr && uint64(addr+size) > mmap.Addr) {
+			pages = append(pages, mmap)
+		}
+	}
+	for _, page := range pages {
+		k.U.MemUnmap(page.Addr, page.Size)
+	}
+	return 0
 }
 
 func (k *CgcKernel) Random(buf co.Obuf, size uint32, ret co.Obuf) {
