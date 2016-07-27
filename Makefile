@@ -1,4 +1,4 @@
-.PHONY: get test deps usercorn imgtrace shellcode repl fuzz
+.PHONY: get test deps usercorn imgtrace shellcode repl fuzz cgc
 .DEFAULT_GOAL := build
 
 build: get usercorn
@@ -122,6 +122,10 @@ repl: .gopath
 fuzz: .gopath
 	sh -c "PATH=$(PATHX) $(GOBUILD) -o fuzz ./go/cmd/fuzz"
 	$(FIXRPATH) fuzz
+
+cgc: .gopath
+	sh -c "PATH=$(PATHX) $(GOBUILD) -o cgc ./go/cmd/cgc"
+	$(FIXRPATH) cgc
 
 get: .gopath
 	sh -c "PATH=$(PATHX) go get -u ${DEPS}"

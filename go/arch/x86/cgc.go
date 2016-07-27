@@ -1,8 +1,8 @@
 package x86
 
 import (
-	"crypto/rand"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+	"math/rand"
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
@@ -29,12 +29,20 @@ func (k *CgcKernel) Literal_terminate(code int) {
 }
 
 func (k *CgcKernel) Transmit(fd co.Fd, buf co.Buf, size co.Len, ret co.Obuf) int {
-	mem, _ := k.U.MemRead(buf.Addr, uint64(size))
+	if fd == 0 {
+		fd = 1
+	}
+	mem, err := k.U.MemRead(buf.Addr, uint64(size))
+	if err != nil {
+		return -1 // FIXME
+	}
 	n, err := syscall.Write(int(fd), mem)
 	if err != nil {
 		return -1 // FIXME
 	}
-	ret.Pack(int32(n))
+	if err := ret.Pack(int32(n)); err != nil {
+		return -1 // FIXME
+	}
 	return 0
 }
 
@@ -44,8 +52,12 @@ func (k *CgcKernel) Receive(fd co.Fd, buf co.Obuf, size co.Len, ret co.Obuf) int
 	if err != nil {
 		return -1 // FIXME
 	}
-	buf.Pack(tmp[:n])
-	ret.Pack(int32(n))
+	if err := buf.Pack(tmp[:n]); err != nil {
+		return -1 // FIXME
+	}
+	if err := ret.Pack(int32(n)); err != nil {
+		return -1 // FIXME
+	}
 	return 0
 }
 
@@ -122,6 +134,7 @@ func CgcInit(u models.Usercorn, args, env []string) error {
 	if err := u.MemWrite(secretPage, tmp); err != nil {
 		return err
 	}
+	u.MemWrite(secretPage, []byte("FLAG"))
 
 	for _, m := range u.Mappings() {
 		if m.Desc == "stack" {

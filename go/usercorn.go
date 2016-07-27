@@ -784,6 +784,15 @@ func (u *Usercorn) mapStack() error {
 	return u.MemMapProt(stackEnd, UC_MEM_ALIGN, uc.PROT_NONE)
 }
 
+func (u *Usercorn) AddKernel(kernel interface{}, first bool) {
+	kco := kernel.(co.Kernel)
+	if first {
+		u.kernels = append([]co.Kernel{kco}, u.kernels...)
+	} else {
+		u.kernels = append(u.kernels, kco)
+	}
+}
+
 func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
 	if name == "" {
 		panic(fmt.Sprintf("Syscall missing: %d", num))

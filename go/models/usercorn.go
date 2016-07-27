@@ -59,6 +59,8 @@ type Usercorn interface {
 
 	// TODO: PrefixPath will be replaced by a full VFS subsystem
 	PrefixPath(s string, force bool) string
+
+	AddKernel(kernel interface{}, first bool)
 	Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error)
 
 	Exit(err error)
