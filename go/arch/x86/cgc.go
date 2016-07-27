@@ -40,8 +40,10 @@ func (k *CgcKernel) Transmit(fd co.Fd, buf co.Buf, size co.Len, ret co.Obuf) int
 	if err != nil {
 		return -1 // FIXME
 	}
-	if err := ret.Pack(int32(n)); err != nil {
-		return -1 // FIXME
+	if ret.Addr > 0 {
+		if err := ret.Pack(int32(n)); err != nil {
+			return -1 // FIXME
+		}
 	}
 	return 0
 }
@@ -55,8 +57,10 @@ func (k *CgcKernel) Receive(fd co.Fd, buf co.Obuf, size co.Len, ret co.Obuf) int
 	if err := buf.Pack(tmp[:n]); err != nil {
 		return -1 // FIXME
 	}
-	if err := ret.Pack(int32(n)); err != nil {
-		return -1 // FIXME
+	if ret.Addr > 0 {
+		if err := ret.Pack(int32(n)); err != nil {
+			return -1 // FIXME
+		}
 	}
 	return 0
 }
