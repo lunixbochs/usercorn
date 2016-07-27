@@ -30,12 +30,10 @@ type Negotiate struct {
 
 func (no *Negotiate) Read(p []byte) (int, error) {
 	n, err := no.out.Read(p)
-	log.Printf("NEG -> POV: %s", hex.EncodeToString(p[:n]))
 	return n, err
 }
 
 func (no *Negotiate) Write(p []byte) (int, error) {
-	log.Printf("POV -> NEG: %s", hex.EncodeToString(p))
 	en := binary.LittleEndian
 	if no.Type == 2 {
 		log.Printf("Type 2 POV result received: %s", hex.EncodeToString(p))
@@ -133,7 +131,8 @@ func main() {
 	}
 
 	var povFile = fs.String("pov", "", "")
-	// var idsFile = fs.String("ids", "", "")
+	var idsFile = fs.String("ids", "", "")
+	var idsDebug = fs.Bool("idsDebug", false, "")
 	var trace = fs.Bool("trace", false, "")
 	var btrace = fs.Bool("btrace", false, "")
 	var etrace = fs.Bool("etrace", false, "")
@@ -217,15 +216,27 @@ func main() {
 		pov.AddKernel(povk, true)
 
 		// set up POV IO
-		a, b := NewBufPipePair()
-		cbio[0] = a
-		cbio[1] = cbio[0]
 		cbio[2] = &NullIO{}
 
-		povk.Virtio[0] = b
 		povk.Virtio[1] = povk.Virtio[0]
 		povk.Virtio[2] = &NullIO{}
 		povk.Virtio[3] = &Negotiate{CS: cs, POV: pov}
+
+		if *idsFile == "" {
+			a, b := NewBufPipePair()
+			cbio[0] = a
+			povk.Virtio[0] = b
+		} else {
+			pov2cb, cb2pov, err := NewIDS(*idsFile, *idsDebug)
+			if err != nil {
+				fmt.Println("Failed to set up IDS:", err)
+				os.Exit(1)
+			}
+			cbio[0] = cb2pov
+			povk.Virtio[0] = pov2cb
+		}
+		cbio[1] = cbio[0]
+		povk.Virtio[1] = povk.Virtio[0]
 	} else {
 		// set up STDIO
 		cbio[0] = os.Stdin
