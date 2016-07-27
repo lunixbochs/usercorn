@@ -16,11 +16,13 @@ func MatchCgc(r io.ReaderAt) bool {
 
 type FakeCgcReader struct {
 	io.ReaderAt
+	first bool
 }
 
 func (f *FakeCgcReader) ReadAt(p []byte, off int64) (int, error) {
 	n := 0
-	if off < 4 {
+	if off < 4 && f.first {
+		f.first = false
 		n, _ = elfMagicReader.ReadAt(p, off)
 		if n == len(p) {
 			return n, nil
@@ -41,6 +43,6 @@ func (c *CgcLoader) OS() string {
 }
 
 func NewCgcLoader(r io.ReaderAt, arch string) (models.Loader, error) {
-	l, err := NewElfLoader(&FakeCgcReader{r}, arch)
+	l, err := NewElfLoader(&FakeCgcReader{r, true}, arch)
 	return &CgcLoader{l}, err
 }
