@@ -45,21 +45,29 @@ type ReadWriter struct {
 type WriteLogger struct {
 	Prefix string
 	Hex    bool
+	buf    bytes.Buffer
 }
 
-func (w WriteLogger) Read(p []byte) (int, error) {
+func (w *WriteLogger) Read(p []byte) (int, error) {
 	return 0, io.EOF
 }
 
-func (w WriteLogger) Write(p []byte) (int, error) {
-	if len(p) > 0 {
-		s := string(p)
-		if w.Hex {
-			s = hex.EncodeToString(p)
+func (w *WriteLogger) Write(p []byte) (int, error) {
+	w.buf.Write(p)
+	if bytes.Contains(w.buf.Bytes(), []byte("\n")) {
+		lines := bytes.Split(w.buf.Bytes(), []byte("\n"))
+		last := len(lines) - 1
+		for _, line := range lines[:last] {
+			s := string(line)
+			if w.Hex {
+				s = hex.EncodeToString(line)
+			}
+			log.Printf("%s: %s", w.Prefix, s)
 		}
-		log.Printf("%s: %s", w.Prefix, s)
+		w.buf.Reset()
+		w.buf.Write(lines[last])
 	}
 	return 0, nil
 }
 
-func (w WriteLogger) Close() error { return nil }
+func (w *WriteLogger) Close() error { return nil }

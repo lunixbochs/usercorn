@@ -125,10 +125,10 @@ func main() {
 	}
 
 	cbConfig := &models.Config{
-		Output: WriteLogger{"CB", false},
+		Output: &WriteLogger{Prefix: "CB", Hex: false},
 	}
 	povConfig := &models.Config{
-		Output: WriteLogger{"POV", false},
+		Output: &WriteLogger{Prefix: "POV", Hex: false},
 	}
 
 	cb, err := usercorn.NewUsercorn(os.Args[1], cbConfig)
@@ -153,16 +153,16 @@ func main() {
 	cbp := NewBufPipe()
 	povp := NewBufPipe()
 
-	pov2cb := WriteLogger{"POV -> CB", true}
-	cb2pov := WriteLogger{"CB -> POV", true}
+	pov2cb := &WriteLogger{Prefix: "POV -> CB", Hex: true}
+	cb2pov := &WriteLogger{Prefix: "CB -> POV", Hex: true}
 
 	cbk.Virtio[0] = ReadWriter{io.TeeReader(cbp, pov2cb), povp}
 	cbk.Virtio[1] = cbk.Virtio[0]
-	cbk.Virtio[2] = WriteLogger{"CB[2]", true}
+	cbk.Virtio[2] = &WriteLogger{Prefix: "CB[2]", Hex: true}
 
 	povk.Virtio[0] = ReadWriter{io.TeeReader(povp, cb2pov), cbp}
 	povk.Virtio[1] = povk.Virtio[0]
-	povk.Virtio[2] = WriteLogger{"POV[2]", true}
+	povk.Virtio[2] = &WriteLogger{Prefix: "POV[2]", Hex: true}
 	povk.Virtio[3] = &Negotiate{CB: cb, POV: pov}
 
 	go func() {
