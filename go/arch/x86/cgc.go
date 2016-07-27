@@ -1,8 +1,8 @@
 package x86
 
 import (
+	"crypto/rand"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
-	"math/rand"
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
@@ -134,7 +134,6 @@ func CgcInit(u models.Usercorn, args, env []string) error {
 	if err := u.MemWrite(secretPage, tmp); err != nil {
 		return err
 	}
-	u.MemWrite(secretPage, []byte("FLAG"))
 	u.RegWrite(uc.X86_REG_ECX, secretPage)
 
 	for _, m := range u.Mappings() {
