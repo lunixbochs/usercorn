@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/bnagy/gapstone"
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
@@ -63,6 +64,7 @@ func Assemble(asm string, addr uint64, arch *Arch) ([]byte, error) {
 }
 
 var discache = make(map[string]string)
+var discacheLock sync.RWMutex
 
 func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
 	var asm []gapstone.Instruction
@@ -70,9 +72,12 @@ func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
 	if len(mem) == 0 {
 		return "", nil
 	}
+	discacheLock.RLock()
 	if cached, ok := discache[cacheKey]; ok {
+		discacheLock.RUnlock()
 		return cached, nil
 	}
+	discacheLock.RUnlock()
 	if arch.cs == nil {
 		engine, err := gapstone.New(arch.CS_ARCH, arch.CS_MODE)
 		if err != nil {
@@ -100,7 +105,9 @@ func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
 		out = append(out, fmt.Sprintf("0x%x: %s %s %s", insn.Address, data, insn.Mnemonic, insn.OpStr))
 	}
 	ret := strings.Join(out, "\n")
+	discacheLock.Lock()
 	discache[cacheKey] = ret
+	discacheLock.Unlock()
 	return ret, nil
 }
 
