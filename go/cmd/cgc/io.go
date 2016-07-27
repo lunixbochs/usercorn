@@ -8,6 +8,11 @@ import (
 	"sync"
 )
 
+type NullIO struct{}
+
+func (n *NullIO) Read(p []byte) (int, error)  { return 0, io.EOF }
+func (n *NullIO) Write(p []byte) (int, error) { return 0, nil }
+
 type BufPipe struct {
 	b bytes.Buffer
 	c sync.Cond
@@ -18,6 +23,11 @@ func NewBufPipe() *BufPipe {
 	b := &BufPipe{}
 	b.c = sync.Cond{L: &b.l}
 	return b
+}
+
+func NewBufPipePair() (io.ReadWriter, io.ReadWriter) {
+	a, b := NewBufPipe(), NewBufPipe()
+	return ReadWriter{a, b}, ReadWriter{b, a}
 }
 
 func (b *BufPipe) Read(p []byte) (int, error) {
