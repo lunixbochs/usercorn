@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"os"
 	"os/exec"
 	"syscall"
@@ -11,7 +10,7 @@ func newFile(fd int) *os.File {
 	return os.NewFile(uintptr(fd), "")
 }
 
-func NewIDS(rules string, debug bool) (io.ReadWriter, io.ReadWriter, error) {
+func NewIDS(rules string, debug bool) (*os.File, *os.File, error) {
 	pair1, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_STREAM, 0)
 	if err != nil {
 		return nil, nil, err

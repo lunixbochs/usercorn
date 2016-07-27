@@ -200,8 +200,9 @@ func main() {
 	}
 
 	var pov models.Usercorn
+	var pov2cb, cb2pov *os.File
+	var err error
 	if *povFile != "" {
-		var err error
 		config := &models.Config{
 			Output: &WriteLogger{Prefix: "POV", Hex: false},
 		}
@@ -227,7 +228,7 @@ func main() {
 			cbio[0] = a
 			povk.Virtio[0] = b
 		} else {
-			pov2cb, cb2pov, err := NewIDS(*idsFile, *idsDebug)
+			pov2cb, cb2pov, err = NewIDS(*idsFile, *idsDebug)
 			if err != nil {
 				fmt.Println("Failed to set up IDS:", err)
 				os.Exit(1)
@@ -246,7 +247,12 @@ func main() {
 
 	if *timeout > 0 {
 		go func() {
-			<-time.After(time.Second * time.Duration(*timeout))
+			time.Sleep(time.Second * time.Duration(*timeout))
+			log.Printf("Timeout (%d seconds) reached. Killing binaries.", *timeout)
+			if *idsFile != "" {
+				pov2cb.Close()
+				cb2pov.Close()
+			}
 			for _, cb := range cs {
 				cb.Stop()
 			}
