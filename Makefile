@@ -133,4 +133,4 @@ get: .gopath
 test: .gopath
 	sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test -v ./go/..."
 
-all: usercorn imgtrace shellcode repl fuzz
+all: usercorn imgtrace shellcode repl fuzz cgc
