@@ -2,10 +2,12 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
 	"flag"
 	"fmt"
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io"
 	"log"
 	"os"
@@ -20,9 +22,25 @@ import (
 var secretPage uint64 = 0x4347c000
 var secretSize uint64 = 0x1000
 
+func bitcount(i uint32) int {
+	out := 0
+	for bit := uint32(0); bit < 32; bit++ {
+		if i&1<<bit != 0 {
+			out++
+		}
+	}
+	return out
+}
+
 type Negotiate struct {
 	Type    int
 	in, out bytes.Buffer
+	ready   bool
+
+	ipmask, regmask uint32
+	ipval, regval   uint32
+
+	regnum int
 
 	CS  []models.Usercorn
 	POV models.Usercorn
@@ -35,32 +53,92 @@ func (no *Negotiate) Read(p []byte) (int, error) {
 
 func (no *Negotiate) Write(p []byte) (int, error) {
 	en := binary.LittleEndian
-	if no.Type == 2 {
-		log.Printf("Type 2 POV result received: %s", hex.EncodeToString(p))
-		mem, err := no.CS[0].MemRead(secretPage, secretSize)
-		if err == nil && bytes.Contains(mem, p) {
-			log.Println("Type 2 success")
-		} else {
-			log.Println("Type 2 failed")
-		}
-		for _, cb := range no.CS {
-			cb.Stop()
-		}
-		no.POV.Stop()
-		return 0, nil
-	} else if no.Type > 0 {
-		return 0, io.EOF
-	}
-	no.in.Write(p)
-	if no.in.Len() >= 4 {
-		no.Type = int(en.Uint32(no.in.Bytes()[:4]))
-		log.Printf("Type %d POV requested", no.Type)
+	if no.ready {
 		if no.Type == 2 {
-			out := make([]byte, 12)
-			en.PutUint32(out[:4], uint32(secretPage))
-			en.PutUint32(out[4:8], uint32(secretSize))
-			en.PutUint32(out[8:12], 4)
-			no.out.Write(out)
+			log.Printf("Type 2 POV result received: %s", hex.EncodeToString(p))
+			mem, err := no.CS[0].MemRead(secretPage, secretSize)
+			if err == nil && bytes.Contains(mem, p) {
+				log.Println("Type 2 success")
+			} else {
+				log.Println("Type 2 failed")
+			}
+			for _, cb := range no.CS {
+				cb.Stop()
+			}
+			no.POV.Stop()
+			return 0, nil
+		} else {
+			return 0, io.EOF
+		}
+	} else {
+		if no.Type == 2 {
+			return 0, io.EOF
+		}
+		no.in.Write(p)
+		if no.Type == 1 {
+			if no.in.Len() < 12 {
+				return len(p), nil
+			} else {
+				var tmp [12]byte
+				no.in.Read(tmp[:])
+				no.ipmask = en.Uint32(tmp[:4])
+				no.regmask = en.Uint32(tmp[4:8])
+				if bitcount(no.ipmask) < 20 || bitcount(no.regmask) < 20 {
+					no.Type = 0
+					no.ready = true
+					return 0, io.EOF
+				}
+				regmap := map[uint32]int{
+					0: uc.X86_REG_EAX,
+					1: uc.X86_REG_ECX,
+					2: uc.X86_REG_EDX,
+					3: uc.X86_REG_EBX,
+					4: uc.X86_REG_ESP,
+					5: uc.X86_REG_EBP,
+					6: uc.X86_REG_ESI,
+					7: uc.X86_REG_EDI,
+				}
+				regnum := en.Uint32(tmp[8:12])
+				if num, ok := regmap[regnum]; ok {
+					no.regnum = num
+				} else {
+					no.Type = 0
+					no.ready = true
+					return 0, io.EOF
+				}
+				// pick reg vals
+				rand.Read(tmp[:4])
+				no.ipval = en.Uint32(tmp[:4]) & no.ipmask
+				rand.Read(tmp[:4])
+				no.regval = en.Uint32(tmp[:4]) & no.regmask
+
+				// send 'em
+				en.PutUint32(tmp[:4], no.ipval)
+				no.out.Write(tmp[:4])
+				en.PutUint32(tmp[:4], no.regval)
+				no.out.Write(tmp[:4])
+
+				log.Printf("ipmask=0x%x  regmask=0x%x  regnum=0x%x\n", no.ipmask, no.regmask, no.regnum)
+				log.Printf(" ipval=0x%x   regval=0x%x\n", no.ipval, no.regval)
+				no.ready = true
+			}
+		}
+		if no.in.Len() >= 4 {
+			var tmp [4]byte
+			no.in.Read(tmp[:])
+			no.Type = int(en.Uint32(tmp[:]))
+			log.Printf("Type %d POV requested", no.Type)
+			if no.Type == 2 {
+				out := make([]byte, 12)
+				en.PutUint32(out[:4], uint32(secretPage))
+				en.PutUint32(out[4:8], uint32(secretSize))
+				en.PutUint32(out[8:12], 4)
+				no.out.Write(out)
+				no.ready = true
+			} else if no.Type != 1 {
+				no.ready = true
+				return 0, io.EOF
+			}
 		}
 	}
 	return len(p), nil
@@ -202,6 +280,7 @@ func main() {
 	var pov models.Usercorn
 	var pov2cb, cb2pov *os.File
 	var err error
+	var neg *Negotiate
 	if *povFile != "" {
 		config := &models.Config{
 			Output: &WriteLogger{Prefix: "POV", Hex: false},
@@ -219,9 +298,10 @@ func main() {
 		// set up POV IO
 		cbio[2] = &NullIO{}
 
+		neg = &Negotiate{CS: cs, POV: pov}
 		povk.Virtio[1] = povk.Virtio[0]
 		povk.Virtio[2] = &NullIO{}
-		povk.Virtio[3] = &Negotiate{CS: cs, POV: pov}
+		povk.Virtio[3] = neg
 
 		if *idsFile == "" {
 			a, b := NewBufPipePair()
@@ -261,6 +341,19 @@ func main() {
 			}
 		}()
 	}
+	defer func() {
+		if neg != nil && neg.Type == 1 {
+			for _, cb := range cs {
+				eip, _ := cb.RegRead(uc.X86_REG_EIP)
+				reg, _ := cb.RegRead(neg.regnum)
+				if uint32(eip)&neg.ipmask == neg.ipval && uint32(reg)&neg.regmask == neg.regval {
+					log.Println("POV Type 1 success")
+				} else {
+					log.Println("POV Type 1 failed")
+				}
+			}
+		}
+	}()
 	var wg sync.WaitGroup
 	for _, cb := range cs {
 		wg.Add(1)
