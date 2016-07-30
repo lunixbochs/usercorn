@@ -339,6 +339,7 @@ func main() {
 			if pov != nil {
 				pov.Stop()
 			}
+			os.Exit(0)
 		}()
 	}
 	defer func() {
