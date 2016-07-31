@@ -211,9 +211,6 @@ func main() {
 		fs.PrintDefaults()
 	}
 
-	var povFile = fs.String("pov", "", "")
-	var idsFile = fs.String("ids", "", "")
-	var idsDebug = fs.Bool("idsDebug", false, "")
 	var trace = fs.Bool("trace", false, "")
 	var btrace = fs.Bool("btrace", false, "")
 	var etrace = fs.Bool("etrace", false, "")
@@ -223,6 +220,10 @@ func main() {
 	var strace = fs.Bool("strace", false, "")
 	var icount = fs.Bool("icount", false, "")
 
+	var povFile = fs.String("pov", "", "")
+	var idsFile = fs.String("ids", "", "")
+	var idsDebug = fs.Bool("idsDebug", false, "")
+	var flagtrace = fs.Bool("flagtrace", false, "trace secret flag page reads")
 	var timeout = fs.Int("timeout", 0, "")
 
 	fs.Parse(os.Args[1:])
@@ -257,7 +258,7 @@ func main() {
 		setFlags(config)
 		u, err := usercorn.NewUsercorn(cb, config)
 		if err != nil {
-			fmt.Printf("Error loading CB-%d (%s):\n", i, cb)
+			fmt.Printf("Error loading %s (%s):\n", name, cb)
 			fmt.Println(err)
 			os.Exit(1)
 		}
@@ -294,6 +295,18 @@ func main() {
 		defer func() {
 			fmt.Printf("\ninscount: %d\n", inscount)
 		}()
+	}
+
+	if *flagtrace {
+		for i, cb := range cs {
+			name := fmt.Sprintf("CB-%d", i)
+			cb.HookAdd(uc.HOOK_MEM_READ, func(_ uc.Unicorn, access int, addr uint64, size int, val int64) {
+				if addr >= secretPage && addr <= secretPage+0x1000 {
+					eip, _ := cb.RegRead(uc.X86_REG_EIP)
+					fmt.Printf("%s: FLAG READ eip: 0x%x addr: 0x%x size: %d\n", name, eip, addr, size)
+				}
+			}, 1, 0)
+		}
 	}
 
 	var pov models.Usercorn
