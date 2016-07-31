@@ -117,7 +117,20 @@ func Repr(p []byte, strsize int) string {
 		if b >= 0x20 && b <= 0x7e {
 			tmp[i] = string(b)
 		} else {
-			tmp[i] = fmt.Sprintf("\\x%02x", b)
+			switch b {
+			case 0:
+				tmp[i] = "\\0"
+			case '\b':
+				tmp[i] = "\\b"
+			case '\r':
+				tmp[i] = "\\r"
+			case '\n':
+				tmp[i] = "\\n"
+			case '\t':
+				tmp[i] = "\\t"
+			default:
+				tmp[i] = fmt.Sprintf("\\x%02x", b)
+			}
 		}
 	}
 	out := strings.Join(tmp, "")
