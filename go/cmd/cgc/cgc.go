@@ -117,6 +117,7 @@ func (no *Negotiate) Write(p []byte) (int, error) {
 					6: uc.X86_REG_ESI,
 					7: uc.X86_REG_EDI,
 				}
+				regname := []string{"eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"}
 				regnum := en.Uint32(tmp[8:12])
 				if num, ok := regmap[regnum]; ok {
 					no.regnum = num
@@ -137,7 +138,7 @@ func (no *Negotiate) Write(p []byte) (int, error) {
 				en.PutUint32(tmp[:4], no.regval)
 				no.out.Write(tmp[:4])
 
-				log.Printf("ipmask=0x%x  regmask=0x%x  regnum=0x%x\n", no.ipmask, no.regmask, no.regnum)
+				log.Printf("ipmask=0x%x  regmask=0x%x  regnum=0x%x (%s)\n", no.ipmask, no.regmask, no.regnum, regname[regnum])
 				log.Printf(" ipval=0x%x   regval=0x%x\n", no.ipval, no.regval)
 				no.ready = true
 			}
