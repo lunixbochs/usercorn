@@ -218,6 +218,7 @@ func main() {
 	var mtrace2 = fs.Bool("mtrace2", false, "")
 	var rtrace = fs.Bool("rtrace", false, "")
 	var strace = fs.Bool("strace", false, "")
+	var icount = fs.Bool("icount", false, "")
 
 	var timeout = fs.Int("timeout", 0, "")
 
@@ -275,6 +276,21 @@ func main() {
 	secret, _ := cs[0].MemRead(secretPage, secretSize)
 	for _, u := range cs[1:] {
 		u.MemWrite(secretPage, secret)
+	}
+
+	inscount := 0
+	if *icount {
+		var imut sync.Mutex
+		for _, cb := range cs {
+			cb.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+				imut.Lock()
+				inscount += 1
+				imut.Unlock()
+			}, 1, 0)
+		}
+		defer func() {
+			fmt.Printf("\ninscount: %d\n", inscount)
+		}()
 	}
 
 	var pov models.Usercorn
@@ -338,6 +354,9 @@ func main() {
 			}
 			if pov != nil {
 				pov.Stop()
+			}
+			if *icount {
+				fmt.Printf("\ninscount: %d\n", inscount)
 			}
 			os.Exit(0)
 		}()
