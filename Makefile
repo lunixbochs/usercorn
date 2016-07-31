@@ -1,7 +1,7 @@
 .PHONY: get test deps usercorn imgtrace shellcode repl fuzz cgc
 .DEFAULT_GOAL := build
 
-build: get usercorn
+build: get all
 
 # dependency targets
 DEST = $(shell mkdir -p deps/build; cd deps && pwd)
