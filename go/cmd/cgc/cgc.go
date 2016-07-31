@@ -381,6 +381,9 @@ func main() {
 			cb.Run(nil, nil)
 			wg.Done()
 		}()
+		if len(cs) > 1 {
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 	if pov != nil {
 		wg.Add(1)
