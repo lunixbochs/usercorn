@@ -75,6 +75,23 @@ func (no *Negotiate) Write(p []byte) (int, error) {
 			return 0, io.EOF
 		}
 		no.in.Write(p)
+		if no.Type == 0 && no.in.Len() >= 4 {
+			var tmp [4]byte
+			no.in.Read(tmp[:])
+			no.Type = int(en.Uint32(tmp[:]))
+			log.Printf("Type %d POV requested", no.Type)
+			if no.Type == 2 {
+				out := make([]byte, 12)
+				en.PutUint32(out[:4], uint32(secretPage))
+				en.PutUint32(out[4:8], uint32(secretSize))
+				en.PutUint32(out[8:12], 4)
+				no.out.Write(out)
+				no.ready = true
+			} else if no.Type != 1 {
+				no.ready = true
+				return 0, io.EOF
+			}
+		}
 		if no.Type == 1 {
 			if no.in.Len() < 12 {
 				return len(p), nil
@@ -84,6 +101,8 @@ func (no *Negotiate) Write(p []byte) (int, error) {
 				no.ipmask = en.Uint32(tmp[:4])
 				no.regmask = en.Uint32(tmp[4:8])
 				if bitcount(no.ipmask) < 20 || bitcount(no.regmask) < 20 {
+					log.Printf("Type 1 POV bitmask bit count too low:")
+					log.Printf("ipmask: 0x%x  regmask: 0x%x", no.ipmask, no.regmask)
 					no.Type = 0
 					no.ready = true
 					return 0, io.EOF
@@ -121,23 +140,6 @@ func (no *Negotiate) Write(p []byte) (int, error) {
 				log.Printf("ipmask=0x%x  regmask=0x%x  regnum=0x%x\n", no.ipmask, no.regmask, no.regnum)
 				log.Printf(" ipval=0x%x   regval=0x%x\n", no.ipval, no.regval)
 				no.ready = true
-			}
-		}
-		if no.in.Len() >= 4 {
-			var tmp [4]byte
-			no.in.Read(tmp[:])
-			no.Type = int(en.Uint32(tmp[:]))
-			log.Printf("Type %d POV requested", no.Type)
-			if no.Type == 2 {
-				out := make([]byte, 12)
-				en.PutUint32(out[:4], uint32(secretPage))
-				en.PutUint32(out[4:8], uint32(secretSize))
-				en.PutUint32(out[8:12], 4)
-				no.out.Write(out)
-				no.ready = true
-			} else if no.Type != 1 {
-				no.ready = true
-				return 0, io.EOF
 			}
 		}
 	}
