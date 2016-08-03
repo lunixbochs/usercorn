@@ -379,14 +379,18 @@ func main() {
 	}
 	defer func() {
 		if neg != nil && neg.Type == 1 {
+			success := false
 			for _, cb := range cs {
 				eip, _ := cb.RegRead(uc.X86_REG_EIP)
 				reg, _ := cb.RegRead(neg.regnum)
 				if uint32(eip)&neg.ipmask == neg.ipval && uint32(reg)&neg.regmask == neg.regval {
-					log.Println("POV Type 1 success")
-				} else {
-					log.Println("POV Type 1 failed")
+					success = true
 				}
+			}
+			if success {
+				log.Println("Type 1 success")
+			} else {
+				log.Println("Type 1 failed")
 			}
 		}
 	}()
@@ -395,6 +399,11 @@ func main() {
 		wg.Add(1)
 		go func() {
 			cb.Run(nil, nil)
+			// if a CB goes down, take 'em all
+			for _, cb := range cs {
+				cb.Stop()
+			}
+			pov.Stop()
 			wg.Done()
 		}()
 		if len(cs) > 1 {
