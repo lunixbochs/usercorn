@@ -100,13 +100,16 @@ func (no *Negotiate) Write(p []byte) (int, error) {
 				no.in.Read(tmp[:])
 				no.ipmask = en.Uint32(tmp[:4])
 				no.regmask = en.Uint32(tmp[4:8])
-				if bitcount(no.ipmask) < 20 || bitcount(no.regmask) < 20 {
-					log.Printf("Type 1 POV bitmask bit count too low:")
-					log.Printf("ipmask: 0x%x  regmask: 0x%x", no.ipmask, no.regmask)
-					no.Type = 0
-					no.ready = true
-					return 0, io.EOF
-				}
+				// bitcount was broken so is currently disabled
+				/*
+					if bitcount(no.ipmask) < 20 || bitcount(no.regmask) < 20 {
+						log.Printf("Type 1 POV bitmask bit count too low:")
+						log.Printf("ipmask: 0x%x  regmask: 0x%x", no.ipmask, no.regmask)
+						no.Type = 0
+						no.ready = true
+						return 0, io.EOF
+					}
+				*/
 				regmap := map[uint32]int{
 					0: uc.X86_REG_EAX,
 					1: uc.X86_REG_ECX,
