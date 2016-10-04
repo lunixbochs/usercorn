@@ -14,7 +14,9 @@ type DarwinKernel struct {
 }
 
 func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
-	k.U.RegWrite(uc.X86_REG_GS, addr)
+	gsmsr := uint64(0xC0000101)
+	Wrmsr(k.U, gsmsr, addr)
+	
 	return 0
 }
 
