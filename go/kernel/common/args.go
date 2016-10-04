@@ -43,3 +43,9 @@ func RegArgs(u models.Usercorn, regs []int) func(n int) ([]uint64, error) {
 		return vals[:n], nil
 	}
 }
+
+func RegArgsShifted(u models.Usercorn, regs []int, shift int)  func(n int) ([]uint64, error) {
+	return func(n int) ([]uint64, error) {
+		return u.ReadRegs(regs[shift:n+shift])
+	}
+}

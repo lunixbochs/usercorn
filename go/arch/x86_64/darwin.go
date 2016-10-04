@@ -20,6 +20,14 @@ func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
 	return 0
 }
 
+func (k *DarwinKernel) Syscall(syscallNum int) uint64 {
+	//TODO: check if there is such a thing as an "indirect indirect syscall" - in that case we need to fix this to support recursion
+	syscallNum |= 0x2000000
+	name, _ := num.Darwin_x86_mach[syscallNum]
+	ret, _ := k.U.Syscall(syscallNum, name, common.RegArgsShifted(k.U, AbiRegs, 1))
+	return ret
+}
+
 func DarwinKernels(u models.Usercorn) []interface{} {
 	kernel := &DarwinKernel{darwin.NewKernel(u)}
 	return []interface{}{kernel}
