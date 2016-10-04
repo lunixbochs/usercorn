@@ -17,3 +17,11 @@ func (k *DarwinKernel) PreadNocancel(fd co.Fd, buf co.Obuf, size co.Len, offset 
 func (k *DarwinKernel) Pwrite(fd co.Fd, buf co.Buf, size co.Len, offset int64) uint64 {
 	return k.PosixKernel.Pwrite64(fd, buf, size, offset)
 }
+
+func (k *DarwinKernel) Fstat64(fd co.Fd, buf co.Obuf) uint64 {
+	return k.PosixKernel.Fstat(fd, buf)
+}
+
+func (k *DarwinKernel) Stat64(path string, buf co.Obuf) uint64 {
+	return k.PosixKernel.Stat(path, buf)
+}
