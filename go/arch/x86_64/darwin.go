@@ -77,6 +77,18 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 }
 
 func DarwinSyscall(u models.Usercorn) {
+	//make result "success" (CF unset) by default
+	//TODO: actually set CF depending on syscall failure/success
+	u.Trampoline(func() error {
+		eflags, err := u.RegRead(uc.X86_REG_EFLAGS)
+		
+		const CF uint64 = 1 << 0
+		eflags &= ^CF //unset carry flag
+		
+		err = u.RegWrite(uc.X86_REG_EFLAGS, eflags)
+		return err
+	})
+	
 	rax, _ := u.RegRead(uc.X86_REG_RAX)
 	name, _ := num.Darwin_x86_mach[int(rax)]
 	ret, _ := u.Syscall(int(rax), name, common.RegArgs(u, AbiRegs))
