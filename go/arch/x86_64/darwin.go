@@ -239,6 +239,11 @@ func (k *DarwinKernel) Literal__sysctl(name common.Buf, namelen uint64, olddata 
 	return 0//TODO: return actual error codes
 }
 
+func (k *DarwinKernel) SharedRegionCheckNp(startAddress uint64) uint64 {
+	//TODO: actually implement
+	return 1
+}
+
 func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
 	gsmsr := uint64(0xC0000101)
 	Wrmsr(k.U, gsmsr, addr)
