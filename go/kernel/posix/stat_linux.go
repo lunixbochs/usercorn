@@ -46,5 +46,25 @@ func NewLinuxStat(stat *syscall.Stat_t, bits uint) interface{} {
 }
 
 func NewDarwinStat(stat *syscall.Stat_t, bits uint) interface{} {
-	panic("darwin stat struct unimplemented")
+	if bits == 64 {
+		return &DarwinStat64{
+			Dev:     int32(stat.Dev),
+			Mode:    uint16(stat.Mode),
+			Ino:     uint64(stat.Ino),
+			Uid:     uint32(stat.Uid),
+			Gid:     uint32(stat.Gid),
+			Rdev:    int32(stat.Rdev),
+			Size:    int64(stat.Size),
+			Blksize: int32(stat.Blksize),
+			//Blkcnt:    int64(stat.Blkcnt),
+			Atime:     int64(stat.Atim.Sec),
+			AtimeNsec: int64(stat.Atim.Nsec),
+			Mtime:     int64(stat.Mtim.Sec),
+			MtimeNsec: int64(stat.Mtim.Nsec),
+			Ctime:     int64(stat.Ctim.Sec),
+			CtimeNsec: int64(stat.Ctim.Nsec),
+		}
+	} else {
+		panic("darwin stat struct unimplemented")
+	}
 }
