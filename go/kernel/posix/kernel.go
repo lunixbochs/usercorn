@@ -30,7 +30,7 @@ func NewKernel() *PosixKernel {
 	}
 }
 
-func packAddrs(u models.Usercorn, addrs []uint64) ([]byte, error) {
+func PackAddrs(u models.Usercorn, addrs []uint64) ([]byte, error) {
 	buf := make([]byte, int(u.Bits())/8*(len(addrs)+1))
 	pos := buf
 	for _, v := range addrs {
@@ -43,7 +43,7 @@ func packAddrs(u models.Usercorn, addrs []uint64) ([]byte, error) {
 	return buf, nil
 }
 
-func pushStrings(u models.Usercorn, args ...string) ([]uint64, error) {
+func PushStrings(u models.Usercorn, args ...string) ([]uint64, error) {
 	addrs := make([]uint64, 0, len(args)+1)
 	for _, arg := range args {
 		if addr, err := u.PushBytes([]byte(arg + "\x00")); err != nil {
@@ -65,20 +65,20 @@ func StackInit(u models.Usercorn, args, env []string, auxv []byte) error {
 		}
 	}
 	// push argv and envp strings
-	envp, err := pushStrings(u, env...)
+	envp, err := PushStrings(u, env...)
 	if err != nil {
 		return err
 	}
-	argv, err := pushStrings(u, args...)
+	argv, err := PushStrings(u, args...)
 	if err != nil {
 		return err
 	}
 	// precalc envp -> argc for stack alignment
-	envpb, err := packAddrs(u, envp)
+	envpb, err := PackAddrs(u, envp)
 	if err != nil {
 		return err
 	}
-	argvb, err := packAddrs(u, argv)
+	argvb, err := PackAddrs(u, argv)
 	if err != nil {
 		return err
 	}
