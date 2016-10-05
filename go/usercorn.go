@@ -661,6 +661,7 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase
 		return
 	}
 	var low, high uint64
+	low = 0xffffffffffffffff
 	for _, seg := range segments {
 		if seg.Size == 0 {
 			continue
@@ -672,6 +673,9 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase
 		if h > high {
 			high = h
 		}
+	}
+	if low > high {
+		low = high
 	}
 	// map contiguous binary
 	loadBias := u.config.ForceBase
