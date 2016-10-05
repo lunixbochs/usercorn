@@ -159,7 +159,14 @@ func (m *MachOLoader) Header() (uint64, []byte, int) {
 }
 
 func (m *MachOLoader) Type() int {
-	return EXEC
+	switch m.file.Type {
+	case macho.TypeExec:
+		return EXEC
+	case macho.TypeDylib, 0x7: // type dylinker
+		return DYN
+	default:
+		return EXEC
+	}
 }
 
 func (m *MachOLoader) DataSegment() (start, end uint64) {
