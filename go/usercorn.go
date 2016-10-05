@@ -401,7 +401,7 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 }
 
 func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
-	l, err := loader.Load(f)
+	l, err := loader.LoadArch(f, u.Loader().Arch())
 	if err != nil {
 		return
 	}
