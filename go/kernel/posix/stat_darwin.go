@@ -56,15 +56,15 @@ func NewDarwinStat(stat *syscall.Stat_t, bits uint) interface{} {
 			Rdev:    int32(stat.Rdev),
 			Size:    int64(stat.Size),
 			Blksize: int32(stat.Blksize),
-			Blkcnt:    int64(stat.Blkcnt),
-			Atime:     int64(stat.Atim.Sec),
-			AtimeNsec: int64(stat.Atim.Nsec),
-			Mtime:     int64(stat.Mtim.Sec),
-			MtimeNsec: int64(stat.Mtim.Nsec),
-			Ctime:     int64(stat.Ctim.Sec),
-			CtimeNsec: int64(stat.Ctim.Nsec),
+			// Blkcnt:    int64(stat.Blkcnt),
+			Atime:     int64(stat.Atimespec.Sec),
+			AtimeNsec: int64(stat.Atimespec.Nsec),
+			Mtime:     int64(stat.Mtimespec.Sec),
+			MtimeNsec: int64(stat.Mtimespec.Nsec),
+			Ctime:     int64(stat.Ctimespec.Sec),
+			CtimeNsec: int64(stat.Ctimespec.Nsec),
 		}
 	} else {
-		panic("darwin stat struct unimplemented")
+		panic("darwin-32 stat struct unimplemented")
 	}
 }
