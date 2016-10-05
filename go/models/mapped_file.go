@@ -29,7 +29,7 @@ func (m *MappedFile) Symbolicate(addr uint64) (result Symbol, distance uint64) {
 		if sym.Start == 0 {
 			continue
 		}
-		if sym.Contains(addr) {
+		if sym.Contains(addr) || (addr >= sym.Start && sym.End == 0) {
 			dist := int64(addr - sym.Start)
 			if dist < min || min == -1 {
 				nearest = sym

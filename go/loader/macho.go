@@ -214,6 +214,9 @@ func (m *MachOLoader) getSymbols() ([]models.Symbol, error) {
 				Start: s.Value,
 				End:   0,
 			}
+			if i > 0 {
+				symbols[i-1].End = symbols[i].Start
+			}
 		}
 	}
 	if m.file.Dysymtab != nil {
