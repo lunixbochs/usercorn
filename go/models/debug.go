@@ -16,8 +16,10 @@ import (
 )
 
 var demangleRe = regexp.MustCompile(`^[^(]+`)
+var demangleCache = make(map[string]string)
+var demangleLock sync.RWMutex
 
-func Demangle(name string) string {
+func demangleMiss(name string) string {
 	if strings.HasPrefix(name, "__Z") {
 		name = name[1:]
 	} else if !strings.HasPrefix(name, "_Z") {
@@ -40,12 +42,28 @@ func Demangle(name string) string {
 	stdin.Close()
 	out, err := ioutil.ReadAll(stdout)
 	out = bytes.Trim(out, "\t\r\n ")
+	result := name
 	if err != nil || len(out) == 0 {
 		return name
 	}
 	cmd.Wait()
 	out = demangleRe.FindSubmatch(out)[0]
-	return string(out)
+	result = string(out)
+	return result
+}
+
+func Demangle(name string) string {
+	demangleLock.RLock()
+	if hit, ok := demangleCache[name]; ok {
+		demangleLock.RUnlock()
+		return hit
+	}
+	demangleLock.RUnlock()
+	result := demangleMiss(name)
+	demangleLock.Lock()
+	demangleCache[name] = result
+	demangleLock.Unlock()
+	return result
 }
 
 func Assemble(asm string, addr uint64, arch *Arch) ([]byte, error) {
