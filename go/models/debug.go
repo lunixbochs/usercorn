@@ -130,32 +130,35 @@ func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
 }
 
 func Repr(p []byte, strsize int) string {
-	tmp := make([]string, len(p))
-	for i, b := range p {
+	if len(p) > strsize && strsize > 0 {
+		p = p[:strsize]
+	}
+	tmp := make([]byte, 0, len(p))
+	for _, b := range p {
 		if b >= 0x20 && b <= 0x7e {
-			tmp[i] = string(b)
+			tmp = append(tmp, b)
 		} else {
+			var repr string
 			switch b {
 			case 0:
-				tmp[i] = "\\0"
+				repr = "\\0"
 			case '\b':
-				tmp[i] = "\\b"
+				repr = "\\b"
 			case '\r':
-				tmp[i] = "\\r"
+				repr = "\\r"
 			case '\n':
-				tmp[i] = "\\n"
+				repr = "\\n"
 			case '\t':
-				tmp[i] = "\\t"
+				repr = "\\t"
 			default:
-				tmp[i] = fmt.Sprintf("\\x%02x", b)
+				repr = fmt.Sprintf("\\x%02x", b)
 			}
+			tmp = append(tmp, repr...)
 		}
 	}
-	out := strings.Join(tmp, "")
+	out := string(tmp)
 	if strsize > 0 && len(out) > strsize {
-		for i := len(tmp) - 1; len(out) > strsize-3; i-- {
-			out = strings.Join(tmp[:i], "")
-		}
+		out = string(tmp[:strsize-3])
 		return "\"" + out + "\"..."
 	}
 	return "\"" + out + "\""
