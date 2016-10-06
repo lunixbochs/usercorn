@@ -85,10 +85,12 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	prefix := fs.String("prefix", "", "library load prefix")
 	base := fs.Uint64("base", 0, "force executable base address")
 	ibase := fs.Uint64("ibase", 0, "force interpreter base address")
-	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
 	strsize := fs.Int("strsize", 30, "limited -strace'd strings to length (0 disables)")
 	skipinterp := fs.Bool("nointerp", false, "don't load binary's interpreter")
 	native := fs.Bool("native", false, "[stub] use native syscall override (only works if host/guest arch/ABI matches)")
+
+	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
+	symfile := fs.Bool("symfile", false, "display symbols as sym@<mapped file>")
 
 	outfile := fs.String("o", "", "redirect debugging output to file (default stderr)")
 
@@ -158,7 +160,9 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		*looproll = 8
 	}
 	config := &models.Config{
-		Demangle:        *demangle,
+		Demangle: *demangle,
+		SymFile:  *symfile,
+
 		ForceBase:       *base,
 		ForceInterpBase: *ibase,
 		LoadPrefix:      absPrefix,

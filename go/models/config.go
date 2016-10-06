@@ -11,7 +11,6 @@ type Config struct {
 	Output io.WriteCloser
 
 	Color           bool
-	Demangle        bool
 	ForceBase       uint64
 	ForceInterpBase uint64
 	LoadPrefix      string
@@ -30,6 +29,9 @@ type Config struct {
 	TraceReg        bool
 	TraceSys        bool
 	Verbose         bool
+
+	Demangle bool
+	SymFile  bool
 
 	PrefixArgs []string
 }

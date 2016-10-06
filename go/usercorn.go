@@ -425,12 +425,14 @@ func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) {
 	var sym models.Symbol
 	var dist uint64
 	fileLine := ""
+	var file *models.MappedFile
 	for _, f := range u.mappedFiles {
 		if f.Contains(addr) {
 			sym, dist = f.Symbolicate(addr)
 			if sym.Name != "" && includeFile {
 				fileLine = f.FileLine(addr)
 			}
+			file = f
 			break
 		}
 	}
@@ -438,6 +440,9 @@ func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) {
 	if name != "" {
 		if u.config.Demangle {
 			name = models.Demangle(name)
+		}
+		if u.config.SymFile && file != nil {
+			name = fmt.Sprintf("%s@%s", name, file.Name)
 		}
 		if dist > 0 {
 			name = fmt.Sprintf("%s+0x%x", name, dist)
