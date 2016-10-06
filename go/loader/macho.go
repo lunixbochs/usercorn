@@ -121,10 +121,7 @@ func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 	if !ok {
 		return nil, fmt.Errorf("Unsupported CPU: %s", file.Cpu)
 	}
-	entry, err := findEntry(file, bits)
-	if err != nil {
-		return nil, err
-	}
+	entry, _ := findEntry(file, bits)
 	return &MachOLoader{
 		LoaderHeader: LoaderHeader{
 			arch:  machineName,
