@@ -206,11 +206,15 @@ func (m *MachOLoader) getSymbols() ([]models.Symbol, error) {
 		syms := m.file.Symtab.Syms
 		symbols = make([]models.Symbol, len(syms))
 		for i, s := range syms {
+			if s.Sect == 0 {
+				continue
+			}
 			symbols[i] = models.Symbol{
 				Name:  s.Name,
 				Start: s.Value,
 				End:   0,
 			}
+			symbols[i].Start -= m.file.Sections[0].Addr
 			if i > 0 {
 				symbols[i-1].End = symbols[i].Start
 			}
