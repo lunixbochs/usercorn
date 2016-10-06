@@ -2,6 +2,7 @@ package usercorn
 
 import (
 	"bufio"
+	"debug/dwarf"
 	"errors"
 	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/memio"
@@ -401,12 +402,13 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 }
 
 func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
+	var symbols []models.Symbol
+	var DWARF *dwarf.Data
 	l, err := loader.LoadArch(f, u.Loader().Arch())
-	if err != nil {
-		return
+	if err == nil {
+		symbols, _ = l.Symbols()
+		DWARF, _ = l.DWARF()
 	}
-	symbols, _ := l.Symbols()
-	DWARF, _ := l.DWARF()
 	mappedFile := &models.MappedFile{
 		Name:    path.Base(f.Name()),
 		Off:     off,
