@@ -173,6 +173,14 @@ func Repr(p []byte, strsize int) string {
 	return "\"" + out + "\""
 }
 
+func isNull(p []byte) bool {
+	var x byte
+	for _, b := range p {
+		x |= b
+	}
+	return x == 0
+}
+
 func HexDump(base uint64, mem []byte, bits int) []string {
 	var clean = func(p []byte) string {
 		o := make([]byte, len(p))
@@ -186,7 +194,7 @@ func HexDump(base uint64, mem []byte, bits int) []string {
 		return string(o)
 	}
 	bsz := bits / 8
-	hexFmt := fmt.Sprintf("0x%%0%dx:", bsz*2)
+	hexFmt := fmt.Sprintf("0x%%0%dx", bsz*2)
 	padBlock := strings.Repeat(" ", bsz*2)
 	padTail := strings.Repeat(" ", bsz)
 
@@ -198,6 +206,24 @@ func HexDump(base uint64, mem []byte, bits int) []string {
 	blocks := make([]string, blockCount)
 	tail := make([]string, blockCount)
 	for i := 0; i < len(mem); i += lineSize {
+		// try to skip consecutive null chunks
+		if i+lineSize < len(mem) {
+			start := i
+			end := i
+			// TODO: what if there's less than a line of nulls at the end?
+			for end < len(mem)-lineSize && isNull(mem[end:end+lineSize]) {
+				end += lineSize
+			}
+			if end > start+lineSize {
+				end += lineSize
+				// let's do this
+				shex := fmt.Sprintf(hexFmt, base+uint64(start))
+				line := fmt.Sprintf("%s: [skipped 0x%x null bytes]", shex, end-start)
+				out = append(out, line)
+				i = end
+				continue
+			}
+		}
 		memLine := mem[i:]
 		for j := 0; j < blockCount; j++ {
 			if j*bsz < len(memLine) {
@@ -221,7 +247,7 @@ func HexDump(base uint64, mem []byte, bits int) []string {
 				tail[j] = padTail
 			}
 		}
-		line := []string{fmt.Sprintf(hexFmt, base+uint64(i))}
+		line := []string{fmt.Sprintf(hexFmt+":", base+uint64(i))}
 		line = append(line, strings.Join(blocks, " "))
 		line = append(line, fmt.Sprintf("[%s]", strings.Join(tail, " ")))
 		out = append(out, strings.Join(line, " "))
