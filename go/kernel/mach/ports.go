@@ -4,6 +4,10 @@ func (k *MachKernel) TaskSelfTrap() uint64 {
 	return 1
 }
 
+func (k *MachKernel) ThreadSelfTrap() uint64 {
+	return 1
+}
+
 func (k *MachKernel) MachReplyPort() uint64 {
 	return 1
 }
