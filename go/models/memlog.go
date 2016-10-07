@@ -126,9 +126,9 @@ func (m *MemLog) String(bits int) string {
 		}
 		for i, line := range HexDump(d.addr, d.data, bits) {
 			if i == 0 {
-				out = append(out, fmt.Sprintf("%s%c%s %s%c\n", t, d.tag, line, t, d.tag))
+				out = append(out, fmt.Sprintf("%s%c %s %s%c\n", t, d.tag, line, t, d.tag))
 			} else {
-				out = append(out, fmt.Sprintf("  %s\n", line))
+				out = append(out, fmt.Sprintf("   %s\n", line))
 			}
 		}
 	}
