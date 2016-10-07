@@ -243,7 +243,7 @@ func (u *Usercorn) Run(args, env []string) error {
 		}
 	}
 	if u.config.Verbose || u.config.TraceReg {
-		u.Printf("%s", u.status.Changes(false).String("", u.config.Color))
+		u.Printf("%s", u.status.Changes(false).String(u.config.Color))
 	}
 	if u.config.Verbose {
 		u.Println("=====================================")
@@ -280,7 +280,7 @@ func (u *Usercorn) Run(args, env []string) error {
 			u.Printf("  %v\n", m.String())
 		}
 		u.Println("[registers]")
-		u.Printf("%s", u.status.Changes(false).String("", u.config.Color))
+		u.Printf("%s", u.status.Changes(false).String(u.config.Color))
 		u.Println("[stacktrace]")
 		pc, _ := u.RegRead(u.arch.PC)
 		sp, _ := u.RegRead(u.arch.SP)
@@ -307,7 +307,7 @@ func (u *Usercorn) Run(args, env []string) error {
 		err = u.Start(pc, u.exit)
 		u.gate.Stop()
 
-		u.Printf("%s", u.memlog.Flush("", u.arch.Bits))
+		u.Printf("%s", u.memlog.Flush(u.arch.Bits))
 		if err != nil || len(u.trampolines) == 0 {
 			break
 		}
@@ -330,7 +330,7 @@ func (u *Usercorn) Run(args, env []string) error {
 	if err != nil || u.config.Verbose {
 		verboseExit()
 	} else if u.config.TraceReg {
-		u.Printf("\n%s", u.status.Changes(false).String("", u.config.Color))
+		u.Printf("\n%s", u.status.Changes(false).String(u.config.Color))
 	}
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus
@@ -515,10 +515,7 @@ func (u *Usercorn) addHooks() error {
 				return
 			}
 			u.traceMatching = true
-			var indent string
-			if u.stacktrace.Len() > 2 {
-				indent = strings.Repeat("  ", u.stacktrace.Len()-1)
-			}
+			// TODO: mark stack depth changes in a different way
 			if u.blockloop != nil {
 				if looped, loop, count := u.blockloop.Update(addr); looped {
 					return
@@ -526,35 +523,42 @@ func (u *Usercorn) addHooks() error {
 					// TODO: maybe print a message when we start collapsing loops
 					// with the symbols or even all disassembly involved encapsulated
 					chain := u.blockloop.String(u, loop)
-					u.Printf(indent+"- (%d) loops over %s\n", count, chain)
+					u.Printf("- (%d) loops over %s\n", count, chain)
 				}
 			}
-			u.Printf("%s", u.memlog.Flush(indent, u.arch.Bits))
+			// stacktrace dir
+			dir := "  "
+			oldpos := u.stacktrace.Len()
+
+			u.Printf("%s", u.memlog.Flush(u.arch.Bits))
 			if !u.trampolined {
 				if sp, err := u.RegRead(u.arch.SP); err == nil {
 					u.stacktrace.Update(addr, sp)
 				}
 			}
-			indent = strings.Repeat("  ", u.stacktrace.Len())
-			blockIndent := indent
-			if len(indent) >= 2 {
-				blockIndent = indent[:len(indent)-2]
-			}
 			if sym != "" {
 				sym = " (" + sym + ")"
 			}
-			blockLine := fmt.Sprintf("\n%s+ block%s @0x%x", blockIndent, sym, addr)
+
+			newpos := u.stacktrace.Len()
+			if newpos > oldpos {
+				dir = ">>"
+			} else if newpos < oldpos {
+				dir = "<<"
+			}
+
+			blockLine := fmt.Sprintf("\n%s 0x%x%s", dir, addr, sym)
 			changes := u.status.Changes(true)
 			if !u.config.TraceExec && u.config.TraceReg {
 				// if only registers are being traced, we don't need to print
 				// the block if no registers were modified
 				if changes.Count() > 0 {
 					u.Println(blockLine)
-					u.Printf("%s", changes.String(indent, u.config.Color))
+					u.Printf("  %s", changes.String(u.config.Color))
 				}
 			} else {
 				if changes.Count() > 0 {
-					u.Printf("%s", changes.String(blockIndent, u.config.Color))
+					u.Printf("  %s", changes.String(u.config.Color))
 				}
 				u.Println(blockLine)
 			}
@@ -566,11 +570,10 @@ func (u *Usercorn) addHooks() error {
 			if !u.traceMatching {
 				return
 			}
-			indent := strings.Repeat("  ", u.stacktrace.Len())
 			if u.config.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 || u.trampolined {
 				changes := u.status.Changes(true)
 				dis, _ := u.Disas(addr, uint64(size))
-				u.Printf("%s", indent+dis)
+				u.Printf("   %s", dis)
 				if !u.config.TraceReg || changes.Count() == 0 {
 					u.Println("")
 				} else {
@@ -580,7 +583,7 @@ func (u *Usercorn) addHooks() error {
 					if pad > 0 {
 						dindent = strings.Repeat(" ", pad)
 					}
-					u.Printf("%s", changes.String(dindent, u.config.Color))
+					u.Printf("%s%s", dindent, changes.String(u.config.Color))
 				}
 			}
 		}, 1, 0)
@@ -610,12 +613,8 @@ func (u *Usercorn) addHooks() error {
 				}
 			}
 			if u.config.TraceMem {
-				memFmt := fmt.Sprintf("%%s%%s 0x%%0%dx 0x%%0%dx\n", u.Bsz*2, size*2)
-				indent := ""
-				if u.stacktrace.Len() > 0 {
-					indent = strings.Repeat("  ", u.stacktrace.Len()-1)
-				}
-				u.Printf(memFmt, indent, letter, addr, value)
+				memFmt := fmt.Sprintf("%%s  0x%%0%dx 0x%%0%dx\n", u.Bsz*2, size*2)
+				u.Printf(memFmt, letter, addr, value)
 			}
 			if u.config.TraceMemBatch {
 				u.memlog.Update(addr, size, value, letter == "W")
@@ -813,10 +812,8 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 			panic(msg)
 		}
 	}
-	indent := ""
-	if u.config.TraceSys && u.stacktrace.Len() > 0 {
-		indent = strings.Repeat("  ", u.stacktrace.Len()-1)
-		u.Printf("%s", u.memlog.Flush(indent, u.arch.Bits))
+	if u.config.TraceSys {
+		u.Printf("%s", u.memlog.Flush(u.arch.Bits))
 	}
 	for _, k := range u.kernels {
 		if sys := co.Lookup(u, k, name); sys != nil {
@@ -825,7 +822,7 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 				return 0, err
 			}
 			if u.config.TraceSys {
-				u.Printf(indent + "s ")
+				u.Printf("s  ")
 				u.Printf("%s", sys.Trace(args))
 				// don't memlog our strace
 				u.memlog.Reset()
@@ -837,7 +834,7 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 				// TODO: print this manually?
 				u.Printf("%s", sys.TraceRet(args, ret))
 			}
-			u.Printf("%s", u.memlog.Flush(indent, u.arch.Bits))
+			u.Printf("%s", u.memlog.Flush(u.arch.Bits))
 			return ret, nil
 		}
 	}

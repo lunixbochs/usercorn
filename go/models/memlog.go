@@ -38,8 +38,8 @@ func (m *MemLog) Freeze() {
 	m.frozen = true
 }
 
-func (m *MemLog) Flush(indent string, bits int) string {
-	tmp := m.String(indent, bits)
+func (m *MemLog) Flush(bits int) string {
+	tmp := m.String(bits)
 	m.Reset()
 	return tmp
 }
@@ -117,7 +117,7 @@ func (m *MemLog) Update(addr uint64, size int, value int64, write bool) {
 	m.UpdateBytes(addr, tmp[:size], write)
 }
 
-func (m *MemLog) String(indent string, bits int) string {
+func (m *MemLog) String(bits int) string {
 	var out []string
 	for _, d := range m.log {
 		t := "R"
@@ -126,9 +126,9 @@ func (m *MemLog) String(indent string, bits int) string {
 		}
 		for i, line := range HexDump(d.addr, d.data, bits) {
 			if i == 0 {
-				out = append(out, fmt.Sprintf("%s%s%c%s %s%c\n", indent, t, d.tag, line, t, d.tag))
+				out = append(out, fmt.Sprintf("%s%c%s %s%c\n", t, d.tag, line, t, d.tag))
 			} else {
-				out = append(out, fmt.Sprintf("%s  %s\n", indent, line))
+				out = append(out, fmt.Sprintf("  %s\n", line))
 			}
 		}
 	}

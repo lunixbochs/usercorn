@@ -105,12 +105,9 @@ type Changes struct {
 	Changes []*Change
 }
 
-func (cs *Changes) String(indent string, color bool) string {
+func (cs *Changes) String(color bool) string {
 	var out []string
 	var printRow = func(changes []*Change, cols int) {
-		if len(changes) > 0 {
-			out = append(out, indent)
-		}
 		if len(changes) < cols && len(changes) > 0 {
 			padLen := cs.Bsz + len(" regn 0x ")
 			pad := strings.Repeat(" ", padLen*(cols-len(changes)))
