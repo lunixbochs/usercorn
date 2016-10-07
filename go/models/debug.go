@@ -130,8 +130,12 @@ func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
 }
 
 func Repr(p []byte, strsize int) string {
+	trunc := false
 	if len(p) > strsize && strsize > 0 {
-		p = p[:strsize]
+		// factor quotes into strsize
+		strsize -= 2
+		p = p[:strsize-3]
+		trunc = true
 	}
 	tmp := make([]byte, 0, len(p))
 	for _, b := range p {
@@ -153,12 +157,17 @@ func Repr(p []byte, strsize int) string {
 			default:
 				repr = fmt.Sprintf("\\x%02x", b)
 			}
-			tmp = append(tmp, repr...)
+			if strsize > 0 && len(tmp)+len(repr) <= strsize {
+				tmp = append(tmp, repr...)
+			}
 		}
 	}
 	out := string(tmp)
 	if strsize > 0 && len(out) > strsize {
 		out = string(tmp[:strsize-3])
+		trunc = true
+	}
+	if trunc {
 		return "\"" + out + "\"..."
 	}
 	return "\"" + out + "\""
