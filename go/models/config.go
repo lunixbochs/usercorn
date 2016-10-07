@@ -33,6 +33,8 @@ type Config struct {
 	Demangle bool
 	SymFile  bool
 
+	StubSyscalls bool
+
 	PrefixArgs []string
 }
 

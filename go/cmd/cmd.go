@@ -91,6 +91,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 
 	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
 	symfile := fs.Bool("symfile", false, "display symbols as sym@<mapped file>")
+	stubsys := fs.Bool("stubsys", false, "stub missing syscalls")
 
 	outfile := fs.String("o", "", "redirect debugging output to file (default stderr)")
 
@@ -160,8 +161,9 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		*looproll = 8
 	}
 	config := &models.Config{
-		Demangle: *demangle,
-		SymFile:  *symfile,
+		Demangle:     *demangle,
+		SymFile:      *symfile,
+		StubSyscalls: *stubsys,
 
 		ForceBase:       *base,
 		ForceInterpBase: *ibase,

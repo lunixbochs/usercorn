@@ -806,7 +806,12 @@ func (u *Usercorn) AddKernel(kernel interface{}, first bool) {
 
 func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
 	if name == "" {
-		panic(fmt.Sprintf("Syscall missing: %d", num))
+		msg := fmt.Sprintf("Syscall missing: %d", num)
+		if u.config.StubSyscalls {
+			u.Println(msg)
+		} else {
+			panic(msg)
+		}
 	}
 	indent := ""
 	if u.config.TraceSys && u.stacktrace.Len() > 0 {
@@ -836,7 +841,13 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 			return ret, nil
 		}
 	}
-	panic(fmt.Errorf("Kernel not found for syscall '%s'", name))
+	msg := fmt.Errorf("Kernel not found for syscall '%s'", name)
+	if u.config.StubSyscalls {
+		u.Println(msg)
+		return 0, nil
+	} else {
+		panic(msg)
+	}
 }
 
 func (u *Usercorn) Exit(err error) {
