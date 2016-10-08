@@ -14,7 +14,7 @@ type Usercorn interface {
 	Bits() uint
 	ByteOrder() binary.ByteOrder
 	Assemble(asm string, addr uint64) ([]byte, error)
-	Disas(addr, size uint64) (string, error)
+	Disas(addr, size uint64, showBytes bool) (string, error)
 	Config() *Config
 	Run(args, env []string) error
 	Trampoline(func() error) error

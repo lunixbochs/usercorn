@@ -32,6 +32,7 @@ type Config struct {
 
 	Demangle bool
 	SymFile  bool
+	DisBytes bool
 
 	StubSyscalls bool
 

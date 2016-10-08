@@ -92,6 +92,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
 	symfile := fs.Bool("symfile", false, "display symbols as sym@<mapped file>")
 	stubsys := fs.Bool("stubsys", false, "stub missing syscalls")
+	disbytes := fs.Bool("disbytes", false, "show instruction bytes with disassembly")
 
 	outfile := fs.String("o", "", "redirect debugging output to file (default stderr)")
 
@@ -164,6 +165,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		Demangle:     *demangle,
 		SymFile:      *symfile,
 		StubSyscalls: *stubsys,
+		DisBytes:     *disbytes,
 
 		ForceBase:       *base,
 		ForceInterpBase: *ibase,

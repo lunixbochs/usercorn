@@ -219,7 +219,7 @@ func (u *Usercorn) Run(args, env []string) error {
 	}
 	if u.config.Verbose {
 		u.Printf("[entry @ 0x%x]\n", u.entry)
-		dis, err := u.Disas(u.entry, 64)
+		dis, err := u.Disas(u.entry, 64, u.config.DisBytes)
 		if err != nil {
 			u.Println(err)
 		} else {
@@ -579,14 +579,16 @@ func (u *Usercorn) addHooks() error {
 			}
 			if u.config.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 || u.trampolined {
 				changes := u.status.Changes(true)
-				dis, _ := u.Disas(addr, uint64(size))
+				dis, _ := u.Disas(addr, uint64(size), u.config.DisBytes)
 				u.Printf("   %s", dis)
 				if !u.config.TraceReg || changes.Count() == 0 {
 					u.Println("")
 				} else {
 					dindent := ""
 					// TODO: I can count the max dis length in the block and reuse it here
-					pad := 40 - len(dis)
+					// TODO: base of 60 is right for 32-bit and wrong for hexdump
+					// so I should give hexdump a fixed base too
+					pad := 60 - len(dis) - 3 - 2
 					if pad > 0 {
 						dindent = strings.Repeat(" ", pad)
 					}

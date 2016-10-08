@@ -65,12 +65,12 @@ func (u *Unicorn) Assemble(asm string, addr uint64) ([]byte, error) {
 	return models.Assemble(asm, addr, u.arch)
 }
 
-func (u *Unicorn) Disas(addr, size uint64) (string, error) {
+func (u *Unicorn) Disas(addr, size uint64, showBytes bool) (string, error) {
 	mem, err := u.MemRead(addr, size)
 	if err != nil {
 		return "", err
 	}
-	return models.Disas(mem, addr, u.arch, u.Bsz)
+	return models.Disas(mem, addr, u.arch, showBytes, u.Bsz)
 }
 
 func (u *Unicorn) MemMapProt(addr, size uint64, prot int) error {

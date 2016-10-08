@@ -84,7 +84,7 @@ func Assemble(asm string, addr uint64, arch *Arch) ([]byte, error) {
 var discache = make(map[string]string)
 var discacheLock sync.RWMutex
 
-func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
+func Disas(mem []byte, addr uint64, arch *Arch, showBytes bool, pad ...int) (string, error) {
 	var asm []gapstone.Instruction
 	cacheKey := fmt.Sprintf("%d|%s", addr, mem)
 	if len(mem) == 0 {
@@ -118,9 +118,13 @@ func Disas(mem []byte, addr uint64, arch *Arch, pad ...int) (string, error) {
 	}
 	var out []string
 	for _, insn := range asm {
-		pad := strings.Repeat(" ", int(width-insn.Size)*2)
-		data := pad + hex.EncodeToString(insn.Bytes)
-		out = append(out, fmt.Sprintf("0x%x: %s %s %s", insn.Address, data, insn.Mnemonic, insn.OpStr))
+		if showBytes {
+			pad := strings.Repeat(" ", int(width-insn.Size)*2)
+			data := pad + hex.EncodeToString(insn.Bytes)
+			out = append(out, fmt.Sprintf("0x%x: %s %s %s", insn.Address, data, insn.Mnemonic, insn.OpStr))
+		} else {
+			out = append(out, fmt.Sprintf("0x%x: %s %s", insn.Address, insn.Mnemonic, insn.OpStr))
+		}
 	}
 	ret := strings.Join(out, "\n")
 	discacheLock.Lock()
