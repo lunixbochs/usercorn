@@ -79,7 +79,7 @@ func handleCmd(c *cmd.UsercornCmd, line string) bool {
 		}
 	case "regs":
 		status := models.StatusDiff{U: u}
-		fmt.Printf("%s", status.Changes(false).String("", c.Config.Color))
+		fmt.Printf("%s", status.Changes(false).String(c.Config.Color))
 	default:
 		return false
 	}
@@ -100,12 +100,12 @@ func main() {
 		mem.Desc = "repl"
 
 		status := models.StatusDiff{U: u}
-		fmt.Printf("%s", status.Changes(false).String("", c.Config.Color))
+		fmt.Printf("%s", status.Changes(false).String(c.Config.Color))
 		addr := mem.Addr
 		end := addr
 		input := bufio.NewScanner(os.Stdin)
 		for {
-			fmt.Printf("%s", status.Changes(true).String("", c.Config.Color))
+			fmt.Printf("%s", status.Changes(true).String(c.Config.Color))
 			fmt.Printf("0x%x: ", addr)
 			if !input.Scan() {
 				break
@@ -133,7 +133,7 @@ func main() {
 			}
 			addr = end
 		}
-		fmt.Printf("\n%s", status.Changes(false).String("", c.Config.Color))
+		fmt.Printf("\n%s", status.Changes(false).String(c.Config.Color))
 		return nil
 	}
 	c.Run(os.Args, os.Environ())
