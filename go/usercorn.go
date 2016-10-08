@@ -457,13 +457,20 @@ func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) {
 }
 
 func (u *Usercorn) Brk(addr uint64) (uint64, error) {
-	// TODO: this is linux specific
+	// TODO: brk(0) behavior is linux specific
+	cur := u.brk
 	if addr > 0 {
-		err := u.MemMapProt(u.brk, addr-u.brk, uc.PROT_READ|uc.PROT_WRITE)
+		// take brk protections from last brk segment (not sure if this is right)
+		prot := uc.PROT_READ | uc.PROT_WRITE
+		if brk := u.mapping(cur, 1); brk != nil {
+			prot = brk.Prot
+		}
+		size := addr - u.brk
+		err := u.MemMapProt(u.brk, size, prot)
 		if err != nil {
 			return u.brk, err
 		}
-		if mmap := u.mapping(u.brk, addr); mmap != nil {
+		if mmap := u.mapping(cur, size); mmap != nil {
 			mmap.Desc = "brk"
 		}
 		u.brk = addr
