@@ -423,21 +423,23 @@ func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
 	}
 }
 
-func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) {
-	var sym models.Symbol
-	var dist uint64
-	fileLine := ""
-	var file *models.MappedFile
+func (u *Usercorn) addr2file(addr uint64, includeSource bool) (*models.MappedFile, string, uint64) {
+	var fileLine string
 	for _, f := range u.mappedFiles {
 		if f.Contains(addr) {
-			sym, dist = f.Symbolicate(addr)
-			if sym.Name != "" && includeFile {
+			sym, dist := f.Symbolicate(addr)
+			if sym.Name != "" && includeSource {
 				fileLine = f.FileLine(addr)
 			}
-			file = f
-			break
+			return f, fileLine, dist
 		}
 	}
+	return nil, "", 0
+}
+
+func (u *Usercorn) Symbolicate(addr uint64, includeSource bool) (string, error) {
+	var sym models.Symbol
+	file, fileLine, dist := u.addr2file(addr, includeSource)
 	name := sym.Name
 	if name != "" {
 		if u.config.Demangle {
@@ -554,7 +556,14 @@ func (u *Usercorn) addHooks() error {
 				dir = "<<"
 			}
 
-			blockLine := fmt.Sprintf("\n%s 0x%x%s", dir, addr, sym)
+			addrStr := fmt.Sprintf("%#x", addr)
+			if sym == "" && u.config.SymFile {
+				file, _, _ := u.addr2file(addr, false)
+				if file != nil {
+					addrStr = fmt.Sprintf("%#x@%s", addr, file.Name)
+				}
+			}
+			blockLine := fmt.Sprintf("\n%s %s%s", dir, addrStr, sym)
 			changes := u.status.Changes(true)
 			if !u.config.TraceExec && u.config.TraceReg {
 				// if only registers are being traced, we don't need to print
