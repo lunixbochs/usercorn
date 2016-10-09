@@ -54,7 +54,7 @@ Caveats
 
 - Your userspace might be incredibly confusing to the target binary.
 - No API for memory mapped files yet (kinda, if mmap() currently gets a file descriptor argument it will manually copy the file into memory).
-- I only have maybe 20% of the posix syscalls implemented, which is enough to run basic binaries. Busybox works great. Dynamically linked stuff not so much. I keep breaking this, and I probably need to rework the TLS and x86 segment stuff again.
+- I only have maybe 20% of the posix syscalls implemented, which is enough to run basic binaries. Busybox (x86_64) works great. Dynamically linked stuff not so much. I keep breaking this, and I probably need to rework the TLS and x86 segment stuff again.
 
 [See Also](https://xkcd.com/1406/)
 ----
