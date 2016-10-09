@@ -77,3 +77,20 @@ func (c *Config) PrefixPath(path string, force bool) string {
 	}
 	return c.resolveSymlink(target, path, force)
 }
+
+func (c *Config) PrefixRel(path string) string {
+	// returns an absolute path inside the load prefix
+	// as a path relative to the prefix base
+	if !filepath.IsAbs(path) {
+		return path
+	}
+	rel, err := filepath.Rel(c.LoadPrefix, path)
+	if err != nil {
+		return path
+	}
+	split := filepath.SplitList(rel)
+	if len(split) > 0 && split[0] == ".." {
+		return path
+	}
+	return rel
+}

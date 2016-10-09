@@ -404,10 +404,26 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
 	var symbols []models.Symbol
 	var DWARF *dwarf.Data
-	l, err := loader.LoadArch(f, u.Loader().Arch())
-	if err == nil {
-		symbols, _ = l.Symbols()
-		DWARF, _ = l.DWARF()
+
+	// GNU/Linux: try loading /usr/lib/debug version of libraries for debug symbols
+	// TODO: only do this on absolute paths?
+	debugPath := filepath.Join("/usr/lib/debug", u.config.PrefixRel(f.Name()))
+	debugPath = u.PrefixPath(debugPath, false)
+	if _, err := os.Stat(debugPath); err == nil {
+		l, err := loader.LoadFileArch(debugPath, u.Loader().Arch())
+		if err == nil {
+			symbols, _ = l.Symbols()
+			DWARF, _ = l.DWARF()
+		}
+		// TODO: hash the segments and ensure debug lib is the same?
+	}
+	// if no debug library was found, fall back to loading symbols from original library
+	if symbols == nil {
+		l, err := loader.LoadArch(f, u.Loader().Arch())
+		if err == nil {
+			symbols, _ = l.Symbols()
+			DWARF, _ = l.DWARF()
+		}
 	}
 	mappedFile := &models.MappedFile{
 		Name:    path.Base(f.Name()),
@@ -423,23 +439,28 @@ func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
 	}
 }
 
-func (u *Usercorn) addr2file(addr uint64, includeSource bool) (*models.MappedFile, string, uint64) {
-	var fileLine string
+func (u *Usercorn) addr2file(addr uint64) *models.MappedFile {
 	for _, f := range u.mappedFiles {
 		if f.Contains(addr) {
-			sym, dist := f.Symbolicate(addr)
-			if sym.Name != "" && includeSource {
-				fileLine = f.FileLine(addr)
-			}
-			return f, fileLine, dist
+			return f
 		}
 	}
-	return nil, "", 0
+	return nil
 }
 
 func (u *Usercorn) Symbolicate(addr uint64, includeSource bool) (string, error) {
-	var sym models.Symbol
-	file, fileLine, dist := u.addr2file(addr, includeSource)
+	file := u.addr2file(addr)
+	var (
+		fileLine string
+		sym      models.Symbol
+		dist     uint64
+	)
+	if file != nil {
+		sym, dist = file.Symbolicate(addr)
+		if sym.Name != "" && includeSource {
+			fileLine = file.FileLine(addr)
+		}
+	}
 	name := sym.Name
 	if name != "" {
 		if u.config.Demangle {
@@ -558,7 +579,7 @@ func (u *Usercorn) addHooks() error {
 
 			addrStr := fmt.Sprintf("%#x", addr)
 			if sym == "" && u.config.SymFile {
-				file, _, _ := u.addr2file(addr, false)
+				file := u.addr2file(addr)
 				if file != nil {
 					addrStr = fmt.Sprintf("%#x@%s", addr, file.Name)
 				}
