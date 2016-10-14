@@ -269,6 +269,25 @@ func (k *DarwinKernel) BsdthreadRegister() uint64 {
 	return 0
 }
 
+func (k *DarwinKernel) Sigprocmask(how int32, mask common.Buf, omask common.Obuf) uint64 {
+	/*
+		"how" values:
+	#    define SIG_UNBLOCK 1
+	#    define SIG_BLOCK   2
+	#    define SIG_SETMASK 3
+	*/
+	
+	if mask.Addr != 0 {
+		panic("Sigprocmask set not implemented")
+	} else if omask.Addr != 0 {
+		//query-only
+		var blockedSigMask uint64 = 0
+		omask.Pack(blockedSigMask)
+	}
+	
+	return 0
+}
+
 func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
 	gsmsr := uint64(0xC0000101)
 	Wrmsr(k.U, gsmsr, addr)
