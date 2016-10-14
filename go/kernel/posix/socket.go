@@ -30,6 +30,10 @@ func (k *PosixKernel) Shutdown(fd co.Fd, how int) uint64 {
 }
 
 func (k *PosixKernel) Sendto(fd co.Fd, buf co.Buf, size co.Len, flags int, sa syscall.Sockaddr, socklen co.Len) uint64 {
+	if sa == nil {
+		return k.Write(fd, buf, size/*, flags*/)//TODO: implement k.Send instead, which does the same but supports flags
+	}
+	
 	msg := make([]byte, size)
 	if err := buf.Unpack(msg); err != nil {
 		return UINT64_MAX // FIXME
