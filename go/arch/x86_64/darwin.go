@@ -264,6 +264,11 @@ func (k *DarwinKernel) SharedRegionCheckNp(startAddress uint64) uint64 {
 	return 1
 }
 
+func (k *DarwinKernel) BsdthreadRegister() uint64 {
+	//TODO: implement
+	return 0
+}
+
 func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
 	gsmsr := uint64(0xC0000101)
 	Wrmsr(k.U, gsmsr, addr)
