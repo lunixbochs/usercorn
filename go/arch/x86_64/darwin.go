@@ -288,6 +288,24 @@ func (k *DarwinKernel) Sigprocmask(how int32, mask common.Buf, omask common.Obuf
 	return 0
 }
 
+type sigaltstack_t struct {
+	Stackpointer	uint64
+	Size			int64
+	Flags			int64
+}
+
+func (k *DarwinKernel) Sigaltstack(nss common.Buf, oss common.Obuf) uint64 {
+	if nss.Addr != 0 {
+		panic("Sigaltstack set not implemented")
+	} else if oss.Addr != 0 {
+		//query-only
+		var altstack sigaltstack_t
+		oss.Pack(&altstack)
+	}
+	
+	return 0
+}
+
 func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
 	gsmsr := uint64(0xC0000101)
 	Wrmsr(k.U, gsmsr, addr)
