@@ -11,6 +11,7 @@ import (
 	"strings"
 	"encoding/binary"
 	"reflect"
+	"time"
 )
 
 type DarwinKernel struct {
@@ -301,6 +302,32 @@ func (k *DarwinKernel) Sigaltstack(nss common.Buf, oss common.Obuf) uint64 {
 		//query-only
 		var altstack sigaltstack_t
 		oss.Pack(&altstack)
+	}
+	
+	return 0
+}
+
+type timeval_t struct {
+	Tv_sec		int64
+	Tv_usec		int64
+}
+
+type timezone_t struct {
+	Tz_minuteswest		int64
+	Tz_dsttime			int64//daylight saving time
+}
+
+func (k *DarwinKernel) Gettimeofday(timeval common.Obuf, timezone common.Obuf) uint64 {
+	if timeval.Addr != 0 {
+		var timedata timeval_t
+		now := time.Now()
+		timedata.Tv_sec = now.Unix()
+		timedata.Tv_usec = int64(now.Nanosecond()) / 1000
+		timeval.Pack(&timedata)
+	}
+	
+	if timezone.Addr != 0 {
+		panic("gettimeofday timezone query not implemented")
 	}
 	
 	return 0
