@@ -2,6 +2,7 @@ package darwin
 
 import (
 	"github.com/lunixbochs/argjoy"
+	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/darwin/unpack"
@@ -15,7 +16,10 @@ func Unpack(k co.Kernel, arg interface{}, vals []interface{}) error {
 	if reg0 == 0 {
 		return nil
 	}
+	buf := co.NewBuf(k, reg0)
 	switch v := arg.(type) {
+	case *syscall.Sockaddr:
+		*v = unpack.Sockaddr(buf, int(vals[1].(uint64)))
 	case *enum.OpenFlag:
 		*v = unpack.OpenFlag(reg0)
 	case *enum.MmapFlag:
