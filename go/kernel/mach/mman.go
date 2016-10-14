@@ -22,3 +22,17 @@ func (k *MachKernel) KernelrpcMachVmDeallocateTrap(target int, addr co.Buf, size
 	//TODO: implement
 	return 0
 }
+
+func (k *MachKernel) KernelrpcMachVmMapTrap(target_mask uint32, addr co.Buf, size uint64, mask uint64, flags int64, cur_prot uint64) uint64 {
+	//TODO: implement prot/flags handling
+	mmap, err := k.U.Mmap(0, uint64(size))
+	if err != nil {
+		return posix.UINT64_MAX // FIXME
+	}
+	var tmp [8]byte
+	buf, _ := k.U.PackAddr(tmp[:], mmap.Addr)
+	if err := addr.Pack(buf); err != nil {
+		return posix.UINT64_MAX // FIXME
+	}
+	return 0
+}
