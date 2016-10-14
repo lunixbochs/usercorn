@@ -360,19 +360,20 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 	
 	//commpage
 	//TODO: move constants
-	var addr_COMM_PAGE_GTOD_GENERATION uint64
-	addr_COMM_PAGE_GTOD_GENERATION = 0x00007fffffe00000 + 0x050 + 28
-	var addr_COMM_PAGE_NT_GENERATION uint64
-	addr_COMM_PAGE_NT_GENERATION = 0x00007fffffe00000 + 0x050 + 24
+	var addr_COMM_PAGE_VERSION uint64 = 0x00007fffffe00000 + 0x1e
+	var addr_COMM_PAGE_GTOD_GENERATION uint64 = 0x00007fffffe00000 + 0x050 + 28
+	var addr_COMM_PAGE_NT_GENERATION uint64 = 0x00007fffffe00000 + 0x050 + 24
 	
-	var commpageAddrBegin uint64
-	commpageAddrBegin = 0x00007fffffe00000
-	var commpageAddrEnd uint64
-	commpageAddrEnd = 0x00007fffffe01fff
+	var commpageAddrBegin uint64 = 0x00007fffffe00000
+	var commpageAddrEnd uint64 = 0x00007fffffe01fff
 	if err := u.MemMap(commpageAddrBegin, commpageAddrEnd - commpageAddrBegin); err != nil {
 		return err
 	}
 	u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(mu uc.Unicorn, access int, addr uint64, size int, value int64) {
+		if addr < commpageAddrBegin || addr > commpageAddrEnd {
+			return
+		}
+		
 		if access == uc.MEM_WRITE {
 			u.Printf("\ncommpage Mem write")
 		} else {
@@ -380,14 +381,24 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 			if addr == addr_COMM_PAGE_GTOD_GENERATION {
 				//TODO: either write 0 in which case time lookups will fall back to syscalls
 				//or write non-zero and write current timestamp to timestamp and timestampNanosecond fields
-				one32 := []byte{1, 0, 0, 0}
-				u.MemWrite(addr_COMM_PAGE_GTOD_GENERATION, one32)
-			}
-			if addr == addr_COMM_PAGE_NT_GENERATION {
+				var one uint32 = 1
+				tmp := make([]byte, 4)
+				binary.LittleEndian.PutUint32(tmp, one)
+				u.MemWrite(addr_COMM_PAGE_NT_GENERATION, tmp)
+			} else if addr == addr_COMM_PAGE_NT_GENERATION {
 				//TODO: either write 0 in which case time lookups will fall back to syscalls
 				//or write non-zero and write current timestamp to timestamp and timestampNanosecond fields
-				one32 := []byte{1, 0, 0, 0}
-				u.MemWrite(addr_COMM_PAGE_NT_GENERATION, one32)
+				var one uint32 = 1
+				tmp := make([]byte, 4)
+				binary.LittleEndian.PutUint32(tmp, one)
+				u.MemWrite(addr_COMM_PAGE_NT_GENERATION, tmp)
+			} else if addr == addr_COMM_PAGE_VERSION {
+				//TODO: const value -> write only once?
+				//or rewrite for protection if guest needs write-access on commpage somewhere
+				var commpageThisVersion uint16 = 13
+				tmp := make([]byte, 2)
+				binary.LittleEndian.PutUint16(tmp, commpageThisVersion)
+				u.MemWrite(addr_COMM_PAGE_VERSION, tmp)
 			}
 		}
 		u.Printf(": @0x%x, 0x%x = 0x%x\n", addr, size, value)
