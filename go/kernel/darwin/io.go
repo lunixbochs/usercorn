@@ -2,6 +2,7 @@ package darwin
 
 import (
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
+	"github.com/lunixbochs/usercorn/go/native/enum"
 )
 
 func (k *DarwinKernel) Pread(fd co.Fd, buf co.Obuf, size co.Len, offset int64) uint64 {
@@ -24,4 +25,16 @@ func (k *DarwinKernel) Fstat64(fd co.Fd, buf co.Obuf) uint64 {
 
 func (k *DarwinKernel) Stat64(path string, buf co.Obuf) uint64 {
 	return k.PosixKernel.Stat(path, buf)
+}
+
+func (k *DarwinKernel) OpenNocancel(path string, flags enum.OpenFlag, mode uint64) uint64 {
+	return k.PosixKernel.Open(path, flags, mode)
+}
+
+func (k *DarwinKernel) ReadNocancel(fd co.Fd, buf co.Obuf, size co.Len) uint64 {
+	return k.PosixKernel.Read(fd, buf, size)
+}
+
+func (k *DarwinKernel) CloseNocancel(fd co.Fd) uint64 {
+	return k.PosixKernel.Close(fd)
 }
