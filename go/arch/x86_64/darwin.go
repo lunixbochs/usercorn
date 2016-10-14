@@ -10,6 +10,7 @@ import (
 	
 	"strings"
 	"encoding/binary"
+	"reflect"
 )
 
 type DarwinKernel struct {
@@ -214,6 +215,25 @@ func (k *DarwinKernel) Literal__sysctl(name common.Buf, namelen uint64, olddata 
 		safebootBytesLen := make([]byte, 4)
 		binary.LittleEndian.PutUint32(safebootBytesLen, uint32(len(safebootBytes)))
 		k.U.MemWrite(oldlenp.Addr, safebootBytesLen)
+	} else if namelen == 2 && nameArr[0] == 1 && nameArr[1] == 59 && newdata.Addr == 0 && newlen == 0 {
+		//kern.usrstack64 query
+		var usrstack64 uint64 = 0
+		
+		//search for the stack
+		for _, m := range k.U.Mappings() { 
+			if m.Desc == "stack" {
+				usrstack64 = uint64(m.Addr) + uint64(m.Size)
+				break
+			}
+		}
+		
+		if usrstack64 == 0 {
+			panic("stack not found")
+		}
+		
+		olddata.Pack(usrstack64)
+		datalen := uint32(reflect.TypeOf(usrstack64).Size())
+		oldlenp.Pack(datalen)
 	} else {
 		k.U.Printf("sysctl", nameArr, err)
 		panic("unhandled sysctl")
