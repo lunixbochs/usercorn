@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -68,6 +69,9 @@ type Usercorn struct {
 	stackinit   bool
 
 	gate models.Gate
+
+	breaks       []*models.Breakpoint
+	futureBreaks []*models.Breakpoint
 }
 
 func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
@@ -410,7 +414,7 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 	return u.config.PrefixPath(path, force)
 }
 
-func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
+func (u *Usercorn) RegisterFile(f *os.File, addr, size uint64, off int64) {
 	var symbols []models.Symbol
 	var DWARF *dwarf.Data
 
@@ -446,6 +450,13 @@ func (u *Usercorn) RegisterAddr(f *os.File, addr, size uint64, off int64) {
 	if mmap := u.mapping(addr, size); mmap != nil {
 		mmap.File = mappedFile
 	}
+	for _, b := range u.futureBreaks {
+		b.Apply()
+	}
+}
+
+func (u *Usercorn) MappedFiles() []*models.MappedFile {
+	return u.mappedFiles
 }
 
 func (u *Usercorn) addr2file(addr uint64) *models.MappedFile {
@@ -588,8 +599,7 @@ func (u *Usercorn) addHooks() error {
 
 			addrStr := fmt.Sprintf("%#x", addr)
 			if sym == "" && u.config.SymFile {
-				file := u.addr2file(addr)
-				if file != nil {
+				if file := u.addr2file(addr); file != nil {
 					addrStr = fmt.Sprintf("%#x@%s", addr, file.Name)
 				}
 			}
@@ -785,7 +795,7 @@ outer:
 			}
 		}
 		// register binary for symbolication
-		u.RegisterAddr(f, loadBias+seg.Start, seg.End-seg.Start, int64(seg.Start))
+		u.RegisterFile(f, loadBias+seg.Start, seg.End-seg.Start, int64(seg.Start))
 		if err != nil {
 			return
 		}
@@ -1000,4 +1010,46 @@ func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64
 		return u.MemUnmap(mmap.Addr, mmap.Size)
 	})
 	return u.RunShellcodeMapped(mmap, code, setRegs, regsClobbered)
+}
+
+var breakRe = regexp.MustCompile(`^((?P<addr>0x[0-9a-fA-F]+|\d+)|(?P<sym>[\w:]+(?P<off>\+0x[0-9a-fA-F]+|\d+)?)|(?P<source>.+):(?P<line>\d+))(@(?P<file>.+))?$`)
+
+// adds a breakpoint to Usercorn instance
+// see models.Breakpoint for desc syntax
+// future=true adds it to the list of breakpoints to update when new memory is mapped/registered
+func (u *Usercorn) BreakAdd(desc string, future bool, cb func(u models.Usercorn, addr uint64)) (*models.Breakpoint, error) {
+	b, err := models.NewBreakpoint(desc, cb, u)
+	if err != nil {
+		return nil, err
+	}
+	u.breaks = append(u.breaks, b)
+	if future {
+		u.futureBreaks = append(u.futureBreaks, b)
+	}
+	return b, b.Apply()
+}
+
+// TODO: do these sort of operations while holding a lock?
+func (u *Usercorn) BreakDel(b *models.Breakpoint) error {
+	tmp := make([]*models.Breakpoint, 0, len(u.breaks))
+	for _, v := range u.breaks {
+		if v != b {
+			tmp = append(tmp, v)
+		}
+	}
+	u.breaks = tmp
+
+	tmp = make([]*models.Breakpoint, 0, len(u.futureBreaks))
+	for _, v := range u.futureBreaks {
+		if v != b {
+			tmp = append(tmp, v)
+		}
+	}
+	u.futureBreaks = tmp
+
+	return b.Remove()
+}
+
+func (u *Usercorn) Breakpoints() []*models.Breakpoint {
+	return u.breaks
 }

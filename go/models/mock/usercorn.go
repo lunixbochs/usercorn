@@ -31,7 +31,8 @@ func (u *Usercorn) Trampoline(func() error) error { return nil }
 func (u *Usercorn) Printf(fmt string, args ...interface{}) {}
 func (u *Usercorn) Println(s interface{})                  {}
 
-func (u *Usercorn) RegisterAddr(f *os.File, start, end uint64, off int64)     {}
+func (u *Usercorn) RegisterFile(f *os.File, start, end uint64, off int64)     {}
+func (u *Usercorn) MappedFiles() []*models.MappedFile                         { return nil }
 func (u *Usercorn) Symbolicate(addr uint64, includeFile bool) (string, error) { return "", nil }
 
 func (u *Usercorn) Brk(addr uint64) (uint64, error)                                { return 0, nil }
@@ -57,6 +58,12 @@ func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs ma
 func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
 	return nil
 }
+
+func (u *Usercorn) BreakAdd(desc string, future bool, cb func(u Usercorn, addr uint64)) (*models.Breakpoint, error) {
+	return nil, nil
+}
+func (u *Usercorn) BreakDel(b *models.Breakpoint) error { return nil }
+func (u *Usercorn) Breakpoints() []*models.Breakpoint   { return nil }
 
 func (u *Usercorn) Exe() string           { return "" }
 func (u *Usercorn) Loader() models.Loader { return nil }

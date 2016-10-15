@@ -10,7 +10,7 @@ func MappedFileTest(t *testing.T) {
 		{Name: "test2"},
 	}
 	file := &MappedFile{Symbols: syms}
-	if file.SymbolLookup("test2") != &syms[1] {
+	if file.SymbolLookup("test2").Name != "test2" {
 		t.Error("Symbol lookup failed.")
 	}
 }

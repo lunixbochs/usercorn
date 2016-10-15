@@ -47,13 +47,15 @@ func (m *MappedFile) Symbolicate(addr uint64) (result Symbol, distance uint64) {
 // TODO: Do I want this to just return addr?
 // Part of problem is adjusting for memory offset,
 // and it's gross if the caller needs to do that manually.
-func (m *MappedFile) SymbolLookup(name string) *Symbol {
+func (m *MappedFile) SymbolLookup(name string) Symbol {
 	for _, sym := range m.Symbols {
 		if sym.Name == name {
-			return &sym
+			var s Symbol = sym
+			s.Start += m.Addr - uint64(m.Off)
+			return s
 		}
 	}
-	return nil
+	return Symbol{}
 }
 
 func (m *MappedFile) FileLine(addr uint64) string {

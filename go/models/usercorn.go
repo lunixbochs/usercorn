@@ -24,7 +24,8 @@ type Usercorn interface {
 	Printf(fmt string, args ...interface{})
 	Println(s interface{})
 
-	RegisterAddr(f *os.File, addr, size uint64, off int64)
+	RegisterFile(f *os.File, addr, size uint64, off int64)
+	MappedFiles() []*MappedFile
 	Symbolicate(addr uint64, includeFile bool) (string, error)
 
 	Brk(addr uint64) (uint64, error)
@@ -46,6 +47,10 @@ type Usercorn interface {
 
 	RunShellcodeMapped(mmap *Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error
 	RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error
+
+	BreakAdd(desc string, future bool, cb func(u Usercorn, addr uint64)) (*Breakpoint, error)
+	BreakDel(b *Breakpoint) error
+	Breakpoints() []*Breakpoint
 
 	Exe() string
 	Loader() Loader
