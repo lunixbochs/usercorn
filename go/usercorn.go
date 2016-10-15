@@ -285,7 +285,16 @@ func (u *Usercorn) Run(args, env []string) error {
 		pc, _ := u.RegRead(u.arch.PC)
 		sp, _ := u.RegRead(u.arch.SP)
 		for _, frame := range u.stacktrace.Freeze(pc, sp) {
-			u.Printf("  %s\n", frame.Pretty(u))
+			sym, _ := u.Symbolicate(frame.PC, true)
+			if sym == "" {
+				sym = fmt.Sprintf("%#x", frame.PC)
+				if file := u.addr2file(frame.PC); file != nil {
+					sym = fmt.Sprintf("%#x@%s", frame.PC, file.Name)
+				}
+			} else {
+				sym = fmt.Sprintf("%#x %s", frame.PC, sym)
+			}
+			u.Printf("  %s\n", sym)
 		}
 	}
 	defer func() {

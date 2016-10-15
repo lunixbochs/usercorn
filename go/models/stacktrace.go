@@ -1,16 +1,7 @@
 package models
 
-import (
-	"fmt"
-)
-
 type Stackframe struct {
 	PC, SP uint64
-}
-
-func (s *Stackframe) Pretty(u Usercorn) string {
-	sym, _ := u.Symbolicate(s.PC, true)
-	return fmt.Sprintf("0x%x %s", s.PC, sym)
 }
 
 type Stacktrace struct {
