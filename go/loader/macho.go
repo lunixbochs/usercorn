@@ -217,7 +217,7 @@ func (m *MachOLoader) getSymbols() ([]models.Symbol, error) {
 		syms := m.file.Symtab.Syms
 		symbols = make([]models.Symbol, len(syms))
 		for i, s := range syms {
-			if s.Sect == 0 {
+			if s.Sect == 0 || s.Name == "" {
 				continue
 			}
 			symbols[i] = models.Symbol{
