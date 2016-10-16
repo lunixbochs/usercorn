@@ -1012,6 +1012,40 @@ func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64
 	return u.RunShellcodeMapped(mmap, code, setRegs, regsClobbered)
 }
 
+// same as RunShellcode but takes asm instead of compiled code
+func (u *Usercorn) RunShellcodeAsm(addr uint64, asm string, setRegs map[int]uint64, regsClobbered []int) error {
+	var mmap *models.Mmap
+	var code []byte
+	var err error
+	for memSize := uint64(1024); true; {
+		exists := u.mapping(addr, memSize)
+		if addr != 0 && exists != nil {
+			return fmt.Errorf("RunShellcodeAsm: 0x%x - 0x%x overlaps mapped memory", addr, addr+memSize)
+		}
+		mmap, err = u.Mmap(addr, memSize)
+		if err != nil {
+			return err
+		}
+		code, err = u.Assemble(asm, mmap.Addr)
+		if err != nil {
+			return err
+		}
+		
+		codeSize := uint64(len(code))
+		if codeSize <= memSize {
+			break
+		}
+		
+		u.MemUnmap(mmap.Addr, mmap.Size)
+		memSize = codeSize + 16//some extra space
+	}
+	
+	defer u.Trampoline(func() error {
+		return u.MemUnmap(mmap.Addr, mmap.Size)
+	})
+	return u.RunShellcodeMapped(mmap, code, setRegs, regsClobbered)
+}
+
 var breakRe = regexp.MustCompile(`^((?P<addr>0x[0-9a-fA-F]+|\d+)|(?P<sym>[\w:]+(?P<off>\+0x[0-9a-fA-F]+|\d+)?)|(?P<source>.+):(?P<line>\d+))(@(?P<file>.+))?$`)
 
 // adds a breakpoint to Usercorn instance
