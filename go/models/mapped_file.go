@@ -22,7 +22,7 @@ func (m *MappedFile) Symbolicate(addr uint64) (result Symbol, distance uint64) {
 	if !m.Contains(addr) || len(m.Symbols) == 0 {
 		return
 	}
-	addr -= m.Addr
+	addr -= m.Addr + uint64(m.Off)
 	var nearest Symbol
 	var min int64 = -1
 	for _, sym := range m.Symbols {
