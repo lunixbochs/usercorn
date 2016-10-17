@@ -39,7 +39,6 @@ var machoMagics = [][]byte{
 type MachOLoader struct {
 	LoaderHeader
 	file *macho.File
-	base uint64
 }
 
 func findEntry(f *macho.File, bits int) (uint64, error) {
@@ -132,15 +131,6 @@ func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 		},
 		file: file,
 	}
-	// find base segment address for symbol offset
-	segs, _ := m.Segments()
-	base := ^uint64(0)
-	for _, s := range segs {
-		if s.Addr < base {
-			base = s.Addr
-		}
-	}
-	m.base = base
 	return m, nil
 }
 
@@ -225,7 +215,6 @@ func (m *MachOLoader) getSymbols() ([]models.Symbol, error) {
 				Start: s.Value,
 				End:   0,
 			}
-			symbols[i].Start -= m.base
 			if i > 0 {
 				symbols[i-1].End = symbols[i].Start
 			}
