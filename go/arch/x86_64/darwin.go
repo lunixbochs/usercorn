@@ -404,6 +404,19 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 		u.Printf(": @0x%x, 0x%x = 0x%x\n", addr, size, value)
 	}, commpageAddrBegin, commpageAddrEnd)
 	
+	//temp fix for missing AVX instructions: hook system functions which use them
+	u.BreakAdd("__platform_bzero$VARIANT$Unknown", true, func(u models.Usercorn, addr uint64) {
+		//zero memory
+        dataAddr, _ := u.RegRead(AbiRegs[0])
+        dataSize, _ := u.RegRead(AbiRegs[1])
+        tmp := make([]byte, dataSize)
+        u.MemWrite(dataAddr, tmp)
+		
+		//return
+        retAddr, _ := u.Pop()
+        u.RegWrite(u.Arch().PC, retAddr)
+    })
+	
 	return AbiInit(u, DarwinSyscall)
 }
 
