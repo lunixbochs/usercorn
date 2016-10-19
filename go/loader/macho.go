@@ -38,6 +38,7 @@ var machoMagics = [][]byte{
 type MachOLoader struct {
 	LoaderBase
 	file *macho.File
+	fatOffset uint32
 }
 
 func findEntry(f *macho.File, bits int) (uint64, error) {
@@ -84,6 +85,7 @@ func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 		file    *macho.File
 		fatFile *macho.FatFile
 		err     error
+		fatOffset uint32
 	)
 	magic := getMagic(r)
 	if bytes.Equal(magic, fatMagic) {
@@ -93,6 +95,7 @@ func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 				if machineName, ok := machoCpuMap[arch.Cpu]; ok {
 					if machineName == archHint || archHint == "any" {
 						file = arch.File
+						fatOffset = arch.Offset
 						break
 					}
 				}
@@ -129,6 +132,7 @@ func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 			entry: entry,
 		},
 		file: file,
+		fatOffset: fatOffset,
 	}
 	return m, nil
 }
@@ -211,7 +215,7 @@ func (m *MachOLoader) getSymbols() ([]models.Symbol, error) {
 			}
 			symbols[i] = models.Symbol{
 				Name:  s.Name,
-				Start: s.Value,
+				Start: s.Value + uint64(m.fatOffset),
 				End:   0,
 			}
 			if i > 0 {
