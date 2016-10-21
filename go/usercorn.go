@@ -59,9 +59,9 @@ type Usercorn struct {
 	blockloop  *models.LoopDetect
 	memlog     models.MemLog
 
-	init, final sync.Once
-	exitStatus  error
-	insnCount   uint64
+	final      sync.Once
+	exitStatus error
+	insnCount  uint64
 
 	running     bool
 	trampolines []tramp
@@ -72,6 +72,8 @@ type Usercorn struct {
 
 	breaks       []*models.Breakpoint
 	futureBreaks []*models.Breakpoint
+
+	hooks []uc.Hook
 }
 
 func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
@@ -203,23 +205,46 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	return u, nil
 }
 
+func (u *Usercorn) HookAdd(htype int, cb interface{}, begin, end uint64, extra ...int) (uc.Hook, error) {
+	hh, err := u.Unicorn.HookAdd(htype, cb, begin, end, extra...)
+	if err == nil {
+		u.hooks = append(u.hooks, hh)
+	}
+	return hh, err
+}
+
+func (u *Usercorn) HookDel(hh uc.Hook) error {
+	tmp := make([]uc.Hook, 0, len(u.hooks))
+	for _, v := range u.hooks {
+		if v != hh {
+			tmp = append(tmp, v)
+		}
+	}
+	u.hooks = tmp
+	return u.Unicorn.HookDel(hh)
+}
+
 func (u *Usercorn) Run(args, env []string) error {
 	// PrefixArgs was added for shebang
 	if len(u.config.PrefixArgs) > 0 {
 		args = append(u.config.PrefixArgs, args...)
 	}
-	if u.os.Init != nil && !u.stackinit {
-		u.stackinit = true
+	// TODO: hooks are removed below but if Run() is called again the OS stack will be reinitialized
+	// maybe won't be a problem if the stack is zeroed and stack pointer is reset?
+	// or OS stack init can be moved somewhere else (like NewUsercorn)
+	if u.os.Init != nil {
 		if err := u.os.Init(u, args, env); err != nil {
 			return err
 		}
 	}
-	var err error
-	u.init.Do(func() {
-		err = u.addHooks()
-	})
-	if err != nil {
+	if err := u.addHooks(); err != nil {
 		return err
+	} else {
+		defer func() {
+			for _, v := range u.hooks {
+				u.HookDel(v)
+			}
+		}()
 	}
 	if u.config.Verbose {
 		u.Printf("[entry @ 0x%x]\n", u.entry)
@@ -314,6 +339,7 @@ func (u *Usercorn) Run(args, env []string) error {
 
 	// loop to restart Unicorn if we need to call a trampoline function
 	pc := u.entry
+	var err error
 	for err == nil {
 		// well there's a huge pile of sync here to make sure everyone's ready to go...
 		u.gate.Start()
