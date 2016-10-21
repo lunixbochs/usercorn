@@ -100,6 +100,8 @@ func main() {
 			Addr, Size uint64
 			Prot       int
 			Data       []byte
+			Desc       string
+			File       *models.MappedFile
 		}
 		var savedMem []serialMem
 		for _, m := range u.Mappings() {
@@ -110,6 +112,7 @@ func main() {
 			}
 			savedMem = append(savedMem, serialMem{
 				Addr: m.Addr, Size: m.Size, Prot: m.Prot, Data: mem,
+				Desc: m.Desc, File: m.File,
 			})
 		}
 
@@ -144,6 +147,9 @@ func main() {
 			for _, m := range savedMem {
 				u.MemMapProt(m.Addr, m.Size, m.Prot)
 				u.MemWrite(m.Addr, m.Data)
+				x := u.Mappings()
+				x[len(x)-1].Desc = m.Desc
+				x[len(x)-1].File = m.File
 			}
 
 			binary.LittleEndian.PutUint32(aflMsg[:], uint32(proc.Pid))
