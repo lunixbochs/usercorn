@@ -24,7 +24,7 @@ func (sys Syscall) Call(args []uint64) uint64 {
 	in := make([]reflect.Value, len(sys.In)+extraArgs)
 	in[0] = sys.Instance
 	// special case "all args" buf list
-	if sys.ObufArr {
+	if sys.ObufArr && len(sys.In) > 1 {
 		arr := make([]Obuf, len(sys.In)-1)
 		for i := range arr {
 			arr[i] = Obuf{NewBuf(sys.Kernel, args[i])}

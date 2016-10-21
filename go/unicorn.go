@@ -127,7 +127,7 @@ func (u *Unicorn) MemUnmap(addr, size uint64) error {
 		// also delete if the unmap was fully in the middle (as we'll split the mapping into each side)
 		if left >= right || inMiddle {
 			// delete by copying to a new array
-			tmp := make([]*models.Mmap, 0, len(u.memory)-1)
+			tmp := make([]*models.Mmap, 0, len(u.memory))
 			for _, v := range u.memory {
 				if v != mmap {
 					tmp = append(tmp, v)
