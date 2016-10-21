@@ -292,7 +292,7 @@ func (u *Usercorn) Run(args, env []string) error {
 			sym, _ := u.Symbolicate(frame.PC, true)
 			if sym == "" {
 				sym = fmt.Sprintf("%#x", frame.PC)
-				if file := u.addr2file(frame.PC); file != nil {
+				if file := u.addr2file(frame.PC); u.config.SymFile && file != nil {
 					sym = fmt.Sprintf("%#x@%s", frame.PC, file.Name)
 				}
 			} else {
