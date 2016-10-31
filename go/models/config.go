@@ -34,7 +34,8 @@ type Config struct {
 	SymFile  bool
 	DisBytes bool
 
-	StubSyscalls bool
+	BlockSyscalls bool
+	StubSyscalls  bool
 
 	PrefixArgs []string
 }

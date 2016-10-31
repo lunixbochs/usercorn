@@ -896,6 +896,9 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 			panic(msg)
 		}
 	}
+	if u.config.BlockSyscalls {
+		return 0, nil
+	}
 	if u.config.TraceSys {
 		u.Printf("%s", u.memlog.Flush(u.arch.Bits))
 	}
