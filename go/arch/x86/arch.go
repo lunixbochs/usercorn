@@ -49,7 +49,6 @@ var Arch = &models.Arch{
 		"st6": uc.X86_REG_ST0,
 		"st7": uc.X86_REG_ST0,
 		*/
-
 	},
 	DefaultRegs: []string{
 		"eax", "ebx", "ecx", "edx", "esi", "edi", "ebp",
