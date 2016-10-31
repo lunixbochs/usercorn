@@ -63,8 +63,8 @@ deps/lib/libunicorn.1.$(LIBEXT):
 deps/lib/libcapstone.3.$(LIBEXT):
 	cd deps/build && \
 	git clone https://github.com/aquynh/capstone.git && git --git-dir capstone pull; \
-	cd capstone && git clean -fdx && git reset --hard origin/master && \
-	sed -e "/cd tests/d" -i. Makefile && \
+	cd capstone && git clean -fdx && git reset --hard origin/master; \
+	mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=RELEASE .. && \
 	make -j2 PREFIX=$(DEST) install
 
 deps/lib/libkeystone.0.$(LIBEXT):
