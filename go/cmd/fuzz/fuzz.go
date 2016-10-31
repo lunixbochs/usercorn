@@ -90,30 +90,11 @@ func main() {
 			os.Exit(status)
 		}
 
-		var savedRegEnums []int
-		for _, enum := range u.Arch().Regs {
-			savedRegEnums = append(savedRegEnums, enum)
-		}
-		savedRegs, _ := u.RegReadBatch(savedRegEnums)
-
-		type serialMem struct {
-			Addr, Size uint64
-			Prot       int
-			Data       []byte
-			Desc       string
-			File       *models.MappedFile
-		}
-		var savedMem []serialMem
-		for _, m := range u.Mappings() {
-			mem, err := u.MemRead(m.Addr, m.Size)
-			if err != nil {
-				u.Printf("Warning: error saving memory at 0x%x-0x%x: %s\n", m.Addr, m.Addr+m.Size, err)
-				continue
-			}
-			savedMem = append(savedMem, serialMem{
-				Addr: m.Addr, Size: m.Size, Prot: m.Prot, Data: mem,
-				Desc: m.Desc, File: m.File,
-			})
+		// save cpu and memory state
+		savedCtx, err := models.ContextSave(u)
+		if err != nil {
+			u.Println("context save failed.")
+			return err
 		}
 
 		if _, err := forksrvStatus.Write(aflHello); err != nil {
@@ -139,17 +120,10 @@ func main() {
 				return err
 			}
 
-			// restore register and memory state
-			u.RegWriteBatch(savedRegEnums, savedRegs)
-			for _, m := range u.Mappings() {
-				u.MemUnmap(m.Addr, m.Size)
-			}
-			for _, m := range savedMem {
-				u.MemMapProt(m.Addr, m.Size, m.Prot)
-				u.MemWrite(m.Addr, m.Data)
-				x := u.Mappings()
-				x[len(x)-1].Desc = m.Desc
-				x[len(x)-1].File = m.File
+			// restore cpu and memory state
+			if err := models.ContextRestore(u, savedCtx); err != nil {
+				u.Println("context restore failed.")
+				return err
 			}
 
 			binary.LittleEndian.PutUint32(aflMsg[:], uint32(proc.Pid))
