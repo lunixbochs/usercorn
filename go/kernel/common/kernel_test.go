@@ -1,9 +1,11 @@
 package common
 
 import (
+	"encoding/binary"
 	"testing"
 
-	"github.com/lunixbochs/usercorn/go/models/mock"
+	"github.com/lunixbochs/usercorn/go"
+	"github.com/lunixbochs/usercorn/go/loader"
 )
 
 type PosixKernel struct {
@@ -17,7 +19,9 @@ func (k *PosixKernel) Exit(code int) uint64 {
 }
 
 func TestKernel(t *testing.T) {
-	u := &mock.Usercorn{}
+	l := loader.NewNullLoader("x86", "linux", binary.BigEndian, 0)
+	u, _ := usercorn.NewUsercornRaw(l, nil)
+
 	kernel := &PosixKernel{}
 	ret := Lookup(u, kernel, "exit").Call([]uint64{43})
 	if kernel.exitCode != 43 {
