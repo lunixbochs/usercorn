@@ -35,6 +35,20 @@ func EmuCfg(u models.Usercorn, backtrack bool) map[uint64]*Block {
 		blocks[addr] = &Block{u, addr, uint64(size)}
 	}, 1, 0)
 
+	// TODO: instead of the below... support read-only filesystem operations, just nothing destructive?
+	// like open, read, mmap
+	// otherwise we won't be able to map a binary
+
+	// automatically map unmapped pages (besides the zero page)
+	u.HookAdd(uc.HOOK_MEM_UNMAPPED, func(_ uc.Unicorn, write int, addr uint64, size int, value int64) bool {
+		if addr > 0x1000 {
+			align := addr & ^uint64(0xfff)
+			u.MemMap(align, align+0x1000)
+			return true
+		}
+		return false
+	}, 1, 0)
+
 	if backtrack {
 		bt := &BacktrackEngine{u}
 		bt.Run()
