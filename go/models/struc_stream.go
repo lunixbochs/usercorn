@@ -29,3 +29,15 @@ func (s *StrucStream) Unpack(vals ...interface{}) error {
 	}
 	return nil
 }
+
+func (s *StrucStream) Sizeof(vals ...interface{}) (int, error) {
+	var size int
+	for _, val := range vals {
+		n, err := struc.SizeofWithOptions(val, s.Options)
+		if err != nil {
+			return 0, err
+		}
+		size += n
+	}
+	return size, nil
+}

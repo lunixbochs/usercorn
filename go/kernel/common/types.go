@@ -42,6 +42,10 @@ func (b Buf) Unpack(i interface{}) error {
 	return b.Struc().Unpack(i)
 }
 
+func (b Buf) Sizeof(i interface{}) (int, error) {
+	return b.Struc().Sizeof(i)
+}
+
 func (f Fd) File() *os.File {
 	return os.NewFile(uintptr(f), "")
 }
