@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/bnagy/gapstone"
+	cs "github.com/bnagy/gapstone"
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 )
 
@@ -83,9 +83,11 @@ func Assemble(asm string, addr uint64, arch *Arch) ([]byte, error) {
 
 var discache = make(map[string]string)
 var discacheLock sync.RWMutex
+var thumbCs *cs.Engine
 
 func Disas(mem []byte, addr uint64, arch *Arch, showBytes bool, pad ...int) (string, error) {
-	var asm []gapstone.Instruction
+	var asm []cs.Instruction
+	var err error
 	cacheKey := fmt.Sprintf("%d|%s", addr, mem)
 	if len(mem) == 0 {
 		return "", nil
@@ -96,14 +98,27 @@ func Disas(mem []byte, addr uint64, arch *Arch, showBytes bool, pad ...int) (str
 		return cached, nil
 	}
 	discacheLock.RUnlock()
-	if arch.cs == nil {
-		engine, err := gapstone.New(arch.CS_ARCH, arch.CS_MODE)
-		if err != nil {
-			return "", err
+	// detect thumb
+	// FIXME: global hack, needs to go on Arch somehow
+	if len(mem) == 2 && arch.CS_ARCH == cs.CS_ARCH_ARM && arch.CS_MODE == cs.CS_MODE_ARM {
+		if thumbCs == nil {
+			engine, err := cs.New(cs.CS_ARCH_ARM, cs.CS_MODE_THUMB)
+			if err != nil {
+				return "", err
+			}
+			thumbCs = &engine
 		}
-		arch.cs = &engine
+		asm, err = thumbCs.Disasm(mem, addr, 0)
+	} else {
+		if arch.cs == nil {
+			engine, err := cs.New(arch.CS_ARCH, arch.CS_MODE)
+			if err != nil {
+				return "", err
+			}
+			arch.cs = &engine
+		}
+		asm, err = arch.cs.Disasm(mem, addr, 0)
 	}
-	asm, err := arch.cs.Disasm(mem, addr, 0)
 	if err != nil {
 		return "", err
 	}
