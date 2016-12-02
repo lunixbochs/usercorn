@@ -57,8 +57,7 @@ deps/lib/libunicorn.1.$(LIBEXT):
 	cd deps/build && \
 	git clone https://github.com/unicorn-engine/unicorn.git && git --git-dir unicorn fetch; \
 	cd unicorn && git clean -fdx && git reset --hard origin/master && \
-	sed -e "/samples/d" -i. Makefile && \
-	make -j2 PREFIX=$(DEST) install
+	make && make PREFIX=$(DEST) install
 
 deps/lib/libcapstone.3.$(LIBEXT):
 	cd deps/build && \
