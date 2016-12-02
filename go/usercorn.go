@@ -340,7 +340,7 @@ func (u *Usercorn) Run(args, env []string) error {
 	// loop to restart Unicorn if we need to call a trampoline function
 	pc := u.entry
 	var err error
-	for err == nil {
+	for err == nil && u.exitStatus == nil {
 		// well there's a huge pile of sync here to make sure everyone's ready to go...
 		u.gate.Start()
 		err = u.Start(pc, u.exit)
