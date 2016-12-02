@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"io/ioutil"
 	"os"
 
 	"github.com/lunixbochs/usercorn/go/cmd"
@@ -16,7 +17,11 @@ func main() {
 	oldMake := c.MakeUsercorn
 	c.MakeUsercorn = func(exe string) (models.Usercorn, error) {
 		var err error
-		shellcode, err = hex.DecodeString(exe)
+		if exe == "-" {
+			shellcode, err = ioutil.ReadAll(os.Stdin)
+		} else {
+			shellcode, err = hex.DecodeString(exe)
+		}
 		if err != nil {
 			return nil, err
 		}
