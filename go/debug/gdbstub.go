@@ -395,7 +395,10 @@ func (c *gdbClient) Run() {
 		}
 	}()
 
+	loop.Lock()
 	for {
+		// Locking in this order simplifies loop flow, and guarantees lock is unlocked each iteration.
+		loop.Unlock()
 		loop.Lock()
 		var b, chk []byte
 
@@ -403,7 +406,6 @@ func (c *gdbClient) Run() {
 		if err != nil {
 			break
 		} else if b[0] == 0x03 {
-			loop.Unlock()
 			continue
 		} else if b[0] == '+' || b[0] == '-' {
 			// ack
@@ -424,13 +426,11 @@ func (c *gdbClient) Run() {
 		data := b[1 : len(b)-1]
 		if bytes.Equal(checksum(data), chk) {
 			c.ack('+')
-			loop.Unlock()
 			if err = c.Handle(unescape(data)); err != nil {
 				break
 			}
 		} else {
 			c.ack('-')
-			loop.Unlock()
 		}
 	}
 	loop.Unlock()
