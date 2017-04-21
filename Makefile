@@ -16,25 +16,27 @@ ifeq "$(OS)" "Darwin"
 		-add_rpath @executable_path/lib \
 		-add_rpath @executable_path/deps/lib \
 		-change libunicorn.1.dylib @rpath/libunicorn.1.dylib \
-		-change libcapstone.3.dylib @rpath/libcapstone.3.dylib
+		-change libcapstone.dylib @rpath/libcapstone.dylib \
+		-change libkeystone.0.dylib @rpath/libkeystone.0.dylib
 endif
 
 # figure out if we can download Go
+GOVERSION=1.8.1
 ifeq "$(ARCH)" "x86_64"
 	ifeq "$(OS)" "Darwin"
-		GOURL = https://storage.googleapis.com/golang/go1.6.2.darwin-amd64.tar.gz
+		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).darwin-amd64.tar.gz"
 	else ifeq "$(OS)" "Linux"
-		GOURL = https://storage.googleapis.com/golang/go1.6.2.linux-amd64.tar.gz
+		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).linux-amd64.tar.gz"
 	endif
 endif
 ifeq "$(ARCH)" "i686"
 	ifeq "$(OS)" "Linux"
-		GOURL = https://storage.googleapis.com/golang/go1.6.2.linux-386.tar.gz
+		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).linux-386.tar.gz"
 	endif
 endif
 ifneq (,$(filter $(ARCH),armv6l armv7l armv8l))
 	ifeq "$(OS)" "Linux"
-		GOURL = https://storage.googleapis.com/golang/go1.6.2.linux-armv6l.tar.gz
+		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).linux-armv6l.tar.gz"
 	endif
 endif
 
