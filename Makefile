@@ -1,7 +1,7 @@
 .PHONY: get test deps usercorn imgtrace shellcode repl
 .DEFAULT_GOAL := build
 
-build: get usercorn
+build: get all
 
 # dependency targets
 DEST = $(shell mkdir -p deps/build; cd deps && pwd)
@@ -16,25 +16,26 @@ ifeq "$(OS)" "Darwin"
 		-add_rpath @executable_path/lib \
 		-add_rpath @executable_path/deps/lib \
 		-change libunicorn.1.dylib @rpath/libunicorn.1.dylib \
-		-change libcapstone.3.dylib @rpath/libcapstone.3.dylib
+		-change libcapstone.dylib @rpath/libcapstone.dylib
 endif
 
 # figure out if we can download Go
+GOVERSION=1.8.1
 ifeq "$(ARCH)" "x86_64"
 	ifeq "$(OS)" "Darwin"
-		GOURL = https://storage.googleapis.com/golang/go1.6.2.darwin-amd64.tar.gz
+		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).darwin-amd64.tar.gz"
 	else ifeq "$(OS)" "Linux"
-		GOURL = https://storage.googleapis.com/golang/go1.6.2.linux-amd64.tar.gz
+		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).linux-amd64.tar.gz"
 	endif
 endif
 ifeq "$(ARCH)" "i686"
 	ifeq "$(OS)" "Linux"
-		GOURL = https://storage.googleapis.com/golang/go1.6.2.linux-386.tar.gz
+		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).linux-386.tar.gz"
 	endif
 endif
 ifneq (,$(filter $(ARCH),armv6l armv7l armv8l))
 	ifeq "$(OS)" "Linux"
-		GOURL = https://storage.googleapis.com/golang/go1.6.2.linux-armv6l.tar.gz
+		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).linux-armv6l.tar.gz"
 	endif
 endif
 
@@ -57,14 +58,13 @@ deps/lib/libunicorn.1.$(LIBEXT):
 	cd deps/build && \
 	git clone https://github.com/unicorn-engine/unicorn.git && git --git-dir unicorn fetch; \
 	cd unicorn && git clean -fdx && git reset --hard origin/master && \
-	sed -e "/samples/d" -i. Makefile && \
-	make -j2 PREFIX=$(DEST) install
+	make && make PREFIX=$(DEST) install
 
 deps/lib/libcapstone.3.$(LIBEXT):
 	cd deps/build && \
 	git clone https://github.com/aquynh/capstone.git && git --git-dir capstone pull; \
-	cd capstone && git clean -fdx && git reset --hard origin/master && \
-	sed -e "/cd tests/d" -i. Makefile && \
+	cd capstone && git clean -fdx && git reset --hard origin/master; \
+	mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=RELEASE .. && \
 	make -j2 PREFIX=$(DEST) install
 
 deps/lib/libkeystone.0.$(LIBEXT):
@@ -84,15 +84,14 @@ deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/
 LD_LIBRARY_PATH=
 DYLD_LIBRARY_PATH=
 ifneq "$(OS)" "Darwin"
-	GO_LDF = -ldflags '-extldflags -Wl,-rpath=$$ORIGIN/deps/lib:$$ORIGIN/lib'
 	LD_LIBRARY_PATH := "$(LD_LIBRARY_PATH):$(DEST)/lib"
 else
 	DYLD_LIBRARY_PATH := "$(DYLD_LIBRARY_PATH):$(DEST)/lib"
 endif
-GOBUILD := go build -i $(GO_LDF)
+GOBUILD := go build -i
+PATHX := '$(DEST)/$(GODIR)/bin:$(PATH)'
 export CGO_CFLAGS = -I$(DEST)/include
 export CGO_LDFLAGS = -L$(DEST)/lib
-PATHX := "$(DEST)/$(GODIR)/bin:$(PATH)"
 
 ifneq ($(wildcard $(DEST)/$(GODIR)/.),)
 	export GOROOT := $(DEST)/$(GODIR)
@@ -121,9 +120,9 @@ repl: .gopath
 	$(FIXRPATH) repl
 
 get: .gopath
-	sh -c "PATH=$(PATHX) go get $(GO_LDF) -u ${DEPS}"
+	sh -c "PATH=$(PATHX) go get -u ${DEPS}"
 
 test: .gopath
-	sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test $(GO_LDF) -v ./go/..."
+	sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test -v ./go/..."
 
 all: usercorn imgtrace shellcode repl
