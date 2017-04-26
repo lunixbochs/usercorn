@@ -445,7 +445,12 @@ func (u *Usercorn) RegisterFile(f *os.File, addr, size uint64, off int64) {
 
 	// GNU/Linux: try loading /usr/lib/debug version of libraries for debug symbols
 	// TODO: only do this on absolute paths?
-	debugPath := filepath.Join("/usr/lib/debug", u.config.PrefixRel(f.Name()))
+	name := f.Name()
+	tmp, err := filepath.EvalSymlinks(name)
+	if err == nil {
+		name = tmp
+	}
+	debugPath := filepath.Join("/usr/lib/debug", u.config.PrefixRel(name))
 	debugPath = u.PrefixPath(debugPath, false)
 	if _, err := os.Stat(debugPath); err == nil {
 		l, err := loader.LoadFileArch(debugPath, u.Loader().Arch())
