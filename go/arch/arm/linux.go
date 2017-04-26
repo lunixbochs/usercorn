@@ -82,10 +82,7 @@ func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
 			panic(fmt.Sprintf("unsupported kernel trap: 0x%x\n", addr))
 		}
 	}, 0xffff0000, 0xffffffff)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func LinuxKernels(u models.Usercorn) []interface{} {
