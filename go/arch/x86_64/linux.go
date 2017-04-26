@@ -2,6 +2,7 @@ package x86_64
 
 import (
 	"errors"
+	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
@@ -12,6 +13,46 @@ import (
 
 type LinuxKernel struct {
 	*linux.LinuxKernel
+}
+
+func setupVsyscall(u models.Usercorn, kernel *LinuxKernel) error {
+	base := uint64(0xffffffffff600000)
+	vgettimeofday := base + 0x0
+	vtime := base + 0x400
+	vgetcpu := base + 0x800
+
+	// handle x86_64 vsyscall traps
+	if err := u.MemMap(base, 0x1000); err != nil {
+		return err
+	}
+	// write 'ret' to trap addrs so they return
+	ret := []byte{0xc3}
+	if err := u.MemWrite(vgettimeofday, ret); err != nil {
+		return err
+	}
+	if err := u.MemWrite(vtime, ret); err != nil {
+		return err
+	}
+	if err := u.MemWrite(vgetcpu, ret); err != nil {
+		return err
+	}
+
+	_, err := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+		switch addr {
+		case vgettimeofday:
+			ret, _ := u.Syscall(96, "gettimeofday", common.RegArgs(u, AbiRegs))
+			u.RegWrite(uc.X86_REG_RAX, ret)
+		case vtime:
+			ret, _ := u.Syscall(201, "time", common.RegArgs(u, AbiRegs))
+			u.RegWrite(uc.X86_REG_RAX, ret)
+		case vgetcpu:
+			ret, _ := u.Syscall(309, "getcpu", common.RegArgs(u, AbiRegs))
+			u.RegWrite(uc.X86_REG_RAX, ret)
+		default:
+			panic(fmt.Sprintf("unsupported vsyscall trap: 0x%x\n", addr))
+		}
+	}, 0xffffffffff600000, 0xffffffffff601000)
+	return err
 }
 
 // TODO: put these somewhere. ghostrace maybe.
@@ -48,6 +89,10 @@ func (k *LinuxKernel) SetTidAddress() {}
 
 func LinuxKernels(u models.Usercorn) []interface{} {
 	kernel := &LinuxKernel{linux.NewKernel()}
+	// TODO: LinuxInit needs to have a copy of the kernel
+	if err := setupVsyscall(u, kernel); err != nil {
+		panic(err)
+	}
 	return []interface{}{kernel}
 }
 
