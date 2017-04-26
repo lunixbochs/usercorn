@@ -10,3 +10,8 @@ func (k *LinuxKernel) Futex(uaddr co.Buf, op, val int, timeout, uaddr2 co.Buf, v
 
 func (k *LinuxKernel) Fadvise64() {}
 func (k *LinuxKernel) Utimensat() {}
+func (k *LinuxKernel) Prlimit()   {}
+func (k *LinuxKernel) Prlimit64() {}
+
+func (k *LinuxKernel) SetRobustList() {}
+func (k *LinuxKernel) GetRobustList() {}
