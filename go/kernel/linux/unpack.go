@@ -1,7 +1,6 @@
 package linux
 
 import (
-	"fmt"
 	"github.com/lunixbochs/argjoy"
 	"syscall"
 
@@ -15,6 +14,11 @@ func Unpack(k *LinuxKernel, arg interface{}, vals []interface{}) error {
 	reg0 := vals[0].(uint64)
 	// null pointer guard
 	if reg0 == 0 {
+		// work around syscall package panicking on null Sockaddr
+		switch v := arg.(type) {
+		case *syscall.Sockaddr:
+			*v = &syscall.SockaddrInet4{}
+		}
 		return nil
 	}
 	buf := co.NewBuf(k, reg0)
@@ -28,7 +32,6 @@ func Unpack(k *LinuxKernel, arg interface{}, vals []interface{}) error {
 		}
 		*v = tmp
 	case **native.Timespec:
-		fmt.Printf("0x%x\n", reg0)
 		tmp := &native.Timespec{}
 		if err := buf.Unpack(tmp); err != nil {
 			return err
