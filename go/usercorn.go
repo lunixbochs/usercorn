@@ -199,7 +199,6 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 		mask := uint64(4096)
 		u.brk = (u.brk + mask) & ^(mask - 1)
 	}
-	u.Brk(0)
 	// make sure PC is set to entry point for debuggers
 	u.RegWrite(u.Arch().PC, u.Entry())
 	return u, nil

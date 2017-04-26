@@ -51,6 +51,11 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 	if flags&MAP_FIXED != 0 {
 		mmap, err = k.U.MemReserve(addrHint, size, true)
 	} else {
+		// don't automap memory within 8MB of the current program break
+		if addrHint == 0 {
+			brk, _ := k.U.Brk(0)
+			addrHint = brk + 0x800000
+		}
 		mmap, err = k.U.MemReserve(addrHint, size, false)
 	}
 	// map and protect if allocation succeeded
@@ -67,9 +72,6 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 			k.U.RegisterFile(file, mmap.Addr, size, int64(off))
 		}
 	}
-	// TODO: don't think we need to protect twice?
-	// currently just trusting protection enums between Unicorn/kernel to match
-	k.U.MemProtect(mmap.Addr, size, int(prot))
 	return mmap.Addr
 }
 
