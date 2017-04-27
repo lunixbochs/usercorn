@@ -162,23 +162,20 @@ func (m *DebugFile) buildSourceMap(srcPaths []string) []*SourceLine {
 	return lines
 }
 
+// binary search on m.Symbols
 func (m *DebugFile) Symbolicate(addr uint64) (result Symbol, distance uint64) {
-	var nearest Symbol
-	var min int64 = -1
-	for _, sym := range m.Symbols {
-		if sym.Start == 0 {
-			continue
+	l := 0
+	r := len(m.Symbols) - 1
+	for l <= r {
+		mid := (l + r) / 2
+		e := m.Symbols[mid]
+		if addr >= e.End {
+			l = mid + 1
+		} else if addr < e.Start {
+			r = mid - 1
+		} else {
+			return e, addr - e.Start
 		}
-		if sym.Contains(addr) {
-			dist := int64(addr - sym.Start)
-			if dist < min || min == -1 {
-				nearest = sym
-				min = dist
-			}
-		}
-	}
-	if min >= 0 {
-		return nearest, uint64(min)
 	}
 	return
 }
