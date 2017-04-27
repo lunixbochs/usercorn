@@ -13,6 +13,7 @@ type Config struct {
 	Color           bool
 	ForceBase       uint64
 	ForceInterpBase uint64
+	InsCount        bool
 	LoadPrefix      string
 	LoopCollapse    int
 	NativeFallback  bool

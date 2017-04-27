@@ -64,7 +64,7 @@ type Usercorn struct {
 
 	final      sync.Once
 	exitStatus error
-	insnCount  uint64
+	inscount   uint64
 
 	running     bool
 	trampolines []tramp
@@ -374,6 +374,9 @@ func (u *Usercorn) Run(args, env []string) error {
 	} else if u.config.TraceReg {
 		u.Printf("\n%s", u.status.Changes(false).String(u.config.Color))
 	}
+	if u.config.InsCount {
+		u.Printf("inscount: %d\n", u.inscount)
+	}
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus
 	}
@@ -670,9 +673,9 @@ func (u *Usercorn) addHooks() error {
 			}
 		}, 1, 0)
 	}
-	if u.config.TraceExec || u.config.TraceSource {
+	if u.config.TraceExec || u.config.TraceSource || u.config.InsCount {
 		u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
-			u.insnCount++
+			u.inscount++
 			if !u.traceMatching {
 				return
 			}

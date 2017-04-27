@@ -98,6 +98,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		"match", "loop", "demangle", "symfile", "disbytes", "strsize",
 	}
 
+	inscount := fs.Bool("inscount", false, "print instruction count after execution")
 	verbose := fs.Bool("v", false, "verbose output")
 	prefix := fs.String("prefix", "", "library load prefix")
 	base := fs.Uint64("base", 0, "force executable base address")
@@ -203,6 +204,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		SymFile:      *symfile,
 		StubSyscalls: *stubsys,
 		DisBytes:     *disbytes,
+		InsCount:     *inscount,
 
 		ForceBase:       *base,
 		ForceInterpBase: *ibase,
