@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 
@@ -72,7 +73,8 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	defer runtime.UnlockOSThread()
 
 	fs := c.Flags
-	verbose := fs.Bool("v", false, "verbose output")
+
+	// tracing flags
 	trace := fs.Bool("trace", false, "recommended tracing options: -loop 8 -strace -mtrace2 -etrace -rtrace")
 	strace := fs.Bool("strace", false, "trace syscalls")
 	mtrace := fs.Bool("mtrace", false, "trace memory access (single)")
@@ -80,19 +82,26 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	btrace := fs.Bool("btrace", false, "trace basic blocks")
 	etrace := fs.Bool("etrace", false, "trace execution")
 	rtrace := fs.Bool("rtrace", false, "trace register modification")
-	match := fs.String("match", "", "trace from specific function(s) (func[,func...][+depth]")
+
+	match := fs.String("match", "", "trace from specific function(s) (func[,func...][+depth])")
 	looproll := fs.Int("loop", 0, "collapse loop blocks of this depth")
+	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
+	symfile := fs.Bool("symfile", false, "display symbols as sym@<mapped file>")
+	disbytes := fs.Bool("disbytes", false, "show instruction bytes with disassembly")
+	strsize := fs.Int("strsize", 30, "limited -strace'd strings to length (0 disables)")
+	// used for Usage grouping
+	tnames := []string{
+		"trace", "strace", "mtrace", "mtrace2", "btrace", "etrace", "rtrace",
+		"match", "loop", "demangle", "symfile", "disbytes", "strsize",
+	}
+
+	verbose := fs.Bool("v", false, "verbose output")
 	prefix := fs.String("prefix", "", "library load prefix")
 	base := fs.Uint64("base", 0, "force executable base address")
 	ibase := fs.Uint64("ibase", 0, "force interpreter base address")
-	strsize := fs.Int("strsize", 30, "limited -strace'd strings to length (0 disables)")
 	skipinterp := fs.Bool("nointerp", false, "don't load binary's interpreter")
 	native := fs.Bool("native", false, "[stub] use native syscall override (only works if host/guest arch/ABI matches)")
-
-	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
-	symfile := fs.Bool("symfile", false, "display symbols as sym@<mapped file>")
 	stubsys := fs.Bool("stubsys", false, "stub missing syscalls")
-	disbytes := fs.Bool("disbytes", false, "show instruction bytes with disassembly")
 
 	outfile := fs.String("o", "", "redirect debugging output to file (default stderr)")
 
@@ -102,6 +111,9 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	gdb := fs.Int("gdb", -1, "listen for gdb connection on localhost:<port>")
 	listen := fs.Int("listen", -1, "listen for debug connection on localhost:<port>")
 	connect := fs.Int("connect", -1, "connect to remote usercorn debugger on localhost:<port>")
+
+	cpuprofile := fs.String("cpuprofile", "", "write cpu profile to <file>")
+	memprofile := fs.String("memprofile", "", "write mem profile to <file>")
 
 	var envSet strslice
 	var envUnset strslice
@@ -116,10 +128,24 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		if !c.NoExe || !c.NoArgs {
 			usage += " [args...]"
 		}
-		usage += "\n"
+		usage += "\n\nOptions:\n"
 		fmt.Fprintf(os.Stderr, usage, os.Args[0])
-		fmt.Fprintf(os.Stderr, "Debug Client: %s -connect <port>\n", os.Args[0])
-		fs.PrintDefaults()
+		var flags []*flag.Flag
+		var tflags []*flag.Flag
+		fs.VisitAll(func(f *flag.Flag) {
+			for _, name := range tnames {
+				if name == f.Name {
+					tflags = append(tflags, f)
+					return
+				}
+			}
+			flags = append(flags, f)
+		})
+		models.PrintFlags(flags)
+		fmt.Fprintf(os.Stderr, "\nTrace Options:\n")
+		models.PrintFlags(tflags)
+		fmt.Fprintf(os.Stderr, "\nDebug Client:\n  %s -connect <port>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "\nExample:\n  %s -trace -symfile bins/x86_64.linux.elf\n", os.Args[0])
 	}
 	if c.SetupFlags != nil {
 		if err := c.SetupFlags(); err != nil {
@@ -135,6 +161,14 @@ func (c *UsercornCmd) Run(argv, env []string) {
 			fmt.Fprintln(os.Stderr, err)
 		}
 		return
+	}
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			panic(err)
+		}
+		pprof.StartCPUProfile(f)
 	}
 
 	var args []string
@@ -238,10 +272,23 @@ func (c *UsercornCmd) Run(argv, env []string) {
 			panic(err)
 		}
 	}
-	if c.Teardown != nil {
-		// won't run on os.Exit(), so it's manually run below
-		defer c.Teardown()
+	// won't run on os.Exit(), so it's manually run below
+	teardown := func() {
+		if *cpuprofile != "" {
+			pprof.StopCPUProfile()
+		}
+		if *memprofile != "" {
+			f, err := os.Create(*memprofile)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "could not write heap profile: %s\n", err)
+			}
+			pprof.WriteHeapProfile(f)
+		}
+		if c.Teardown != nil {
+			c.Teardown()
+		}
 	}
+	defer teardown()
 
 	// start gdb server
 	// TODO: code duplication here
@@ -249,9 +296,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		conn, err := debug.Accept("localhost", strconv.Itoa(*gdb))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error accepting conn on port %d: %v\n", *gdb, err)
-			if c.Teardown != nil {
-				c.Teardown()
-			}
+			teardown()
 			os.Exit(1)
 		}
 		go debug.NewGdbstub(corn).Run(conn)
@@ -262,9 +307,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		conn, err := debug.Accept("localhost", strconv.Itoa(*listen))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error accepting conn on port %d: %v\n", *listen, err)
-			if c.Teardown != nil {
-				c.Teardown()
-			}
+			teardown()
 			os.Exit(1)
 		}
 		go debug.NewDebugger(corn).Run(conn)
@@ -278,9 +321,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	}
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {
-			if c.Teardown != nil {
-				c.Teardown()
-			}
+			teardown()
 			os.Exit(int(e))
 		} else {
 			panic(err)
