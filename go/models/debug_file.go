@@ -80,20 +80,6 @@ func findFile(srcPaths []string, parent string, shortname string, fullname strin
 }
 
 func (m *DebugFile) buildSourceMap(srcPaths []string) []*SourceLine {
-	/*
-		getAddr := func(f *dwarf.Field) uint64 {
-			if f == nil {
-				return 0
-			}
-			switch f.Class {
-			case dwarf.ClassAddress:
-				return f.Val.(uint64)
-			case dwarf.ClassConstant:
-				return uint64(f.Val.(int64))
-			}
-			return 0
-		}
-	*/
 	var lines []*SourceLine
 	if m.DWARF == nil {
 		return nil
@@ -131,11 +117,7 @@ func (m *DebugFile) buildSourceMap(srcPaths []string) []*SourceLine {
 			break
 		}
 		if entry.Tag == dwarf.TagCompileUnit {
-			// cuFile := entry.AttrField(dwarf.AttrName).Val.(string)
-			// cuCompDir := entry.AttrField(dwarf.AttrCompDir).Val.(string)
 			files := make(map[string][]string)
-			// lowpc := getAddr(entry.AttrField(dwarf.AttrLowpc))
-			// highpc := getAddr(entry.AttrField(dwarf.AttrHighpc))
 			if reader, err := m.DWARF.LineReader(entry); err == nil {
 				var line dwarf.LineEntry
 				var sl *SourceLine
