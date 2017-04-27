@@ -41,6 +41,7 @@ type Usercorn struct {
 	interpLoader models.Loader
 	kernels      []co.Kernel
 	mappedFiles  []*models.MappedFile
+	debugFiles   map[string]*models.DebugFile
 	memio        memio.MemIO
 
 	base       uint64
@@ -58,6 +59,8 @@ type Usercorn struct {
 	stacktrace models.Stacktrace
 	blockloop  *models.LoopDetect
 	memlog     models.MemLog
+
+	lastSourceLine string
 
 	final      sync.Once
 	exitStatus error
@@ -92,6 +95,7 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 		config:        config,
 		loader:        l,
 		exit:          0xffffffffffffffff,
+		debugFiles:    make(map[string]*models.DebugFile),
 	}
 	if config.Output == os.Stderr && readline.IsTerminal(int(os.Stderr.Fd())) {
 		config.Color = true
@@ -469,12 +473,24 @@ func (u *Usercorn) RegisterFile(f *os.File, addr, size uint64, off int64) {
 		}
 	}
 	mappedFile := &models.MappedFile{
-		Name:    path.Base(f.Name()),
-		Off:     off,
-		Addr:    addr,
-		Size:    size,
-		Symbols: symbols,
-		DWARF:   DWARF,
+		Name: path.Base(f.Name()),
+		Off:  off,
+		Addr: addr,
+		Size: size,
+	}
+	if df, ok := u.debugFiles[f.Name()]; ok {
+		mappedFile.DebugFile = df
+	} else {
+		df := &models.DebugFile{
+			Symbols: symbols,
+			DWARF:   DWARF,
+		}
+		mappedFile.DebugFile = df
+		u.debugFiles[f.Name()] = df
+		df.CacheSym()
+		if u.config.TraceSource {
+			df.CacheSource(u.config.SourcePaths)
+		}
 	}
 	u.mappedFiles = append(u.mappedFiles, mappedFile)
 	if mmap := u.mapping(addr, size); mmap != nil {
@@ -508,7 +524,8 @@ func (u *Usercorn) Symbolicate(addr uint64, includeSource bool) (string, error) 
 	if file != nil {
 		sym, dist = file.Symbolicate(addr)
 		if sym.Name != "" && includeSource {
-			fileLine = file.FileLine(addr)
+			fl := file.FileLine(addr)
+			fileLine = fmt.Sprintf("%s:%d", path.Base(fl.File.Name), fl.Line)
 		}
 	}
 	name := sym.Name
@@ -587,7 +604,7 @@ func (u *Usercorn) addHooks() error {
 			u.Printf("0x%x %d %d\n", addr, size, u.stacktrace.Len())
 		}, 1, 0)
 	}
-	if u.config.TraceExec || u.config.TraceReg {
+	if u.config.TraceExec || u.config.TraceReg || u.config.TraceSource {
 		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
 			sym, _ := u.Symbolicate(addr, false)
 			if !u.checkTraceMatch(addr, sym) {
@@ -605,6 +622,9 @@ func (u *Usercorn) addHooks() error {
 					chain := u.blockloop.String(u, loop)
 					u.Printf("- (%d) loops over %s\n", count, chain)
 				}
+			}
+			if u.config.TraceSource && !(u.config.TraceExec || u.config.TraceReg) {
+				return
 			}
 			// stacktrace dir
 			dir := "  "
@@ -650,28 +670,43 @@ func (u *Usercorn) addHooks() error {
 			}
 		}, 1, 0)
 	}
-	if u.config.TraceExec {
+	if u.config.TraceExec || u.config.TraceSource {
 		u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
 			u.insnCount++
 			if !u.traceMatching {
 				return
 			}
-			if u.config.TraceExec && u.blockloop == nil || u.blockloop.Loops == 0 || u.trampolined {
-				changes := u.status.Changes(true)
-				dis, _ := u.Disas(addr, uint64(size), u.config.DisBytes)
-				u.Printf("   %s", dis)
-				if !u.config.TraceReg || changes.Count() == 0 {
-					u.Println("")
-				} else {
-					dindent := ""
-					// TODO: I can count the max dis length in the block and reuse it here
-					// TODO: base of 60 is right for 32-bit and wrong for hexdump
-					// so I should give hexdump a fixed base too
-					pad := 60 - len(dis) - 3 - 2
-					if pad > 0 {
-						dindent = strings.Repeat(" ", pad)
+			if u.blockloop == nil || u.blockloop.Loops == 0 || u.trampolined {
+				if u.config.TraceSource {
+					file := u.addr2file(addr)
+					if file != nil {
+						if sl := file.FileLine(addr); sl != nil {
+							sln := fmt.Sprintf("%s:%d", path.Base(sl.File.Name), sl.Line)
+							if sln != u.lastSourceLine {
+								u.Printf("   %-20s | %s\n", sln, sl.Source)
+								u.lastSourceLine = sln
+							}
+						}
 					}
-					u.Printf("%s%s", dindent, changes.String(u.config.Color))
+				}
+				if u.config.TraceExec {
+					// TODO: don't track regs if not TraceReg
+					changes := u.status.Changes(true)
+					dis, _ := u.Disas(addr, uint64(size), u.config.DisBytes)
+					u.Printf("   %s", dis)
+					if !u.config.TraceReg || changes.Count() == 0 {
+						u.Println("")
+					} else {
+						dindent := ""
+						// TODO: I can count the max dis length in the block and reuse it here
+						// TODO: base of 60 is right for 32-bit and wrong for hexdump
+						// so I should give hexdump a fixed base too
+						pad := 60 - len(dis) - 3 - 2
+						if pad > 0 {
+							dindent = strings.Repeat(" ", pad)
+						}
+						u.Printf("%s%s", dindent, changes.String(u.config.Color))
+					}
 				}
 			}
 		}, 1, 0)

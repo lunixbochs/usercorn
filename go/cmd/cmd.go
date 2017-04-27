@@ -75,13 +75,14 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	fs := c.Flags
 
 	// tracing flags
-	trace := fs.Bool("trace", false, "recommended tracing options: -loop 8 -strace -mtrace2 -etrace -rtrace")
+	trace := fs.Bool("trace", false, "recommended tracing options: -loop 8 -strace -mtrace2 -etrace -rtrace -ftrace")
 	strace := fs.Bool("strace", false, "trace syscalls")
 	mtrace := fs.Bool("mtrace", false, "trace memory access (single)")
 	mtrace2 := fs.Bool("mtrace2", false, "trace memory access (batched)")
 	btrace := fs.Bool("btrace", false, "trace basic blocks")
 	etrace := fs.Bool("etrace", false, "trace execution")
 	rtrace := fs.Bool("rtrace", false, "trace register modification")
+	ftrace := fs.Bool("ftrace", false, "trace source file:line")
 
 	match := fs.String("match", "", "trace from specific function(s) (func[,func...][+depth])")
 	looproll := fs.Int("loop", 0, "collapse loop blocks of this depth")
@@ -89,9 +90,11 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	symfile := fs.Bool("symfile", false, "display symbols as sym@<mapped file>")
 	disbytes := fs.Bool("disbytes", false, "show instruction bytes with disassembly")
 	strsize := fs.Int("strsize", 30, "limited -strace'd strings to length (0 disables)")
+	var src strslice
+	fs.Var(&src, "src", "append source directory to search for -ftrace")
 	// used for Usage grouping
 	tnames := []string{
-		"trace", "strace", "mtrace", "mtrace2", "btrace", "etrace", "rtrace",
+		"trace", "strace", "mtrace", "mtrace2", "btrace", "etrace", "rtrace", "ftrace",
 		"match", "loop", "demangle", "symfile", "disbytes", "strsize",
 	}
 
@@ -216,6 +219,8 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		TraceMemBatch:   *mtrace2 || *trace,
 		TraceReg:        *rtrace || *trace,
 		TraceSys:        *strace || *trace,
+		TraceSource:     *ftrace || *trace,
+		SourcePaths:     src,
 		Verbose:         *verbose,
 	}
 	c.Config = config

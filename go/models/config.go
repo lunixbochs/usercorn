@@ -27,8 +27,11 @@ type Config struct {
 	TraceMem        bool
 	TraceMemBatch   bool
 	TraceReg        bool
+	TraceSource     bool
 	TraceSys        bool
 	Verbose         bool
+
+	SourcePaths []string
 
 	Demangle bool
 	SymFile  bool
