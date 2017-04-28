@@ -110,6 +110,7 @@ func (m *DebugFile) buildSourceMap(srcPaths []string) []*SourceLine {
 		common = path.Dir(common)
 	}
 
+	files := make(map[string][]string)
 	reader.Seek(0)
 	for {
 		entry, err := reader.Next()
@@ -117,7 +118,6 @@ func (m *DebugFile) buildSourceMap(srcPaths []string) []*SourceLine {
 			break
 		}
 		if entry.Tag == dwarf.TagCompileUnit {
-			files := make(map[string][]string)
 			if reader, err := m.DWARF.LineReader(entry); err == nil {
 				var line dwarf.LineEntry
 				var sl *SourceLine
