@@ -34,6 +34,8 @@ func LoadArch(r io.ReaderAt, arch string) (models.Loader, error) {
 		return NewMachOLoader(r, arch)
 	} else if MatchCgc(r) {
 		return NewCgcLoader(r, arch)
+	} else if MatchReeses(r) {
+		return NewReesesLoader(r, arch)
 	} else {
 		return nil, errors.WithStack(UnknownMagic)
 	}
