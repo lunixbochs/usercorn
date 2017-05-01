@@ -71,6 +71,8 @@ type Usercorn struct {
 	trampolined bool
 	stackinit   bool
 
+	restart func(models.Usercorn, error) error
+
 	gate models.Gate
 
 	breaks       []*models.Breakpoint
@@ -350,7 +352,13 @@ func (u *Usercorn) Run(args, env []string) error {
 		u.gate.Stop()
 
 		u.Printf("%s", u.memlog.Flush(u.arch.Bits))
-		if err != nil || len(u.trampolines) == 0 {
+		if u.restart != nil {
+			err = u.restart(u, err)
+			u.restart = nil
+			if err != nil {
+				break
+			}
+		} else if err != nil || len(u.trampolines) == 0 {
 			break
 		}
 		pc, _ = u.RegRead(u.arch.PC)
@@ -1011,6 +1019,11 @@ func (u *Usercorn) Printf(f string, args ...interface{}) {
 
 func (u *Usercorn) Println(s interface{}) {
 	u.Printf("%s\n", s)
+}
+
+func (u *Usercorn) Restart(fn func(models.Usercorn, error) error) {
+	u.restart = fn
+	u.Stop()
 }
 
 func (u *Usercorn) Trampoline(fun func() error) error {

@@ -19,6 +19,8 @@ type Usercorn interface {
 	Run(args, env []string) error
 	Trampoline(func() error) error
 
+	Restart(func(Usercorn, error) error)
+
 	Gate() *Gate
 
 	Printf(fmt string, args ...interface{})
