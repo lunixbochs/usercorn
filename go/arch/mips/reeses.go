@@ -121,8 +121,18 @@ func ReesesInterrupt(u models.Usercorn, cause uint32) {
 	if intno == 8 {
 		ReesesSyscall(u)
 		return
+	} else if intno == 10 {
+		// reserved instruction
+		pc, _ := u.RegRead(u.Arch().PC)
+		ins, _ := u.MemRead(pc, 4)
+		fmt.Printf("Int 10 (reserved instruction) 0x%x: %x. Skipping!\n", pc, ins)
+		u.Restart(func(u models.Usercorn, err error) error {
+			u.RegWrite(u.Arch().PC, pc+4)
+			return nil
+		})
+	} else {
+		panic(fmt.Sprintf("unhandled MIPS interrupt %d", intno))
 	}
-	panic(fmt.Sprintf("unhandled MIPS interrupt %d", intno))
 }
 
 func ReesesKernels(u models.Usercorn) []interface{} {
