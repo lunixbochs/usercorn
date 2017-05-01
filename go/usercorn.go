@@ -535,8 +535,9 @@ func (u *Usercorn) Symbolicate(addr uint64, includeSource bool) (string, error) 
 	if file != nil {
 		sym, dist = file.Symbolicate(addr)
 		if sym.Name != "" && includeSource {
-			fl := file.FileLine(addr)
-			fileLine = fmt.Sprintf("%s:%d", path.Base(fl.File.Name), fl.Line)
+			if fl := file.FileLine(addr); fl != nil {
+				fileLine = fmt.Sprintf("%s:%d", path.Base(fl.File.Name), fl.Line)
+			}
 		}
 	}
 	name := sym.Name
