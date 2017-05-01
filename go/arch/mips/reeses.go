@@ -17,8 +17,8 @@ var reesesSysNum = map[int]string{
 	3:  "read",
 	4:  "write",
 	5:  "rand",
-	11: "time",
-	12: "malloc",
+	13: "time",
+	14: "malloc",
 }
 
 type ReesesKernel struct {
