@@ -53,6 +53,9 @@ func (k *ReesesKernel) Read(fd co.Fd, buf co.Obuf, size co.Len) int {
 	if err := buf.Pack(tmp[:n]); err != nil {
 		return -1 // FIXME
 	}
+	if n == 0 {
+		k.U.RegWrite(uc.MIPS_REG_A3, 1)
+	}
 	return n
 }
 
@@ -101,14 +104,13 @@ func ReesesInit(u models.Usercorn, args, env []string) error {
 func ReesesSyscall(u models.Usercorn) {
 	num, _ := u.RegRead(uc.MIPS_REG_V0)
 	if num >= 4000 && num <= 4014 {
+		u.RegWrite(uc.MIPS_REG_A3, 0)
 		num -= 4000
 		name, _ := reesesSysNum[int(num)]
 		ret, _ := u.Syscall(int(num), name, co.RegArgs(u, LinuxRegs))
 		// looks like errors are passed back in $a3
 		if int64(ret) < 0 {
 			u.RegWrite(uc.MIPS_REG_A3, 1)
-		} else {
-			u.RegWrite(uc.MIPS_REG_A3, 0)
 		}
 		u.RegWrite(uc.MIPS_REG_V0, ret)
 	} else {
