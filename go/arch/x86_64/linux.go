@@ -6,6 +6,7 @@ import (
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
+	"github.com/lunixbochs/usercorn/go/arch/x86"
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
 	"github.com/lunixbochs/usercorn/go/models"
@@ -71,15 +72,15 @@ func (k *LinuxKernel) ArchPrctl(code int, addr uint64) {
 	// TODO: make SET check for valid mapped memory
 	switch code {
 	case ARCH_SET_FS:
-		Wrmsr(k.U, fsmsr, addr)
+		x86.Wrmsr(k.U, fsmsr, addr)
 	case ARCH_SET_GS:
-		Wrmsr(k.U, gsmsr, addr)
+		x86.Wrmsr(k.U, gsmsr, addr)
 	case ARCH_GET_FS:
-		val := Rdmsr(k.U, fsmsr)
+		val := x86.Rdmsr(k.U, fsmsr)
 		buf, _ := k.U.PackAddr(tmp[:], val)
 		k.U.MemWrite(addr, buf)
 	case ARCH_GET_GS:
-		val := Rdmsr(k.U, gsmsr)
+		val := x86.Rdmsr(k.U, gsmsr)
 		buf, _ := k.U.PackAddr(tmp[:], val)
 		k.U.MemWrite(addr, buf)
 	}

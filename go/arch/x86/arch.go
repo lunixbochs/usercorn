@@ -55,3 +55,27 @@ var Arch = &models.Arch{
 	},
 	GdbXml: gdbXml,
 }
+
+func Wrmsr(u models.Usercorn, msr, value uint64) {
+	u.RunAsm(
+		0, "wrmsr",
+		map[int]uint64{
+			uc.X86_REG_RAX: value & 0xFFFFFFFF,
+			uc.X86_REG_RDX: value >> 32 & 0xFFFFFFFF,
+			uc.X86_REG_RCX: msr & 0xFFFFFFFF,
+		}, nil,
+	)
+}
+
+func Rdmsr(u models.Usercorn, msr uint64) uint64 {
+	rcx, _ := u.RegRead(uc.X86_REG_RCX)
+	rdx, _ := u.RegRead(uc.X86_REG_RDX)
+
+	u.RunAsm(0, "rdmsr", map[int]uint64{uc.X86_REG_RAX: msr}, nil)
+	ecx, _ := u.RegRead(uc.X86_REG_ECX)
+	edx, _ := u.RegRead(uc.X86_REG_EDX)
+
+	u.RegWrite(uc.X86_REG_RCX, rcx)
+	u.RegWrite(uc.X86_REG_RDX, rdx)
+	return (edx << 32) | (ecx & 0xFFFFFFFF)
+}
