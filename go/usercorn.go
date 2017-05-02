@@ -1097,6 +1097,45 @@ func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64
 	return u.RunShellcodeMapped(mmap, code, setRegs, regsClobbered)
 }
 
+// like RunShellcode, but we assemble it for you
+func (u *Usercorn) RunAsm(addr uint64, asm string, setRegs map[int]uint64, regsClobbered []int) error {
+	// the assembler needs to know where the code is being assembled
+	// the mapper needs to know how much memory to return
+	// so we potentially bounce back and forth in a loop
+	// in practice, this will never take more than one iteration, as we round up to page size
+	// but maybe in the future there will be an allocator
+	var code []byte
+	var mmap *models.Mmap
+	var err error
+	for i := 0; ; i++ {
+		if i > 100 {
+			return fmt.Errorf("RunAsm() took too many tries (>%d) to map memory", i)
+		}
+		code, err = u.Assemble(asm, addr)
+		if err != nil {
+			return err
+		}
+		mmap, err = u.MemReserve(addr, uint64(len(code)), false)
+		if err != nil {
+			return err
+		}
+		// exit loop if there was space at our requested addr
+		if mmap.Addr == addr {
+			break
+		}
+		// FIXME: there's no "unreserve" function, and unmap is more expensive
+		u.MemUnmap(mmap.Addr, mmap.Size)
+		addr = mmap.Addr
+	}
+	if err := u.MemMap(mmap.Addr, mmap.Size); err != nil {
+		return err
+	}
+	defer u.Trampoline(func() error {
+		return u.MemUnmap(mmap.Addr, mmap.Size)
+	})
+	return u.RunShellcodeMapped(mmap, code, setRegs, regsClobbered)
+}
+
 var breakRe = regexp.MustCompile(`^((?P<addr>0x[0-9a-fA-F]+|\d+)|(?P<sym>[\w:]+(?P<off>\+0x[0-9a-fA-F]+|\d+)?)|(?P<source>.+):(?P<line>\d+))(@(?P<file>.+))?$`)
 
 // adds a breakpoint to Usercorn instance

@@ -1,19 +1,25 @@
 package arm
 
 import (
-	"github.com/lunixbochs/usercorn/go/models"
-
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 func enterUsermode(u models.Usercorn) error {
 	// move CPU from System to User mode
-	modeSwitch := []byte{
-		0x00, 0x00, 0x0f, 0xe1, // mrs r0, cpsr
-		0x1f, 0x00, 0xc0, 0xe3, // bic r0, r0, $0x1f
-		0x10, 0x00, 0x80, 0xe3, // orr r0, r0, $0x10
-		0x00, 0xf0, 0x21, 0xe1, // msr cpsr_c, r0
+	modeSwitchAsm := `
+		mrs r0, cpsr
+		bic r0, r0, $0x1f
+		orr r0, r0, $0x10
+		msr cpsr_c, r0
+	`
+	modeSwitch, err := u.Assemble(modeSwitchAsm, 0)
+	if err != nil {
+		return err
 	}
+	// this is manually mapped instead of using RunShellcode() so
+	// the link register will be set to exit the emulator correctly
 	mmap, err := u.Mmap(0, uint64(len(modeSwitch)))
 	if err != nil {
 		return err
