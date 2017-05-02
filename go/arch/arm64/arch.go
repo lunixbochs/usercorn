@@ -14,7 +14,7 @@ var Arch = &models.Arch{
 	CS_ARCH: cs.CS_ARCH_ARM64,
 	CS_MODE: cs.CS_MODE_ARM,
 	KS_ARCH: ks.ARCH_ARM64,
-	KS_MODE: ks.MODE_ARM,
+	KS_MODE: ks.MODE_LITTLE_ENDIAN,
 	UC_ARCH: uc.ARCH_ARM64,
 	UC_MODE: uc.MODE_ARM,
 	PC:      uc.ARM64_REG_PC,
@@ -60,4 +60,13 @@ var Arch = &models.Arch{
 		"x17", "x18", "x19", "x20", "x21", "x22", "x23", "x24",
 		"x25", "x26", "x27", "x28",
 	},
+}
+
+func EnableFPU(u models.Usercorn) error {
+	val, err := u.RegRead(uc.ARM64_REG_CPACR_EL1)
+	if err != nil {
+		return err
+	}
+	val |= 0x300000 // set the FPEN bits
+	return u.RegWrite(uc.ARM64_REG_CPACR_EL1, val)
 }

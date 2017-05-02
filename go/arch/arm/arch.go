@@ -69,3 +69,14 @@ func EnterUsermode(u models.Usercorn) error {
 	)
 	return err
 }
+
+func EnableFPU(u models.Usercorn) error {
+	val, err := u.RegRead(uc.ARM_REG_C1_C0_2)
+	if err != nil {
+		return err
+	}
+	if err = u.RegWrite(uc.ARM_REG_C1_C0_2, val|(0xf<<20)); err != nil {
+		return err
+	}
+	return u.RegWrite(uc.ARM_REG_FPEXC, 0x40000000)
+}

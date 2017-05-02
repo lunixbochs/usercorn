@@ -96,6 +96,9 @@ func LinuxKernels(u models.Usercorn) []interface{} {
 }
 
 func LinuxInit(u models.Usercorn, args, env []string) error {
+	if err := EnableFPU(u); err != nil {
+		return err
+	}
 	if err := EnterUsermode(u); err != nil {
 		return err
 	}

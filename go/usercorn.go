@@ -1115,6 +1115,9 @@ func (u *Usercorn) RunAsm(addr uint64, asm string, setRegs map[int]uint64, regsC
 		if err != nil {
 			return err
 		}
+		if len(code) == 0 {
+			return fmt.Errorf("RunAsm() assembled code was empty: %s\n", asm)
+		}
 		mmap, err = u.MemReserve(addr, uint64(len(code)), false)
 		if err != nil {
 			return err
