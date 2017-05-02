@@ -12,17 +12,17 @@ import (
 
 var LinuxRegs = []int{uc.ARM64_REG_X0, uc.ARM64_REG_X1, uc.ARM64_REG_X2, uc.ARM64_REG_X3, uc.ARM64_REG_X4, uc.ARM64_REG_X5}
 
-type ArmLinuxKernel struct {
+type Arm64LinuxKernel struct {
 	*linux.LinuxKernel
 	tls uint64
 }
 
-func (k *ArmLinuxKernel) SetTls(addr uint64) {
+func (k *Arm64LinuxKernel) SetTls(addr uint64) {
 	k.tls = addr
 }
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	kernel := &ArmLinuxKernel{LinuxKernel: linux.NewKernel()}
+	kernel := &Arm64LinuxKernel{LinuxKernel: linux.NewKernel()}
 	return []interface{}{kernel}
 }
 
