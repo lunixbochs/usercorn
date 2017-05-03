@@ -9,7 +9,6 @@ import (
 func (k *LinuxKernel) Eventfd2(initval, flags uint) uint64 {
 	var a3 uintptr
 	r1, _, err := syscall.Syscall(syscall.SYS_EVENTFD2, uintptr(&initval), uintptr(&flags), a3)
-	fmt.Println(r1)
 	if err != 0 {
 		posix.Errno(err)
 	}
@@ -19,7 +18,6 @@ func (k *LinuxKernel) Eventfd2(initval, flags uint) uint64 {
 func (k *LinuxKernel) Eventfd(initval, flags uint) uint64 {
 	var a3 uintptr
 	r1, _, err := syscall.Syscall(syscall.SYS_EVENTFD2, uintptr(&initval), uintptr(&flags), a3)
-	fmt.Println(r1)
 	if err != 0 {
 		posix.Errno(err)
 	}
