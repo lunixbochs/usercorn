@@ -9,6 +9,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/arch/mips"
 	"github.com/lunixbochs/usercorn/go/arch/sparc"
 	"github.com/lunixbochs/usercorn/go/arch/x86"
+	"github.com/lunixbochs/usercorn/go/arch/x86_16"
 	"github.com/lunixbochs/usercorn/go/arch/x86_64"
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -20,6 +21,7 @@ var archMap = map[string]*models.Arch{
 	"mips":   mips.Arch,
 	"sparc":  sparc.Arch,
 	"x86":    x86.Arch,
+	"x86_16": x86_16.Arch,
 	"x86_64": x86_64.Arch,
 }
 
