@@ -15,12 +15,12 @@ func sockaddrToNative(a interface{}) syscall.Sockaddr {
 		return &syscall.SockaddrInet4{Port: int(v.Port), Addr: v.Addr}
 	case *SockaddrInet6:
 		return &syscall.SockaddrInet6{Port: int(v.Port), Addr: v.Addr}
-	case SockaddrLinklayer:
+	case *SockaddrLinklayer:
 		return &syscall.SockaddrLinklayer{
 			Protocol: v.Protocol, Ifindex: int(v.Ifindex), Hatype: v.Hatype,
 			Pkttype: v.Pkttype, Halen: v.Halen,
 		}
-	case SockaddrNetlink:
+	case *SockaddrNetlink:
 		return &syscall.SockaddrNetlink{Pad: v.Pad, Pid: v.Pid, Groups: v.Groups}
 	default:
 		panic(fmt.Sprintf("sockAddrToNative unsupported type %T", v))
