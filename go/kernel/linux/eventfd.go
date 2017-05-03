@@ -1,25 +1,27 @@
 package linux
 
 import (
+	"fmt"
+	"github.com/lunixbochs/usercorn/go/kernel/posix"
 	"syscall"
 )
 
 func (k *LinuxKernel) Eventfd2(initval, flags uint) uint64 {
 	var a3 uintptr
-	r1, _, err := syscall.Syscall(syscall.SYS_EVENTFD2, uintptr(initval), 
-uintptr(flags), a3)
+	r1, _, err := syscall.Syscall(syscall.SYS_EVENTFD2, uintptr(&initval), uintptr(&flags), a3)
+	fmt.Println(r1)
 	if err != 0 {
-		panic(err)
+		posix.Errno(err)
 	}
 	return uint64(r1)
 }
 
 func (k *LinuxKernel) Eventfd(initval, flags uint) uint64 {
 	var a3 uintptr
-	r1, _, err := syscall.Syscall(syscall.SYS_EVENTFD, uintptr(initval), 
-uintptr(flags), a3)
+	r1, _, err := syscall.Syscall(syscall.SYS_EVENTFD2, uintptr(&initval), uintptr(&flags), a3)
+	fmt.Println(r1)
 	if err != 0 {
-		panic(err)
+		posix.Errno(err)
 	}
 	return uint64(r1)
 
