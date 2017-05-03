@@ -83,6 +83,12 @@ func (k *PosixKernel) Setsockopt(fd co.Fd, level, opt int, valueIn co.Buf, size 
 	return 0
 }
 
+func (k *PosixKernel) Getsockname(fd co.Fd, sa syscall.Sockaddr, size co.Len) uint64 {
+	opt, err := syscall.Getsockname(int(fd))
+	sa = opt
+	return Errno(err)
+}
+
 func getfdset(f *native.Fdset32) *syscall.FdSet {
 	if f == nil {
 		return nil
