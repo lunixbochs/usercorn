@@ -27,7 +27,7 @@ var machineMap = map[elf.Machine]string{
 }
 
 type ElfLoader struct {
-	LoaderHeader
+	LoaderBase
 	file *elf.File
 }
 
@@ -56,7 +56,7 @@ func NewElfLoader(r io.ReaderAt, arch string) (models.Loader, error) {
 		return nil, fmt.Errorf("Unsupported machine: %s", file.Machine)
 	}
 	return &ElfLoader{
-		LoaderHeader: LoaderHeader{
+		LoaderBase: LoaderBase{
 			arch:      machineName,
 			bits:      bits,
 			os:        "linux",
