@@ -35,6 +35,13 @@ func LoadArch(r io.ReaderAt, arch string) (models.Loader, error) {
 	} else if MatchCgc(r) {
 		return NewCgcLoader(r, arch)
 	} else {
-		return nil, errors.WithStack(UnknownMagic)
+		// TODO: Make COM a separate, explicit command
+		// COM doesn't have a header
+		loader, err := NewComLoader(r, arch)
+		if err != nil {
+			return nil, errors.WithStack(UnknownMagic)
+		} else {
+			return loader, err
+		}
 	}
 }
