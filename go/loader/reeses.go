@@ -2,7 +2,6 @@ package loader
 
 import (
 	"bytes"
-	"debug/dwarf"
 	"encoding/binary"
 	"github.com/lunixbochs/struc"
 	"io"
@@ -41,7 +40,7 @@ type ReesesReg struct {
 }
 
 type ReesesLoader struct {
-	LoaderHeader
+	LoaderBase
 	Hash  []byte
 	Regs  []ReesesReg
 	Loads []reesesLoad
@@ -77,7 +76,7 @@ func NewReesesLoader(r io.ReaderAt, arch string) (models.Loader, error) {
 		}
 	}
 	return &ReesesLoader{
-		LoaderHeader: LoaderHeader{
+		LoaderBase: LoaderBase{
 			arch:      "mips",
 			bits:      32,
 			os:        "reeses",
@@ -118,28 +117,4 @@ func (r *ReesesLoader) Segments() ([]models.SegmentData, error) {
 		})
 	}
 	return segs, nil
-}
-
-func (r *ReesesLoader) Interp() string {
-	return ""
-}
-
-func (r *ReesesLoader) DWARF() (*dwarf.Data, error) {
-	return nil, nil
-}
-
-func (r *ReesesLoader) DataSegment() (uint64, uint64) {
-	return 0, 0
-}
-
-func (r *ReesesLoader) Header() (uint64, []byte, int) {
-	return 0, nil, 0
-}
-
-func (r *ReesesLoader) Symbols() ([]models.Symbol, error) {
-	return nil, nil
-}
-
-func (r *ReesesLoader) Type() int {
-	return EXEC
 }
