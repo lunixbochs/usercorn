@@ -8,6 +8,24 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+// TODO: We only need the regs in the DOS syscall ABI
+var X86_16SyscallRegs = []int{
+	uc.X86_REG_IP,
+	uc.X86_REG_SP,
+	uc.X86_REG_BP,
+	uc.X86_REG_AX,
+	uc.X86_REG_BX,
+	uc.X86_REG_CX,
+	uc.X86_REG_DX,
+	uc.X86_REG_SI,
+	uc.X86_REG_DI,
+	uc.X86_REG_EFLAGS,
+	uc.X86_REG_CS,
+	uc.X86_REG_DS,
+	uc.X86_REG_ES,
+	uc.X86_REG_SS,
+}
+
 var Arch = &models.Arch{
 	Bits:    16,
 	Radare:  "x86_16", // TODO: Test
