@@ -69,7 +69,7 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 		k.U.MemWrite(mmap.Addr, data)
 		if path != "" {
 			// register mapped files for symbolication of mapped shared libraries
-			k.U.RegisterFile(file, mmap.Addr, size, int64(mmap.Addr)+int64(off))
+			k.U.RegisterFile(file, mmap.Addr, size, int64(mmap.Addr)+int64(off), nil)
 		}
 	}
 	return mmap.Addr

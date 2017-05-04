@@ -26,7 +26,7 @@ type Usercorn interface {
 	Printf(fmt string, args ...interface{})
 	Println(s interface{})
 
-	RegisterFile(f *os.File, addr, size uint64, off int64)
+	RegisterFile(f *os.File, addr, size uint64, off int64, fileLoader Loader)
 	MappedFiles() []*MappedFile
 	Symbolicate(addr uint64, includeFile bool) (string, error)
 

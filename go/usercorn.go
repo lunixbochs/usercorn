@@ -181,7 +181,7 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	u.loader = l
 
 	// map binary (and interp) into memory
-	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(f, false, l.Arch())
+	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(f, false, l.Arch(), u.loader)
 	if err != nil {
 		return nil, err
 	}
@@ -454,7 +454,7 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 	return u.config.PrefixPath(path, force)
 }
 
-func (u *Usercorn) RegisterFile(f *os.File, addr, size uint64, off int64) {
+func (u *Usercorn) RegisterFile(f *os.File, addr, size uint64, off int64, fileLoader models.Loader) {
 	var symbols []models.Symbol
 	var DWARF *dwarf.Data
 
@@ -477,10 +477,12 @@ func (u *Usercorn) RegisterFile(f *os.File, addr, size uint64, off int64) {
 	}
 	// if no debug library was found, fall back to loading symbols from original library
 	if symbols == nil {
-		l, err := loader.LoadArch(f, u.Loader().Arch())
+		if fileLoader == nil {
+			fileLoader, err = loader.LoadArch(f, u.Loader().Arch())
+		}
 		if err == nil {
-			symbols, _ = l.Symbols()
-			DWARF, _ = l.DWARF()
+			symbols, _ = fileLoader.Symbols()
+			DWARF, _ = fileLoader.DWARF()
 		}
 	}
 	mappedFile := &models.MappedFile{
@@ -777,11 +779,12 @@ func (u *Usercorn) addHooks() error {
 	return nil
 }
 
-func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase, entry, base, realEntry uint64, err error) {
-	var l models.Loader
-	l, err = loader.LoadArch(f, arch)
-	if err != nil {
-		return
+func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string, l models.Loader) (interpBase, entry, base, realEntry uint64, err error) {
+	if l == nil {
+		l, err = loader.LoadArch(f, arch)
+		if err != nil {
+			return
+		}
 	}
 	if isInterp {
 		u.interpLoader = l
@@ -872,7 +875,7 @@ outer:
 			}
 		}
 		// register binary for symbolication
-		u.RegisterFile(f, loadBias+seg.Start, seg.End-seg.Start, int64(seg.Start))
+		u.RegisterFile(f, loadBias+seg.Start, seg.End-seg.Start, int64(seg.Start), l)
 		if err != nil {
 			return
 		}
@@ -900,7 +903,7 @@ outer:
 		mmap, _ := u.MemReserve(0, 24*1024*1024, false)
 
 		var interpBias, interpEntry uint64
-		_, _, interpBias, interpEntry, err = u.mapBinary(f, true, l.Arch())
+		_, _, interpBias, interpEntry, err = u.mapBinary(f, true, l.Arch(), nil)
 		if u.interpLoader.Arch() != l.Arch() {
 			err = errors.Errorf("Interpreter arch mismatch: %s != %s", l.Arch(), u.interpLoader.Arch())
 			return
