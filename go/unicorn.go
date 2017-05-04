@@ -162,7 +162,7 @@ func (u *Unicorn) Mappings() []*models.Mmap {
 }
 
 func (u *Unicorn) MemReserve(addr, size uint64, force bool) (*models.Mmap, error) {
-	if addr == 0 {
+	if addr == 0 && !force {
 		addr = BASE
 	}
 	addr, size = align(addr, size, true)
@@ -172,7 +172,7 @@ func (u *Unicorn) MemReserve(addr, size uint64, force bool) (*models.Mmap, error
 		u.memory = append(u.memory, mmap)
 		return mmap, nil
 	}
-	for i := addr; i < uint64(1)<<uint64(u.bits-1); i += UC_MEM_ALIGN {
+	for i := addr; i < uint64(1)<<uint64(u.bits); i += UC_MEM_ALIGN {
 		if u.mapping(i, size) == nil {
 			mmap := &models.Mmap{Addr: i, Size: size, Prot: uc.PROT_ALL}
 			u.memory = append(u.memory, mmap)
