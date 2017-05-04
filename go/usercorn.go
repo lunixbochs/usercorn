@@ -801,8 +801,8 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string) (interpBase
 	if err != nil {
 		return
 	}
-	var low, high uint64
-	low = 0xffffffffffffffff
+	low := ^uint64(0)
+	high := uint64(0)
 	for _, seg := range segments {
 		if seg.Size == 0 {
 			continue
