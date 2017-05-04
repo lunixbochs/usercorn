@@ -230,6 +230,40 @@ func (u *Usercorn) HookDel(hh uc.Hook) error {
 }
 
 func (u *Usercorn) Run(args, env []string) error {
+	// panic/exit handler
+	verboseExit := func() {
+		u.Printf("[memory map]\n")
+		for _, m := range u.Mappings() {
+			u.Printf("  %s\n", m)
+		}
+		u.Println("[registers]")
+		u.Printf("%s", u.status.Changes(false).String(u.config.Color))
+		u.Println("[stacktrace]")
+		pc, _ := u.RegRead(u.arch.PC)
+		sp, _ := u.RegRead(u.arch.SP)
+		for _, frame := range u.stacktrace.Freeze(pc, sp) {
+			sym, _ := u.Symbolicate(frame.PC, true)
+			if sym == "" {
+				sym = fmt.Sprintf("%#x", frame.PC)
+				if file := u.addr2file(frame.PC); u.config.SymFile && file != nil {
+					sym = fmt.Sprintf("%#x@%s", frame.PC, file.Name)
+				}
+			} else {
+				sym = fmt.Sprintf("%#x %s", frame.PC, sym)
+			}
+			u.Printf("  %s\n", sym)
+		}
+	}
+	defer func() {
+		if e := recover(); e != nil {
+			u.Printf("\n+++ caught panic +++\n")
+			u.Printf("%s\n", e)
+			u.Printf("------------------\n")
+			verboseExit()
+			u.Printf("------------------\n\n")
+			panic(e)
+		}
+	}()
 	// PrefixArgs was added for shebang
 	if len(u.config.PrefixArgs) > 0 {
 		args = append(u.config.PrefixArgs, args...)
@@ -273,7 +307,7 @@ func (u *Usercorn) Run(args, env []string) error {
 		}
 		u.Printf("[memory map]\n")
 		for _, m := range u.Mappings() {
-			u.Printf("  %v\n", m.String())
+			u.Printf("  %s\n", m)
 		}
 	}
 	if u.config.Verbose || u.config.TraceReg {
@@ -307,40 +341,6 @@ func (u *Usercorn) Run(args, env []string) error {
 			}
 		}()
 	}
-	// panic/exit handler
-	verboseExit := func() {
-		u.Printf("[memory map]\n")
-		for _, m := range u.Mappings() {
-			u.Printf("  %v\n", m.String())
-		}
-		u.Println("[registers]")
-		u.Printf("%s", u.status.Changes(false).String(u.config.Color))
-		u.Println("[stacktrace]")
-		pc, _ := u.RegRead(u.arch.PC)
-		sp, _ := u.RegRead(u.arch.SP)
-		for _, frame := range u.stacktrace.Freeze(pc, sp) {
-			sym, _ := u.Symbolicate(frame.PC, true)
-			if sym == "" {
-				sym = fmt.Sprintf("%#x", frame.PC)
-				if file := u.addr2file(frame.PC); u.config.SymFile && file != nil {
-					sym = fmt.Sprintf("%#x@%s", frame.PC, file.Name)
-				}
-			} else {
-				sym = fmt.Sprintf("%#x %s", frame.PC, sym)
-			}
-			u.Printf("  %s\n", sym)
-		}
-	}
-	defer func() {
-		if e := recover(); e != nil {
-			u.Printf("\n+++ caught panic +++\n")
-			u.Printf("%s\n", e)
-			u.Printf("------------------\n")
-			verboseExit()
-			u.Printf("------------------\n\n")
-			panic(e)
-		}
-	}()
 
 	// loop to restart Unicorn if we need to call a trampoline function
 	pc := u.entry
