@@ -14,6 +14,8 @@ Usercorn depends on Go 1.5 or newer, as well as the latest unstable versions of 
 
 Additional binaries such as `repl`, `imgtrace`, and `shellcode` can be built with `make all`
 
+In case upstream dependencies need updating `make get` should be run.
+
 Examples
 ---
 
