@@ -63,11 +63,10 @@ func EnterUsermode(u models.Usercorn) error {
 	}
 	defer u.MemUnmap(mmap.Addr, mmap.Size)
 	end := mmap.Addr + uint64(len(modeSwitch))
-	err = u.RunShellcodeMapped(mmap, modeSwitch,
+	return u.RunShellcodeMapped(mmap, modeSwitch,
 		map[int]uint64{uc.ARM_REG_LR: end},
 		[]int{uc.ARM_REG_R0, uc.ARM_REG_LR, uc.ARM_REG_SP},
 	)
-	return err
 }
 
 func EnableFPU(u models.Usercorn) error {

@@ -3,11 +3,11 @@ package usercorn
 import (
 	"bufio"
 	"debug/dwarf"
-	"errors"
 	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/memio"
 	"github.com/lunixbochs/readline"
 	"github.com/lunixbochs/struc"
+	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io/ioutil"
 	"os"
@@ -902,7 +902,7 @@ outer:
 		var interpBias, interpEntry uint64
 		_, _, interpBias, interpEntry, err = u.mapBinary(f, true, l.Arch())
 		if u.interpLoader.Arch() != l.Arch() {
-			err = fmt.Errorf("Interpreter arch mismatch: %s != %s", l.Arch(), u.interpLoader.Arch())
+			err = errors.Errorf("Interpreter arch mismatch: %s != %s", l.Arch(), u.interpLoader.Arch())
 			return
 		}
 		// delete reserved space
@@ -976,7 +976,7 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 			return ret, nil
 		}
 	}
-	msg := fmt.Errorf("Kernel not found for syscall '%s'", name)
+	msg := errors.Errorf("Kernel not found for syscall '%s'", name)
 	if u.config.StubSyscalls {
 		u.Println(msg)
 		return 0, nil
@@ -1007,7 +1007,7 @@ func (u *Usercorn) StrucAt(addr uint64) *models.StrucStream {
 		Order:   u.ByteOrder(),
 		PtrSize: int(u.Bits()),
 	}
-	return &models.StrucStream{u.Mem().StreamAt(addr), options}
+	return models.NewStrucStream(u.Mem().StreamAt(addr), options)
 }
 
 func (u *Usercorn) Config() *models.Config {
@@ -1049,7 +1049,7 @@ func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs ma
 		if regsClobbered == nil {
 			regsClobbered = make([]int, len(setRegs))
 			pos := 0
-			for reg, _ := range setRegs {
+			for reg := range setRegs {
 				regsClobbered[pos] = reg
 				pos++
 			}
@@ -1085,7 +1085,7 @@ func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs ma
 func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
 	exists := u.mapping(addr, uint64(len(code)))
 	if addr != 0 && exists != nil {
-		return fmt.Errorf("RunShellcode: 0x%x - 0x%x overlaps mapped memory", addr, addr+uint64(len(code)))
+		return errors.Errorf("RunShellcode: 0x%x - 0x%x overlaps mapped memory", addr, addr+uint64(len(code)))
 	}
 	mmap, err := u.Mmap(addr, uint64(len(code)))
 	if err != nil {
@@ -1109,14 +1109,14 @@ func (u *Usercorn) RunAsm(addr uint64, asm string, setRegs map[int]uint64, regsC
 	var err error
 	for i := 0; ; i++ {
 		if i > 100 {
-			return fmt.Errorf("RunAsm() took too many tries (>%d) to map memory", i)
+			return errors.Errorf("RunAsm() took too many tries (>%d) to map memory", i)
 		}
 		code, err = u.Assemble(asm, addr)
 		if err != nil {
 			return err
 		}
 		if len(code) == 0 {
-			return fmt.Errorf("RunAsm() assembled code was empty: %s\n", asm)
+			return errors.Errorf("RunAsm() assembled code was empty: %s\n", asm)
 		}
 		mmap, err = u.MemReserve(addr, uint64(len(code)), false)
 		if err != nil {

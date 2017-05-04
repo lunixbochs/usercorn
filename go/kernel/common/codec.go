@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/lunixbochs/argjoy"
+	"github.com/pkg/errors"
 )
 
 func (k *KernelBase) commonArgCodec(arg interface{}, vals []interface{}) error {
@@ -22,7 +23,7 @@ func (k *KernelBase) commonArgCodec(arg interface{}, vals []interface{}) error {
 		case *string:
 			s, err := k.U.Mem().ReadStrAt(reg)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "ReadStrAt(%#x) failed", reg)
 			}
 			*v = s
 		default:

@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/lunixbochs/argjoy"
+	"github.com/pkg/errors"
 	"os"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -35,15 +36,16 @@ func (b Buf) Pack(i interface{}) error {
 			return err
 		}
 	}
-	return b.Struc().Pack(i)
+	return errors.Wrap(b.Struc().Pack(i), "struc.Pack() failed")
 }
 
 func (b Buf) Unpack(i interface{}) error {
-	return b.Struc().Unpack(i)
+	return errors.Wrap(b.Struc().Unpack(i), "struc.Unpack() failed")
 }
 
 func (b Buf) Sizeof(i interface{}) (int, error) {
-	return b.Struc().Sizeof(i)
+	n, err := b.Struc().Sizeof(i)
+	return n, errors.Wrap(err, "struc.Sizeof() failed")
 }
 
 func (f Fd) File() *os.File {

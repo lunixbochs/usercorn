@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/xml"
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"net"
 	"os"
@@ -124,7 +124,7 @@ func (c *gdbClient) Send(s string) error {
 	data := escape([]byte(s))
 	data = []byte("$" + string(data) + "#" + string(checksum(data)))
 	_, err := c.Write(data)
-	return err
+	return errors.Wrap(err, "gdbstub socket write failed")
 }
 
 func (c *gdbClient) Wait() {

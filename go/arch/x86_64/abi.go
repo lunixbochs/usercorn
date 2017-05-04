@@ -1,6 +1,7 @@
 package x86_64
 
 import (
+	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -17,5 +18,5 @@ func AbiInit(u models.Usercorn, syscall func(models.Usercorn)) error {
 			syscall(u)
 		}, 1, 0, uc.X86_INS_SYSENTER)
 	}
-	return err
+	return errors.Wrap(err, "u.HookAdd() failed")
 }

@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"debug/dwarf"
 	"debug/elf"
-	"errors"
-	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -53,7 +52,7 @@ func NewElfLoader(r io.ReaderAt, arch string) (models.Loader, error) {
 	}
 	machineName, ok := machineMap[file.Machine]
 	if !ok {
-		return nil, fmt.Errorf("Unsupported machine: %s", file.Machine)
+		return nil, errors.Errorf("Unsupported machine: %s", file.Machine)
 	}
 	return &ElfLoader{
 		LoaderBase: LoaderBase{

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/binary"
-	"fmt"
+	"github.com/pkg/errors"
 	"io"
 )
 
@@ -63,7 +63,7 @@ func Pack(w io.Writer, op Op) (int, error) {
 	case *OpExit:
 		e = OP_EXIT
 	default:
-		return 0, fmt.Errorf("Unknown OP type: %T", op)
+		return 0, errors.Errorf("Unknown OP type: %T", op)
 	}
 	tmp[0] = e
 
@@ -106,7 +106,7 @@ func Unpack(r io.Reader) (Op, int, error) {
 	case OP_EXIT:
 		op = &OpExit{}
 	default:
-		return nil, 0, fmt.Errorf("Unknown op: %d", tmp[0])
+		return nil, 0, errors.Errorf("Unknown op: %d", tmp[0])
 	}
 	n, err := op.Unpack(r)
 	return op, n + 1, err

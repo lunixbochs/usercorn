@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/lunixbochs/struc"
+	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
 )
@@ -53,7 +54,7 @@ func (s *SaveHeader) PackBody(b *SaveBody) error {
 	gz := zlib.NewWriter(&tmp)
 	err := struc.PackWithOptions(gz, b, &struc.Options{Order: binary.BigEndian})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "struc.PackWithOptions() failed")
 	}
 	s.Compressed = tmp.Bytes()
 	return nil
@@ -62,12 +63,12 @@ func (s *SaveHeader) PackBody(b *SaveBody) error {
 func (s *SaveHeader) UnpackBody() (*SaveBody, error) {
 	gz, err := zlib.NewReader(bytes.NewReader(s.Compressed))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "zlib.NewReader() failed")
 	}
 	body := &SaveBody{}
 	err = struc.UnpackWithOptions(gz, body, &struc.Options{Order: binary.BigEndian})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "struc.UnpackWithOptions failed")
 	}
 	return body, nil
 }
@@ -96,7 +97,7 @@ func Save(u Usercorn) ([]byte, error) {
 	arch := u.Arch()
 	options := &struc.Options{Order: binary.BigEndian}
 	// build compressed body
-	s := StrucStream{&buf, options}
+	s := NewStrucStream(&buf, options)
 
 	// register list
 	s.Pack(uint64(len(arch.Regs)))
@@ -116,6 +117,9 @@ func Save(u Usercorn) ([]byte, error) {
 			continue
 		}
 		buf.Write(mem)
+	}
+	if s.Error != nil {
+		return nil, s.Error
 	}
 
 	// compress body
@@ -137,6 +141,9 @@ func Save(u Usercorn) ([]byte, error) {
 		Compressed: tmp.Bytes(),
 	}
 	var final bytes.Buffer
-	struc.PackWithOptions(&final, header, options)
+	err := struc.PackWithOptions(&final, header, options)
+	if err != nil {
+		return nil, err
+	}
 	return final.Bytes(), nil
 }

@@ -2,7 +2,7 @@ package loader
 
 import (
 	"bytes"
-	"errors"
+	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 
@@ -35,6 +35,6 @@ func LoadArch(r io.ReaderAt, arch string) (models.Loader, error) {
 	} else if MatchCgc(r) {
 		return NewCgcLoader(r, arch)
 	} else {
-		return nil, UnknownMagic
+		return nil, errors.WithStack(UnknownMagic)
 	}
 }

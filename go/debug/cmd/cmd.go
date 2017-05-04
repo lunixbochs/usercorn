@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/lunixbochs/argjoy"
 	"github.com/lunixbochs/go-shellwords"
+	"github.com/pkg/errors"
 	"io"
 	"reflect"
 
@@ -36,8 +37,9 @@ type Context struct {
 	U models.Usercorn
 }
 
-func (c *Context) Printf(format string, a ...interface{}) (n int, err error) {
-	return fmt.Fprintf(c, format, a...)
+func (c *Context) Printf(format string, a ...interface{}) (int, error) {
+	n, err := fmt.Fprintf(c, format, a...)
+	return n, errors.Wrap(err, "fmt.Printf() failed")
 }
 
 var aj = argjoy.NewArgjoy(argjoy.RadStrToInt)

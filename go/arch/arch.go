@@ -1,7 +1,7 @@
 package arch
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 
 	"github.com/lunixbochs/usercorn/go/arch/arm"
 	"github.com/lunixbochs/usercorn/go/arch/arm64"
@@ -26,11 +26,11 @@ var archMap = map[string]*models.Arch{
 func GetArch(name, os string) (*models.Arch, *models.OS, error) {
 	a, ok := archMap[name]
 	if !ok {
-		return nil, nil, fmt.Errorf("Arch '%s' not found.", name)
+		return nil, nil, errors.Errorf("Arch '%s' not found.", name)
 	}
 	o, ok := a.OS[os]
 	if !ok {
-		return nil, nil, fmt.Errorf("OS '%s' not found for arch '%s'.", os, name)
+		return nil, nil, errors.Errorf("OS '%s' not found for arch '%s'.", os, name)
 	}
 	return a, o, nil
 }

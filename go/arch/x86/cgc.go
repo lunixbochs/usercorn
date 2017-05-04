@@ -2,6 +2,7 @@ package x86
 
 import (
 	"crypto/rand"
+	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"syscall"
 
@@ -133,7 +134,7 @@ func CgcInit(u models.Usercorn, args, env []string) error {
 	}
 	tmp := make([]byte, 0x1000)
 	if _, err := rand.Read(tmp); err != nil {
-		return err
+		return errors.Wrap(err, "rand.Read() failed")
 	}
 	if err := u.MemWrite(secretPage, tmp); err != nil {
 		return err

@@ -5,8 +5,7 @@ import (
 	"debug/dwarf"
 	"debug/macho"
 	"encoding/binary"
-	"errors"
-	"fmt"
+	"github.com/pkg/errors"
 	"io"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -99,14 +98,14 @@ func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 				}
 			}
 			if file == nil {
-				return nil, fmt.Errorf("Could not find Mach-O fat binary entry for arch '%s'.", archHint)
+				return nil, errors.Errorf("Could not find fat binary entry for arch '%s'.", archHint)
 			}
 		}
 	} else {
 		file, err = macho.NewFile(r)
 	}
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to open MachO file")
 	}
 	var bits int
 	switch file.Magic {
@@ -115,11 +114,11 @@ func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 	case macho.Magic64:
 		bits = 64
 	default:
-		return nil, errors.New("Unknown ELF class.")
+		return nil, errors.New("Unknown magic.")
 	}
 	machineName, ok := machoCpuMap[file.Cpu]
 	if !ok {
-		return nil, fmt.Errorf("Unsupported CPU: %s", file.Cpu)
+		return nil, errors.Errorf("Unsupported CPU: %s", file.Cpu)
 	}
 	entry, _ := findEntry(file, bits)
 	m := &MachOLoader{

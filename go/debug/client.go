@@ -1,8 +1,8 @@
 package debug
 
 import (
-	"fmt"
 	"github.com/lunixbochs/readline"
+	"github.com/pkg/errors"
 	"io"
 	"net"
 	"os"
@@ -22,11 +22,11 @@ func RunClient(addr string) error {
 	stdinFd := int(os.Stdin.Fd())
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		return fmt.Errorf("error connecting to debug server: %v", err)
+		return errors.Errorf("error connecting to debug server: %v", err)
 	}
 	termState, err := readline.MakeRaw(stdinFd)
 	if err != nil {
-		return fmt.Errorf("error placing stdin into raw mode: %v", err)
+		return errors.Errorf("error placing stdin into raw mode: %v", err)
 	}
 	// defer to ensure original stdin isn't left in raw mode
 	defer func() {
@@ -41,7 +41,7 @@ func RunClient(addr string) error {
 	localEOF := copyNotify(conn, os.Stdin)
 	select {
 	case <-remoteEOF:
-		return fmt.Errorf("remote closed connection")
+		return errors.Errorf("remote closed connection")
 	case <-localEOF:
 		return nil
 	}

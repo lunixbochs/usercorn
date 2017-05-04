@@ -84,6 +84,9 @@ func StackInit(u models.Usercorn, args, env []string, auxv []byte) error {
 	}
 	var tmp [8]byte
 	argcb, err := u.PackAddr(tmp[:], uint64(len(argv)))
+	if err != nil {
+		return err
+	}
 	init := append(argcb, argvb...)
 	init = append(init, envpb...)
 	// align stack pointer
@@ -93,7 +96,9 @@ func StackInit(u models.Usercorn, args, env []string, auxv []byte) error {
 	if off > 0 {
 		sp -= uint64(16 - off)
 	}
-	u.RegWrite(u.Arch().SP, sp)
+	if err := u.RegWrite(u.Arch().SP, sp); err != nil {
+		return err
+	}
 	// auxv
 	if len(auxv) > 0 {
 		if _, err := u.PushBytes(auxv); err != nil {
@@ -101,6 +106,6 @@ func StackInit(u models.Usercorn, args, env []string, auxv []byte) error {
 		}
 	}
 	// write envp -> argc
-	u.PushBytes(init)
+	_, err = u.PushBytes(init)
 	return err
 }

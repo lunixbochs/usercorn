@@ -34,7 +34,6 @@ type Usercorn interface {
 	Mappings() []*Mmap
 	MemReserve(addr, size uint64, force bool) (*Mmap, error)
 	Mmap(addr, size uint64) (*Mmap, error)
-	MmapWrite(addr uint64, p []byte) (uint64, error)
 	Mem() memio.MemIO
 	StrucAt(addr uint64) *StrucStream
 
@@ -44,7 +43,6 @@ type Usercorn interface {
 	PushBytes(p []byte) (uint64, error)
 	Pop() (uint64, error)
 	Push(n uint64) (uint64, error)
-	ReadRegs(reg []int) ([]uint64, error)
 	RegDump() ([]RegVal, error)
 
 	RunShellcodeMapped(mmap *Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error

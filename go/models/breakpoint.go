@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"regexp"
 	"strconv"
@@ -43,7 +44,7 @@ var BreakpointParseErr = fmt.Errorf("breakpoint parse failed")
 func NewBreakpoint(desc string, cb func(u Usercorn, addr uint64), u Usercorn) (*Breakpoint, error) {
 	r := breakRe.FindStringSubmatch(desc)
 	if len(r) == 0 {
-		return nil, BreakpointParseErr
+		return nil, errors.WithStack(BreakpointParseErr)
 	}
 	addrG, sourceG, lineG, sym, offG, fileG := r[2], r[3], r[4], r[5], r[6], r[8]
 	var (
@@ -61,7 +62,7 @@ func NewBreakpoint(desc string, cb func(u Usercorn, addr uint64), u Usercorn) (*
 		line, err = strconv.ParseUint(lineG, 0, 64)
 	}
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to parse int")
 	}
 	b := &Breakpoint{
 		Addr:     addr,
@@ -101,7 +102,7 @@ func (b *Breakpoint) Apply() error {
 		}
 	}
 	if len(addrs) == 0 {
-		return fmt.Errorf("no breakpoints set")
+		return errors.Errorf("no breakpoints set")
 	}
 outer:
 	for _, addr := range addrs {
@@ -114,7 +115,7 @@ outer:
 			b.cb(b.u, addr)
 		}, addr, addr+1)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "u.HookAdd() failed")
 		}
 		b.hooks = append(b.hooks, bpHook{addr, hook})
 	}

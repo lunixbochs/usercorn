@@ -3,6 +3,7 @@ package cmd
 import (
 	"flag"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"net"
 	"os"
@@ -61,11 +62,62 @@ func NewUsercornCmd() *UsercornCmd {
 		if stat, err := os.Stat(exe); err != nil {
 			return nil, err
 		} else if stat.Mode().Perm()&0111 == 0 {
-			return nil, fmt.Errorf("%s: permission denied (no execute bit)\n", exe)
+			return nil, errors.Errorf("%s: permission denied (no execute bit)\n", exe)
 		}
 		return usercorn.NewUsercorn(exe, cmd.Config)
 	}
 	return cmd
+}
+
+type stackTracer interface {
+	StackTrace() errors.StackTrace
+}
+
+func (c *UsercornCmd) PrintError(err error) {
+	// print an error, and a stacktrace if available
+	fmt.Fprintf(os.Stderr, "%s\n", strings.Repeat("-", 40))
+	fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+	if err, ok := err.(stackTracer); ok {
+		// parse full path and method name for each stack frame
+		var frames [][]string
+		for _, f := range err.StackTrace() {
+			fullpath := ""
+			fileline := fmt.Sprintf("%s:%d", f, f)
+			method := fmt.Sprintf("%n", f)
+
+			frame := fmt.Sprintf("%+s", f)
+			tmp := strings.SplitN(frame, "\n", 3)
+			if len(tmp) == 2 {
+				pathsplit := strings.Split(tmp[0], "/")
+				method = pathsplit[len(pathsplit)-1]
+				fullpath = strings.TrimSpace(tmp[1])
+			}
+			frames = append(frames, []string{fullpath, fileline, method})
+			if method == "main.main" {
+				break
+			}
+		}
+		// calculate column widths
+		widths := make([]int, len(frames))
+		for _, f := range frames {
+			for i, s := range f {
+				if len(s) > widths[i] {
+					widths[i] = len(s)
+				}
+			}
+		}
+		// print pretty stacktrace
+		for _, f := range frames {
+			method := f[2]
+			for i := 0; i < 2; i++ {
+				if widths[i] > 0 {
+					pad := strings.Repeat(" ", widths[i]-len(f[i]))
+					fmt.Fprintf(os.Stderr, "%s%s | ", f[i], pad)
+				}
+			}
+			fmt.Fprintf(os.Stderr, "%s()\n", method)
+		}
+	}
 }
 
 func (c *UsercornCmd) Run(argv, env []string) {
@@ -73,7 +125,6 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	defer runtime.UnlockOSThread()
 
 	fs := c.Flags
-
 	// tracing flags
 	trace := fs.Bool("trace", false, "recommended tracing options: -loop 8 -strace -mtrace2 -etrace -rtrace -ftrace")
 	strace := fs.Bool("strace", false, "trace syscalls")
@@ -271,12 +322,14 @@ func (c *UsercornCmd) Run(argv, env []string) {
 
 	corn, err := c.MakeUsercorn(args[0])
 	if err != nil {
-		panic(err)
+		c.PrintError(err)
+		os.Exit(1)
 	}
 	c.Usercorn = corn
 	if c.SetupUsercorn != nil {
 		if err := c.SetupUsercorn(); err != nil {
-			panic(err)
+			c.PrintError(err)
+			os.Exit(1)
 		}
 	}
 	// won't run on os.Exit(), so it's manually run below
@@ -331,7 +384,8 @@ func (c *UsercornCmd) Run(argv, env []string) {
 			teardown()
 			os.Exit(int(e))
 		} else {
-			panic(err)
+			c.PrintError(err)
+			os.Exit(1)
 		}
 	}
 }

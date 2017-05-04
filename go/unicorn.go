@@ -2,7 +2,7 @@ package usercorn
 
 import (
 	"encoding/binary"
-	"errors"
+	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -21,7 +21,7 @@ type Unicorn struct {
 func NewUnicorn(arch *models.Arch, os *models.OS, order binary.ByteOrder) (*Unicorn, error) {
 	Uc, err := uc.NewUnicorn(arch.UC_ARCH, arch.UC_MODE)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unicorn.NewUnicorn() failed")
 	}
 	return &Unicorn{
 		Unicorn: Uc,
@@ -79,7 +79,8 @@ func (u *Unicorn) MemMapProt(addr, size uint64, prot int) error {
 		return err
 	}
 	mmap.Prot = prot
-	return u.Unicorn.MemMapProt(mmap.Addr, mmap.Size, prot)
+	err = u.Unicorn.MemMapProt(mmap.Addr, mmap.Size, prot)
+	return errors.Wrap(err, "u.MemMapProt() failed")
 }
 
 func (u *Unicorn) MemMap(addr, size uint64) error {
@@ -92,7 +93,8 @@ func (u *Unicorn) MemProtect(addr, size uint64, prot int) error {
 	if mmap := u.mapping(addr, size); mmap != nil {
 		mmap.Prot = prot
 	}
-	return u.Unicorn.MemProtect(addr, size, prot)
+	err := u.Unicorn.MemProtect(addr, size, prot)
+	return errors.Wrap(err, "u.MemProtect() failed")
 }
 
 func (u *Unicorn) MemUnmap(addr, size uint64) error {
@@ -191,17 +193,9 @@ func (u *Unicorn) Mmap(addr, size uint64) (*models.Mmap, error) {
 	return mmap, u.Unicorn.MemMap(mmap.Addr, mmap.Size)
 }
 
-func (u *Unicorn) MmapWrite(addr uint64, p []byte) (uint64, error) {
-	mmap, err := u.Mmap(addr, uint64(len(p)))
-	if err != nil {
-		return 0, err
-	}
-	return mmap.Addr, u.MemWrite(mmap.Addr, p)
-}
-
 func (u *Unicorn) PackAddr(buf []byte, n uint64) ([]byte, error) {
 	if len(buf) < u.Bsz {
-		return nil, errors.New("Buffer too small.")
+		return nil, errors.Errorf("buffer too small (%d < %d)", len(buf), u.Bsz)
 	}
 	if u.bits == 64 {
 		u.order.PutUint64(buf[:u.Bsz], n)
@@ -256,18 +250,36 @@ func (u *Unicorn) Pop() (uint64, error) {
 	return u.UnpackAddr(buf[:u.Bsz]), nil
 }
 
-func (u *Unicorn) ReadRegs(regs []int) ([]uint64, error) {
-	ret := make([]uint64, len(regs))
-	for i, reg := range regs {
-		n, err := u.RegRead(reg)
-		if err != nil {
-			return nil, err
-		}
-		ret[i] = n
-	}
-	return ret, nil
+func (u *Unicorn) RegReadBatch(regs []int) ([]uint64, error) {
+	ret, err := u.Unicorn.RegReadBatch(regs)
+	return ret, errors.Wrap(err, "u.RegReadBatch() failed")
 }
 
 func (u *Unicorn) RegDump() ([]models.RegVal, error) {
 	return u.arch.RegDump(u)
+}
+
+func (u *Unicorn) RegRead(enum int) (uint64, error) {
+	val, err := u.Unicorn.RegRead(enum)
+	return val, errors.Wrap(err, "u.RegRead() failed")
+}
+
+func (u *Unicorn) RegWrite(enum int, val uint64) error {
+	err := u.Unicorn.RegWrite(enum, val)
+	return errors.Wrap(err, "u.RegWrite() failed")
+}
+
+func (u *Unicorn) MemRead(addr, size uint64) ([]byte, error) {
+	data, err := u.Unicorn.MemRead(addr, size)
+	return data, errors.Wrap(err, "u.MemRead() failed")
+}
+
+func (u *Unicorn) MemWrite(addr uint64, p []byte) error {
+	err := u.Unicorn.MemWrite(addr, p)
+	return errors.Wrap(err, "u.MemWrite() failed")
+}
+
+func (u *Unicorn) MemReadInto(p []byte, addr uint64) error {
+	err := u.Unicorn.MemReadInto(p, addr)
+	return errors.Wrap(err, "u.MemReadInto() failed")
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io/ioutil"
 	"os"
@@ -72,7 +73,7 @@ func main() {
 	}
 	c.SetupUsercorn = func() error {
 		if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
-			return err
+			return errors.Wrap(err, "u.HookAdd() failed")
 		}
 		return nil
 	}
@@ -99,7 +100,7 @@ func main() {
 
 		if _, err := forksrvStatus.Write(aflHello); err != nil {
 			u.Println("AFL hello failed.")
-			return err
+			return errors.Wrap(err, "AFL hello failed.")
 		}
 		var aflMsg [4]byte
 		// afl forkserver loop
@@ -107,7 +108,7 @@ func main() {
 			lastPos = 0
 			if _, err := forksrvCtrl.Read(aflMsg[:]); err != nil {
 				u.Printf("Failed to receive control signal from AFL: %s\n", err)
-				return err
+				return errors.Wrapf(err, "Failed to receive control signal from AFL: %s", err)
 			}
 
 			// spawn a fake child so AFL has something other than us to kill
@@ -117,7 +118,7 @@ func main() {
 			proc, err := os.StartProcess(args[0], args, &procAttr)
 			if err != nil {
 				u.Printf("Failed to spawn child: %s\n", err)
-				return err
+				return errors.Wrap(err, "failed to spawn child")
 			}
 
 			// restore cpu and memory state
@@ -129,7 +130,7 @@ func main() {
 			binary.LittleEndian.PutUint32(aflMsg[:], uint32(proc.Pid))
 			if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
 				u.Printf("Failed to send pid to AFL: %s\n", err)
-				return err
+				return errors.Wrap(err, "failed to send PID to AFL")
 			}
 
 			// Goroutine to stop usercorn if afl-fuzz kills our fake process
@@ -148,7 +149,7 @@ func main() {
 			binary.LittleEndian.PutUint32(aflMsg[:], uint32(status))
 			if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
 				u.Printf("Failed to send status to AFL: %s\n", err)
-				return err
+				return errors.Wrap(err, "failed to send status to AFL")
 			}
 
 			proc.Kill()

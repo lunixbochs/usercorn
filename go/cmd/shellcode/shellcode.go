@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 
@@ -23,7 +24,7 @@ func main() {
 			shellcode, err = hex.DecodeString(exe)
 		}
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to read shellcode")
 		}
 		return oldMake(exe)
 	}

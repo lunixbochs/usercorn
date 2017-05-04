@@ -1,9 +1,9 @@
 package x86_64
 
 import (
-	"errors"
 	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
+	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/arch/x86"
@@ -53,7 +53,7 @@ func setupVsyscall(u models.Usercorn, kernel *LinuxKernel) error {
 			panic(fmt.Sprintf("unsupported vsyscall trap: 0x%x\n", addr))
 		}
 	}, 0xffffffffff600000, 0xffffffffff601000)
-	return err
+	return errors.Wrap(err, "u.HookAdd() failed")
 }
 
 // TODO: put these somewhere. ghostrace maybe.

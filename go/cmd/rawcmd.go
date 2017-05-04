@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"encoding/binary"
-	"fmt"
+	"github.com/pkg/errors"
 
 	"github.com/lunixbochs/usercorn/go"
 	"github.com/lunixbochs/usercorn/go/loader"
@@ -22,7 +22,7 @@ func NewUsercornRawCmd() *UsercornCmd {
 		case "big":
 			byteOrder = binary.BigEndian
 		default:
-			return nil, fmt.Errorf("%s is not a valid byte order ('little' or 'big')", endian)
+			return nil, errors.Errorf("%s is not a valid byte order ('little' or 'big')", endian)
 		}
 		var err error
 		l := loader.NewNullLoader(*arch, *osStr, byteOrder, *entry)

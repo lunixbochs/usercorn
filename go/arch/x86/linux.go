@@ -39,7 +39,7 @@ var socketCallMap = map[int]string{
 }
 
 // TODO: move this to arch.go or something
-func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) {
+func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) error {
 	entry := uint64(limit & 0xFFFF)
 	entry |= uint64(((limit >> 16) & 0xF) << 48)
 	entry |= uint64((base & 0xFFFFFF) << 16)
@@ -49,11 +49,15 @@ func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) {
 
 	if k.gdt == nil {
 		k.gdt, _ = k.U.Mmap(0, 0x1000)
-		k.U.RegWrite(uc.X86_REG_GDTR, k.gdt.Addr)
+		err := k.U.RegWrite(uc.X86_REG_GDTR, k.gdt.Addr)
+		if err != nil {
+			return err
+		}
 	}
 	// this is fragile but we only call it once below in SetThreadArea
 	s := k.U.StrucAt(k.gdt.Addr + uint64(sel)*8)
 	s.Pack(entry)
+	return s.Error
 }
 
 func (k *LinuxKernel) Socketcall(index int, params co.Buf) uint64 {
@@ -79,8 +83,13 @@ func (k *LinuxKernel) SetThreadArea(addr uint64) int {
 	s.Unpack(&uaddr) // burn one
 	s.Unpack(&uaddr, &limit)
 
-	k.gdtWrite(2, uaddr, limit, 0x12, 0)
-	k.U.RegWrite(uc.X86_REG_GS, 2)
+	err := k.gdtWrite(2, uaddr, limit, 0x12, 0)
+	if err == nil {
+		err = k.U.RegWrite(uc.X86_REG_GS, 2)
+	}
+	if err != nil {
+		return -1 // FIXME
+	}
 	return 2
 }
 
