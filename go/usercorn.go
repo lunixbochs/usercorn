@@ -450,10 +450,6 @@ func (u *Usercorn) SetStackBase(base uint64) {
 	u.StackBase = base
 }
 
-func (u *Usercorn) SetStackSize(size uint64) {
-	u.StackSize = size
-}
-
 func (u *Usercorn) BinEntry() uint64 {
 	// points to binary entry, even if an interpreter is used
 	return u.binEntry
@@ -754,8 +750,8 @@ outer:
 }
 
 func (u *Usercorn) MapStack(base uint64, size uint64) error {
-	u.SetStackBase(base)
-	u.SetStackSize(size)
+	u.StackBase = base
+	u.StackSize = size
 	stack, err := u.Mmap(base, size)
 	if err != nil {
 		return err

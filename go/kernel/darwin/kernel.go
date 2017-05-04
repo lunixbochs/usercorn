@@ -10,6 +10,11 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+const (
+	STACK_BASE = 0x60000000
+	STACK_SIZE = 0x00800000
+)
+
 type DarwinKernel struct {
 	*co.KernelBase
 	mach.MachKernel
@@ -30,6 +35,9 @@ func NewKernel(u models.Usercorn) *DarwinKernel {
 }
 
 func StackInit(u models.Usercorn, args, env []string) error {
+	if err := u.MapStack(STACK_BASE, STACK_SIZE); err != nil {
+		return err
+	}
 	var tmp [8]byte
 	rand.Read(tmp[:])
 	stackGuard := u.UnpackAddr(tmp[:])
