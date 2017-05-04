@@ -53,6 +53,7 @@ type Usercorn struct {
 	binEntry   uint64
 
 	StackBase uint64
+	StackSize uint64
 	brk       uint64
 
 	final      sync.Once
@@ -156,11 +157,6 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	u.status = models.StatusDiff{U: u}
 	if u.config.LoopCollapse > 0 {
 		u.blockloop = models.NewLoopDetect(u.config.LoopCollapse)
-	}
-	// TODO: if we error, should close Usercorn/Cpu instance?
-	// GC might take its time
-	if err := u.mapStack(); err != nil {
-		return nil, err
 	}
 	return u, nil
 }
@@ -348,7 +344,7 @@ func (u *Usercorn) Run(args, env []string) error {
 		if err != nil {
 			return err
 		}
-		buf := make([]byte, u.StackBase+STACK_SIZE-sp)
+		buf := make([]byte, u.StackBase+u.StackSize-sp)
 		if err := u.MemReadInto(buf, sp); err != nil {
 			return err
 		}
@@ -467,6 +463,10 @@ func (u *Usercorn) SetExit(exit uint64) {
 
 func (u *Usercorn) SetStackBase(base uint64) {
 	u.StackBase = base
+}
+
+func (u *Usercorn) SetStackSize(size uint64) {
+	u.StackSize = size
 }
 
 func (u *Usercorn) BinEntry() uint64 {
@@ -768,14 +768,16 @@ outer:
 	}
 }
 
-func (u *Usercorn) mapStack() error {
-	stack, err := u.Mmap(STACK_BASE, STACK_SIZE)
+func (u *Usercorn) MapStack(base uint64, size uint64) error {
+	u.SetStackBase(base)
+	u.SetStackSize(size)
+	stack, err := u.Mmap(base, size)
 	if err != nil {
 		return err
 	}
 	stack.Desc = "stack"
 	u.StackBase = stack.Addr
-	stackEnd := stack.Addr + STACK_SIZE
+	stackEnd := stack.Addr + size
 	if err := u.RegWrite(u.arch.SP, stackEnd); err != nil {
 		return err
 	}
