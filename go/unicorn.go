@@ -172,7 +172,8 @@ func (u *Unicorn) MemReserve(addr, size uint64, force bool) (*models.Mmap, error
 		u.memory = append(u.memory, mmap)
 		return mmap, nil
 	}
-	for i := addr; i < uint64(1)<<uint64(u.bits); i += UC_MEM_ALIGN {
+	lastPage := ^uint64(0)>>uint8(64-u.bits) - UC_MEM_ALIGN + 2
+	for i := addr; i < lastPage; i += UC_MEM_ALIGN {
 		if u.mapping(i, size) == nil {
 			mmap := &models.Mmap{Addr: i, Size: size, Prot: uc.PROT_ALL}
 			u.memory = append(u.memory, mmap)
