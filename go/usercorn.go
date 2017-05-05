@@ -465,6 +465,10 @@ func (u *Usercorn) SetStackBase(base uint64) {
 	u.StackBase = base
 }
 
+func (u *Usercorn) SetStackSize(size uint64) {
+	u.StackSize = size
+}
+
 func (u *Usercorn) BinEntry() uint64 {
 	// points to binary entry, even if an interpreter is used
 	return u.binEntry
