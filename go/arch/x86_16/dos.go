@@ -5,7 +5,6 @@ import (
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
-	"github.com/lunixbochs/usercorn/go/loader"
 	"github.com/lunixbochs/usercorn/go/models"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 )
@@ -79,15 +78,6 @@ var regNames = []string{
 }
 
 func DosInit(u models.Usercorn, args, env []string) error {
-	loader := u.Loader().(*loader.ComLoader)
-	// Set initial register values according to the loader
-	for _, reg := range loader.Regs {
-		if reg.Num > 0 && int(reg.Num) < len(regNames) {
-			name := regNames[int(reg.Num)]
-			enum := u.Arch().Regs[name]
-			u.RegWrite(enum, uint64(reg.Val))
-		}
-	}
 	u.RegWrite(u.Arch().SP, STACK_BASE)
 	u.SetStackBase(STACK_BASE)
 	u.SetStackSize(STACK_SIZE)
