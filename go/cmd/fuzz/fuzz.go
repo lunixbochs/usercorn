@@ -4,8 +4,12 @@ import (
 	"encoding/binary"
 	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"sync"
+	"syscall"
 	"unsafe"
 
 	"github.com/lunixbochs/usercorn/go/cmd"
@@ -35,6 +39,45 @@ import "C"
 var MAP_SIZE uint64 = 1 << 16
 var FORKSRV_FD = 198
 var aflHello = []byte{1, 2, 3, 4}
+
+type FakeProc struct {
+	Argv     []string
+	Stdin    io.WriteCloser
+	Usercorn models.Usercorn
+	*exec.Cmd
+	sync.Mutex
+}
+
+func (p *FakeProc) Start() error {
+	p.Lock()
+	defer p.Unlock()
+	if p.Cmd != nil {
+		// kill(0) to see if it's still running
+		if p.Process.Signal(syscall.Signal(0)) == nil {
+			return nil
+		}
+	}
+	var err error
+	p.Cmd = exec.Command(p.Argv[0], p.Argv[1:]...)
+	p.Stdin, err = p.StdinPipe()
+	if err != nil {
+		p.Usercorn.Printf("failed to open stdin: %s\n", err)
+		return errors.Wrap(err, "failed to open stdin")
+	}
+	if err = p.Cmd.Start(); err != nil {
+		p.Usercorn.Printf("failed to spawn child: %s\n", err)
+		return errors.Wrap(err, "failed to spawn child")
+	}
+	go func() {
+		p.Wait()
+		p.Lock()
+		defer p.Unlock()
+		p.Usercorn.Stop()
+		p.Stdin.Close()
+		p.Cmd = nil
+	}()
+	return nil
+}
 
 func main() {
 	message := []byte("In fuzz main")
@@ -71,15 +114,17 @@ func main() {
 		fuzzInterp = c.Flags.Bool("fuzzinterp", false, "controls whether fuzzing is delayed until program's main entry point")
 		return nil
 	}
-	c.SetupUsercorn = func() error {
-		if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
-			return errors.Wrap(err, "u.HookAdd() failed")
-		}
-		return nil
+	addHook := func(u models.Usercorn) error {
+		_, err := u.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0)
+		return errors.Wrap(err, "u.HookAdd() failed")
 	}
 	c.RunUsercorn = func(args, env []string) error {
 		var err error
 		u := c.Usercorn
+
+		if err := addHook(u); err != nil {
+			return err
+		}
 		if nofork {
 			status := 0
 			err = u.Run(args, env)
@@ -102,6 +147,7 @@ func main() {
 			u.Println("AFL hello failed.")
 			return errors.Wrap(err, "AFL hello failed.")
 		}
+		child := FakeProc{Argv: []string{"/bin/cat"}, Usercorn: u}
 		var aflMsg [4]byte
 		// afl forkserver loop
 		for {
@@ -113,31 +159,26 @@ func main() {
 
 			// spawn a fake child so AFL has something other than us to kill
 			// monitor it and if afl kills it, stop the current emulation
-			args := []string{"/bin/cat"}
-			var procAttr os.ProcAttr
-			proc, err := os.StartProcess(args[0], args, &procAttr)
-			if err != nil {
-				u.Printf("Failed to spawn child: %s\n", err)
-				return errors.Wrap(err, "failed to spawn child")
-			}
 
+			if err := child.Start(); err != nil {
+				return err
+			}
 			// restore cpu and memory state
 			if err := models.ContextRestore(u, savedCtx); err != nil {
 				u.Println("context restore failed.")
 				return err
 			}
 
-			binary.LittleEndian.PutUint32(aflMsg[:], uint32(proc.Pid))
+			binary.LittleEndian.PutUint32(aflMsg[:], uint32(child.Process.Pid))
 			if _, err := forksrvStatus.Write(aflMsg[:]); err != nil {
 				u.Printf("Failed to send pid to AFL: %s\n", err)
 				return errors.Wrap(err, "failed to send PID to AFL")
 			}
 
-			// Goroutine to stop usercorn if afl-fuzz kills our fake process
-			go func() {
-				proc.Wait()
-				u.Stop()
-			}()
+			// Run() deletes all hooks, so we need to add back each time
+			if err := addHook(u); err != nil {
+				return err
+			}
 
 			status := 0
 			err = u.Run(args, env)
@@ -151,9 +192,6 @@ func main() {
 				u.Printf("Failed to send status to AFL: %s\n", err)
 				return errors.Wrap(err, "failed to send status to AFL")
 			}
-
-			proc.Kill()
-			proc.Wait()
 		}
 	}
 

@@ -342,6 +342,8 @@ func (u *Usercorn) Run(args, env []string) error {
 		}()
 	}
 
+	// in case this isn't the first run
+	u.exitStatus = nil
 	// loop to restart Unicorn if we need to call a trampoline function
 	pc := u.entry
 	var err error
