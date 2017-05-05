@@ -1021,8 +1021,8 @@ func (u *Usercorn) Printf(f string, args ...interface{}) {
 	fmt.Fprintf(u.config.Output, f, args...)
 }
 
-func (u *Usercorn) Println(s interface{}) {
-	u.Printf("%s\n", s)
+func (u *Usercorn) Println(s ...interface{}) {
+	fmt.Fprintln(u.config.Output, s...)
 }
 
 func (u *Usercorn) Restart(fn func(models.Usercorn, error) error) {

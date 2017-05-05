@@ -24,7 +24,7 @@ type Usercorn interface {
 	Gate() *Gate
 
 	Printf(fmt string, args ...interface{})
-	Println(s interface{})
+	Println(s ...interface{})
 
 	RegisterFile(f *os.File, addr, size uint64, off int64, fileLoader Loader)
 	MappedFiles() []*MappedFile
