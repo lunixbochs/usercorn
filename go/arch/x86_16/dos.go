@@ -54,10 +54,17 @@ type DosKernel struct {
 }
 
 func (k *DosKernel) Display(buf co.Buf) {
-	// TODO: Read up to '$'
-	mem, _ := k.U.MemRead(buf.Addr, uint64(16))
-	// TODO: Why not just use fmt.Print?
-	syscall.Write(1, mem)
+	// TODO: Read ahead? This'll be slow
+	var i uint64
+	var mem []uint8
+	char := uint8(0)
+
+	for i = 1; char != '$'; i++ {
+		mem, _ = k.U.MemRead(buf.Addr, i)
+		char = mem[i-1]
+	}
+
+	syscall.Write(1, mem[:i-2])
 }
 
 func (k *DosKernel) Terminate() {
