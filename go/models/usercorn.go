@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+type SyscallHookFunc func(u Usercorn, num int, name string, args []uint64) (uint64, bool)
+
 type Usercorn interface {
 	uc.Unicorn
 	Arch() *Arch
@@ -24,7 +26,7 @@ type Usercorn interface {
 	Gate() *Gate
 
 	Printf(fmt string, args ...interface{})
-	Println(s interface{})
+	Println(s ...interface{})
 
 	RegisterFile(f *os.File, addr, size uint64, off int64, fileLoader Loader)
 	MappedFiles() []*MappedFile
@@ -68,6 +70,8 @@ type Usercorn interface {
 
 	AddKernel(kernel interface{}, first bool)
 	Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error)
+	SyscallHookAdd(SyscallHookFunc) int
+	SyscallHookDel(int)
 
 	Exit(err error)
 }

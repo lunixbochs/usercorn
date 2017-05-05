@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"unsafe"
 
 	"github.com/lunixbochs/usercorn/go/cmd"
@@ -71,15 +73,39 @@ func main() {
 		fuzzInterp = c.Flags.Bool("fuzzinterp", false, "controls whether fuzzing is delayed until program's main entry point")
 		return nil
 	}
-	c.SetupUsercorn = func() error {
-		if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
-			return errors.Wrap(err, "u.HookAdd() failed")
-		}
-		return nil
+	addHook := func(u models.Usercorn) error {
+		_, err := u.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0)
+		return errors.Wrap(err, "u.HookAdd() failed")
 	}
 	c.RunUsercorn = func(args, env []string) error {
 		var err error
 		u := c.Usercorn
+
+		/*
+			hh := u.SyscallHookAdd(func(_ models.Usercorn, num int, name string, args []uint64) (uint64, bool) {
+				if name == "read" {
+					u.Println("stopping!")
+					u.Stop()
+					u.Println("...")
+					u.Gate().StopLock()
+					u.Println("...")
+					return 0, true
+				}
+				return 0, false
+			})
+
+			// TODO: this should really be u.Setup, u.Start???
+			err = u.Run(args, env)
+			if _, ok := err.(models.ExitStatus); ok {
+			} else if err != nil {
+				return err
+			}
+			u.SyscallHookDel(hh)
+		*/
+
+		if err := addHook(u); err != nil {
+			return err
+		}
 		if nofork {
 			status := 0
 			err = u.Run(args, env)
@@ -105,6 +131,7 @@ func main() {
 		var aflMsg [4]byte
 		// afl forkserver loop
 		for {
+			fmt.Println("new loop")
 			lastPos = 0
 			if _, err := forksrvCtrl.Read(aflMsg[:]); err != nil {
 				u.Printf("Failed to receive control signal from AFL: %s\n", err)
@@ -113,13 +140,19 @@ func main() {
 
 			// spawn a fake child so AFL has something other than us to kill
 			// monitor it and if afl kills it, stop the current emulation
-			args := []string{"/bin/cat"}
-			var procAttr os.ProcAttr
-			proc, err := os.StartProcess(args[0], args, &procAttr)
+
+			// TODO: reuse it if it's still running?
+			cmd := exec.Command("/bin/cat")
+			procStdin, err := cmd.StdinPipe()
 			if err != nil {
-				u.Printf("Failed to spawn child: %s\n", err)
+				u.Printf("failed to open stdin: %s\n", err)
+				return errors.Wrap(err, "failed to open stdin")
+			}
+			if err = cmd.Start(); err != nil {
+				u.Printf("failed to spawn child: %s\n", err)
 				return errors.Wrap(err, "failed to spawn child")
 			}
+			proc := cmd.Process
 
 			// restore cpu and memory state
 			if err := models.ContextRestore(u, savedCtx); err != nil {
@@ -139,8 +172,14 @@ func main() {
 				u.Stop()
 			}()
 
+			// Run() deletes all hooks, so we need to add back each time
+			if err := addHook(u); err != nil {
+				return err
+			}
+
 			status := 0
 			err = u.Run(args, env)
+			fmt.Println("run returned", err)
 			if _, ok := err.(models.ExitStatus); ok {
 			} else if err != nil {
 				u.Printf("Usercorn err: %s\n", err)
@@ -152,6 +191,7 @@ func main() {
 				return errors.Wrap(err, "failed to send status to AFL")
 			}
 
+			procStdin.Close()
 			proc.Kill()
 			proc.Wait()
 		}

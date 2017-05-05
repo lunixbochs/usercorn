@@ -32,6 +32,11 @@ type tramp struct {
 	fun  func() error
 }
 
+type syscallHook struct {
+	Handle int
+	Func   models.SyscallHookFunc
+}
+
 type Usercorn struct {
 	*Unicorn
 	sync.Mutex
@@ -77,6 +82,9 @@ type Usercorn struct {
 
 	breaks       []*models.Breakpoint
 	futureBreaks []*models.Breakpoint
+
+	syscallHooks     []*syscallHook
+	syscallHookCount int
 
 	hooks []uc.Hook
 }
@@ -278,13 +286,12 @@ func (u *Usercorn) Run(args, env []string) error {
 	}
 	if err := u.addHooks(); err != nil {
 		return err
-	} else {
-		defer func() {
-			for _, v := range u.hooks {
-				u.HookDel(v)
-			}
-		}()
 	}
+	defer func() {
+		for _, v := range u.hooks {
+			u.HookDel(v)
+		}
+	}()
 	if u.config.Verbose {
 		u.Printf("[entry @ 0x%x]\n", u.entry)
 		dis, err := u.Disas(u.entry, 64, u.config.DisBytes)
@@ -342,6 +349,8 @@ func (u *Usercorn) Run(args, env []string) error {
 		}()
 	}
 
+	// in case this isn't the first run
+	u.exitStatus = nil
 	// loop to restart Unicorn if we need to call a trampoline function
 	pc := u.entry
 	var err error
@@ -941,6 +950,23 @@ func (u *Usercorn) AddKernel(kernel interface{}, first bool) {
 	}
 }
 
+func (u *Usercorn) SyscallHookAdd(fn models.SyscallHookFunc) int {
+	hook := &syscallHook{u.syscallHookCount, fn}
+	u.syscallHooks = append(u.syscallHooks, hook)
+	u.syscallHookCount++
+	return hook.Handle
+}
+
+func (u *Usercorn) SyscallHookDel(handle int) {
+	tmp := make([]*syscallHook, 0, len(u.syscallHooks))
+	for _, v := range u.syscallHooks {
+		if v.Handle != handle {
+			tmp = append(tmp, v)
+		}
+	}
+	u.syscallHooks = tmp
+}
+
 func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
 	if name == "" {
 		msg := fmt.Sprintf("Syscall missing: %d", num)
@@ -968,7 +994,16 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 				// don't memlog our strace
 				u.memlog.Reset()
 			}
-			ret := sys.Call(args)
+			var ret uint64
+			skip := false
+			for _, hook := range u.syscallHooks {
+				if ret, skip = hook.Func(u, num, name, args); skip {
+					break
+				}
+			}
+			if !skip {
+				ret = sys.Call(args)
+			}
 			if u.config.TraceSys {
 				// don't memlog ret either
 				u.memlog.Freeze()
@@ -1021,8 +1056,8 @@ func (u *Usercorn) Printf(f string, args ...interface{}) {
 	fmt.Fprintf(u.config.Output, f, args...)
 }
 
-func (u *Usercorn) Println(s interface{}) {
-	u.Printf("%s\n", s)
+func (u *Usercorn) Println(s ...interface{}) {
+	fmt.Fprintln(u.config.Output, s...)
 }
 
 func (u *Usercorn) Restart(fn func(models.Usercorn, error) error) {
