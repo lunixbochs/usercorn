@@ -1,31 +1,20 @@
 package loader
 
 import (
-	"bytes"
-	"io"
-	"io/ioutil"
 	"testing"
 )
 
-var comFile io.ReaderAt
-
-func init() {
-	p, err := ioutil.ReadFile("../../bins/simple.com")
-	if err != nil {
-		panic(err)
-	}
-	comFile = bytes.NewReader(p)
-}
+const comFile = "../../bins/simple.com"
 
 func TestComLoad(t *testing.T) {
-	_, err := NewComLoader(comFile, "any")
+	_, err := NewComLoader(comFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestComSegments(t *testing.T) {
-	elf, err := NewComLoader(comFile, "any")
+	elf, err := NewComLoader(comFile)
 	if err != nil {
 		t.Fatal(err)
 	}

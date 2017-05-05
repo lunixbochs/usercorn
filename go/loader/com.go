@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"os"
 
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -18,16 +19,13 @@ func (c *ComLoader) OS() string {
 	return "DOS"
 }
 
-func NewComLoader(r io.ReaderAt) (models.Loader, error) {
-	// Calculate bin size
-	// TODO: We could maybe just pass the file, not the reader
-	buf := make([]byte, 0x1000)
-	n, _ := r.ReadAt(buf, 0)
-	size := n
-	for n != 0 {
-		n, _ = r.ReadAt(buf, int64(size))
-		size += n
+func NewComLoader(filename string) (models.Loader, error) {
+	r, err := os.Open(filename)
+	stat, err := r.Stat()
+	if err != nil {
+		return nil, err
 	}
+	size := stat.Size()
 
 	if size == 0 {
 		return nil, errors.New("Cannot read from file")
@@ -40,7 +38,7 @@ func NewComLoader(r io.ReaderAt) (models.Loader, error) {
 			os:        "dos",
 			entry:     0x100,
 		},
-		Size: size,
+		Size: int(size),
 		r:    r,
 	}, nil
 }
