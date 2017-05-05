@@ -24,7 +24,7 @@ func (c *ComLoader) OS() string {
 	return "DOS"
 }
 
-func NewComLoader(r io.ReaderAt, arch string) (models.Loader, error) {
+func NewComLoader(r io.ReaderAt) (models.Loader, error) {
 	// Calculate bin size
 	// TODO: We could maybe just pass the file, not the reader
 	buf := make([]byte, 0x1000)
