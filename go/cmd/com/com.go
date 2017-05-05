@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"github.com/pkg/errors"
-	"io/ioutil"
 	"os"
 
 	"github.com/lunixbochs/usercorn/go"
@@ -17,12 +15,7 @@ func main() {
 	c.NoArgs = true
 
 	c.MakeUsercorn = func(exe string) (models.Usercorn, error) {
-		p, err := ioutil.ReadFile(exe)
-		if err != nil {
-			return nil, err
-		}
-		r := bytes.NewReader(p)
-		l, err := loader.NewComLoader(r)
+		l, err := loader.NewComLoader(exe)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to load COM file")
 		}
