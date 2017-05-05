@@ -108,7 +108,7 @@ var regNames = []string{
 }
 
 func DosInit(u models.Usercorn, args, env []string) error {
-	u.RegWrite(u.Arch().SP, STACK_BASE)
+	u.RegWrite(u.Arch().SP, STACK_BASE+STACK_SIZE)
 	u.SetStackBase(STACK_BASE)
 	u.SetStackSize(STACK_SIZE)
 	u.SetEntry(0x100)
