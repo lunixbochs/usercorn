@@ -16,10 +16,22 @@ const (
 
 var dosSysNum = map[int]string{
 	0x00: "terminate",
-	//0x01: "input",
-	//0x02: "output",
+	0x01: "char_in",
+	0x02: "char_out",
 	0x09: "display",
 	0x4C: "terminate_with_code",
+}
+
+// TODO: Create a reverse map of this for conciseness
+var abiMap = map[int][]int{
+	0x00: {},
+	0x01: {uc.X86_REG_DX},
+	0x02: {uc.X86_REG_DX}, // Actually DL
+	0x09: {uc.X86_REG_DX, uc.X86_REG_DS},
+	0x30: {},
+	0x3C: {uc.X86_REG_DX, uc.X86_REG_DS, uc.X86_REG_AL},
+	0x3D: {uc.X86_REG_DX, uc.X86_REG_DS, uc.X86_REG_AL},
+	0x4C: {uc.X86_REG_AL},
 }
 
 type PSP struct {
@@ -53,6 +65,17 @@ type DosKernel struct {
 	*co.KernelBase
 }
 
+func (k *DosKernel) Terminate() {
+	k.U.Exit(models.ExitStatus(0))
+}
+
+func (k *DosKernel) CharIn(buf co.Buf) {
+}
+
+func (k *DosKernel) CharOut(char uint16) {
+	fmt.Printf("%c", uint8(char&0xFF))
+}
+
 func (k *DosKernel) Display(buf co.Buf) {
 	// TODO: Read ahead? This'll be slow
 	var i uint64
@@ -67,8 +90,8 @@ func (k *DosKernel) Display(buf co.Buf) {
 	syscall.Write(1, mem[:i-2])
 }
 
-func (k *DosKernel) Terminate() {
-	k.U.Exit(models.ExitStatus(0)) // TODO: Get correct code
+func (k *DosKernel) GetDosVersion() {
+	k.U.RegWrite(uc.X86_REG_AX, 0x7)
 }
 
 func (k *DosKernel) TerminateWithCode(code int) {
@@ -96,18 +119,20 @@ func DosSyscall(u models.Usercorn) {
 	num, _ := u.RegRead(uc.X86_REG_AH)
 	name, _ := dosSysNum[int(num)]
 	// TODO: How are registers numbered from here?
-	u.Syscall(int(num), name, co.RegArgs(u, X86_16SyscallRegs))
+	u.Syscall(int(num), name, dosArgs(u, int(num)))
 	// TODO: Set error
+}
+
+func dosArgs(u models.Usercorn, num int) func(n int) ([]uint64, error) {
+	return co.RegArgs(u, abiMap[num])
 }
 
 func DosInterrupt(u models.Usercorn, cause uint32) {
 	intno := cause & 0xFF
 	if intno == 0x21 {
 		DosSyscall(u)
-		return
 	} else if intno == 0x20 {
-		// TODO: How to access the terminate METHOD?
-		//Terminate()
+		u.Syscall(0, "terminate", func(int) ([]uint64, error) { return []uint64{}, nil })
 	} else {
 		panic(fmt.Sprintf("unhandled X86 interrupt %d", intno))
 	}
