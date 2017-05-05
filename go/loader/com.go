@@ -8,15 +8,9 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
-type ComRegs struct {
-	Num uint16
-	Val uint16
-}
-
 type ComLoader struct {
 	LoaderBase
 	Size int
-	Regs []ComRegs
 	r    io.ReaderAt
 }
 
@@ -38,12 +32,6 @@ func NewComLoader(r io.ReaderAt) (models.Loader, error) {
 	if size == 0 {
 		return nil, errors.New("Cannot read from file")
 	}
-	// Generate the list of reg initial values
-	// TODO: Get num regs from arch?
-	regs := make([]ComRegs, 14)
-	for i, _ := range regs {
-		regs[i].Num = uint16(i)
-	}
 	return &ComLoader{
 		LoaderBase: LoaderBase{
 			arch:      "x86_16",
@@ -53,7 +41,6 @@ func NewComLoader(r io.ReaderAt) (models.Loader, error) {
 			entry:     0x100,
 		},
 		Size: size,
-		Regs: regs,
 		r:    r,
 	}, nil
 }
