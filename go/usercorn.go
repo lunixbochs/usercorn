@@ -181,7 +181,7 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	u.loader = l
 
 	// map binary (and interp) into memory
-	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(f, false, l.Arch(), u.loader)
+	u.interpBase, u.entry, u.base, u.binEntry, err = u.mapBinary(f, false)
 	if err != nil {
 		return nil, err
 	}
@@ -779,14 +779,13 @@ func (u *Usercorn) addHooks() error {
 	return nil
 }
 
-func (u *Usercorn) mapBinary(f *os.File, isInterp bool, arch string, l models.Loader) (interpBase, entry, base, realEntry uint64, err error) {
-	if l == nil {
-		l, err = loader.LoadArch(f, arch)
+func (u *Usercorn) mapBinary(f *os.File, isInterp bool) (interpBase, entry, base, realEntry uint64, err error) {
+	l := u.loader
+	if isInterp {
+		l, err = loader.LoadArch(f, l.Arch())
 		if err != nil {
 			return
 		}
-	}
-	if isInterp {
 		u.interpLoader = l
 	}
 	var dynamic bool
@@ -903,7 +902,7 @@ outer:
 		mmap, _ := u.MemReserve(0, 24*1024*1024, false)
 
 		var interpBias, interpEntry uint64
-		_, _, interpBias, interpEntry, err = u.mapBinary(f, true, l.Arch(), nil)
+		_, _, interpBias, interpEntry, err = u.mapBinary(f, true)
 		if u.interpLoader.Arch() != l.Arch() {
 			err = errors.Errorf("Interpreter arch mismatch: %s != %s", l.Arch(), u.interpLoader.Arch())
 			return
