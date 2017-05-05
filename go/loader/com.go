@@ -41,7 +41,6 @@ func NewComLoader(r io.ReaderAt) (models.Loader, error) {
 	// Generate the list of reg initial values
 	// TODO: Get num regs from arch?
 	regs := make([]ComRegs, 14)
-	// TODO: Init SP, CS, DS, etc.
 	for i, _ := range regs {
 		regs[i].Num = uint16(i)
 	}

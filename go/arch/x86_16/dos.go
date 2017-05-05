@@ -10,6 +10,11 @@ import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 )
 
+const (
+	STACK_BASE = 0x8000
+	STACK_SIZE = 0x1000
+)
+
 var dosSysNum = map[int]string{
 	0x00: "terminate",
 	//0x01: "input",
@@ -83,14 +88,16 @@ func DosInit(u models.Usercorn, args, env []string) error {
 			u.RegWrite(enum, uint64(reg.Val))
 		}
 	}
-	u.RegWrite(u.Arch().SP, 0x8000)
+	u.RegWrite(u.Arch().SP, STACK_BASE)
+	u.SetStackBase(STACK_BASE)
+	u.SetStackSize(STACK_SIZE)
+	u.SetEntry(0x100)
 	return nil
 }
 
 func DosSyscall(u models.Usercorn) {
 	num, _ := u.RegRead(uc.X86_REG_AH)
 	name, _ := dosSysNum[int(num)]
-	// Magic happens here: KernelBase uses reflection in InitKernel to map syscall names to methods in the kernel
 	// TODO: How are registers numbered from here?
 	u.Syscall(int(num), name, co.RegArgs(u, X86_16SyscallRegs))
 	// TODO: Set error
