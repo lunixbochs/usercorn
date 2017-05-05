@@ -83,12 +83,7 @@ func DosInit(u models.Usercorn, args, env []string) error {
 			u.RegWrite(enum, uint64(reg.Val))
 		}
 	}
-	u.RegWrite(u.Arch().SP, 0xbaaaaffc)
-	// TODO: Determine stack address. Right now making it linux x86 32-like
-	// with the stack ending at 0xC...
-	if err := u.MapStack(0xA000, 0x2000); err != nil {
-		return err
-	}
+	u.RegWrite(u.Arch().SP, 0x8000)
 	return nil
 }
 
