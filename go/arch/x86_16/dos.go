@@ -3,6 +3,7 @@ package x86_16
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
@@ -99,15 +100,15 @@ var abiMap = map[int][]int{
 }
 
 type PSP struct {
-	CPMExit                     [2]uint8
+	CPMExit                     [2]byte
 	FirstFreeSegment            uint16
 	Reserved1                   uint8
-	CPMCall5Compat              [5]uint8
+	CPMCall5Compat              [5]byte
 	OldTSRAddress               uint32
 	OldBreakAddress             uint32
 	CriticalErrorHandlerAddress uint32
 	CallerPSPSegment            uint16
-	JobFileTable                [20]uint8
+	JobFileTable                [20]byte
 	EnvironmentSegment          uint16
 	INT21SSSP                   uint32
 	JobFileTableSize            uint16
@@ -115,12 +116,12 @@ type PSP struct {
 	PreviousPSP                 uint32
 	Reserved2                   uint32
 	DOSVersion                  uint16
-	Reserved3                   [14]uint8
-	DOSFarCall                  [3]uint8
+	Reserved3                   [14]byte
+	DOSFarCall                  [3]byte
 	Reserved4                   uint16
-	ExtendedFCB1                [7]uint8
-	FCB1                        [16]uint8
-	FCB2                        [20]uint8
+	ExtendedFCB1                [7]byte
+	FCB1                        [16]byte
+	FCB2                        [20]byte
 	CommandLineLength           uint8
 	CommandLine                 [127]byte
 }
@@ -128,6 +129,27 @@ type PSP struct {
 type DosKernel struct {
 	*co.KernelBase
 	fds [NUM_FDS]int
+}
+
+func initPsp(argc int, argv []string) *PSP {
+	psp := &PSP{
+		CPMExit:    [2]byte{0xcd, 0x20},       // int 0x20
+		DOSFarCall: [3]byte{0xcd, 0x21, 0xcd}, // int 0x21 + retf
+	}
+
+	psp.FCB1[0] = 0x01
+	psp.FCB1[1] = 0x20
+
+	// Combine all args into one string
+	commandline := strings.Join(argv, " ")
+	copy(psp.CommandLine[:126], commandline)
+	if len(commandline) > 126 {
+		psp.CommandLineLength = 126
+	} else {
+		psp.CommandLineLength = uint8(len(commandline))
+	}
+
+	return psp
 }
 
 func (k *DosKernel) readUntilChar(addr uint64, c byte) []byte {
@@ -279,6 +301,12 @@ var regNames = []string{
 }
 
 func DosInit(u models.Usercorn, args, env []string) error {
+	// Setup PSP
+	// TODO: Setup args
+	psp := initPsp(0, nil)
+	u.StrucAt(0).Pack(psp)
+
+	// Setup stack
 	u.RegWrite(u.Arch().SP, STACK_BASE+STACK_SIZE)
 	u.SetStackBase(STACK_BASE)
 	u.SetStackSize(STACK_SIZE)
