@@ -27,7 +27,7 @@ func main() {
 			return nil, errors.Wrap(err, "failed to map in address space")
 		}
 
-		// Write in each segment's data
+		// Write in binary's data
 		segments, err := l.Segments()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get segments from loader")

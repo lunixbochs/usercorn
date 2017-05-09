@@ -46,19 +46,6 @@ func NewComLoader(filename string) (models.Loader, error) {
 func (r *ComLoader) Segments() ([]models.SegmentData, error) {
 	var segs []models.SegmentData
 
-	// Completely flat memory model
-	// TODO: Add PSP
-	segs = append(segs, models.SegmentData{
-		Off:  0,
-		Addr: 0,
-		Size: 0x100,
-		Prot: 7,
-		DataFunc: func() ([]byte, error) {
-			// TODO: Use real PSP
-			psp := make([]byte, 0x100)
-			return psp, nil
-		},
-	})
 	// Main segment
 	segs = append(segs, models.SegmentData{
 		Off:  0,
