@@ -9,6 +9,7 @@ import (
 )
 
 var Arch = &models.Arch{
+	Name:    "mips",
 	Bits:    32,
 	Radare:  "mips",
 	CS_ARCH: cs.CS_ARCH_MIPS,

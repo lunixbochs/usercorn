@@ -1,6 +1,8 @@
 package common
 
 import (
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
@@ -31,7 +33,16 @@ func StackArgs(u models.Usercorn) func(n int) ([]uint64, error) {
 }
 
 func RegArgs(u models.Usercorn, regs []int) func(n int) ([]uint64, error) {
+	batch, err := uc.NewRegBatch(regs)
+	if err != nil {
+		// will only be memory error
+		panic(err)
+	}
 	return func(n int) ([]uint64, error) {
-		return u.RegReadBatch(regs[:n])
+		vals, err := batch.ReadFast(u)
+		if err != nil {
+			return nil, err
+		}
+		return vals[:n], nil
 	}
 }

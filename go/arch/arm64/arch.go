@@ -9,6 +9,7 @@ import (
 )
 
 var Arch = &models.Arch{
+	Name:    "arm64",
 	Bits:    64,
 	Radare:  "arm64",
 	CS_ARCH: cs.CS_ARCH_ARM64,

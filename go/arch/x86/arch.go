@@ -9,6 +9,7 @@ import (
 )
 
 var Arch = &models.Arch{
+	Name:    "x86",
 	Bits:    32,
 	Radare:  "x86",
 	CS_ARCH: cs.CS_ARCH_X86,

@@ -134,6 +134,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	etrace := fs.Bool("etrace", false, "trace execution")
 	rtrace := fs.Bool("rtrace", false, "trace register modification")
 	ftrace := fs.Bool("ftrace", false, "trace source file:line")
+	tracefile := fs.String("to", "", "binary trace output file")
 
 	match := fs.String("match", "", "trace from specific function(s) (func[,func...][+depth])")
 	looproll := fs.Int("loop", 0, "collapse loop blocks of this depth")
@@ -251,32 +252,41 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		*looproll = 8
 	}
 	config := &models.Config{
-		Demangle:     *demangle,
 		SymFile:      *symfile,
 		StubSyscalls: *stubsys,
-		DisBytes:     *disbytes,
-		InsCount:     *inscount,
 
 		ForceBase:       *base,
 		ForceInterpBase: *ibase,
 		LoadPrefix:      absPrefix,
-		LoopCollapse:    *looproll,
 		NativeFallback:  *native,
 		SavePost:        *savepost,
 		SavePre:         *savepre,
 		SkipInterp:      *skipinterp,
 		Strsize:         *strsize,
-		TraceBlock:      *btrace,
-		TraceExec:       *etrace || *trace,
-		TraceMem:        *mtrace,
-		TraceMemBatch:   *mtrace2 || *trace,
-		TraceReg:        *rtrace || *trace,
-		TraceSys:        *strace || *trace,
-		TraceSource:     *ftrace || *trace,
-		SourcePaths:     src,
 		Verbose:         *verbose,
+
+		Trace: models.TraceConfig{
+			Tracefile:  *tracefile,
+			Everything: *trace,
+
+			Block: *btrace,
+			Ins:   *etrace,
+			Mem:   *mtrace,
+			Reg:   *rtrace,
+			Sys:   *strace,
+		},
+
+		// FIXME: these are UI tracing flags and now broken
+		Demangle:      *demangle,
+		DisBytes:      *disbytes,
+		InsCount:      *inscount,
+		LoopCollapse:  *looproll,
+		SourcePaths:   src,
+		TraceMemBatch: *mtrace2 || *trace,
+		TraceSource:   *ftrace || *trace,
 	}
 	c.Config = config
+	// FIXME: TraceMatch* is broken by trace changes
 	if *match != "" {
 		split := strings.SplitN(*match, "+", 2)
 		if len(split) > 1 {

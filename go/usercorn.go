@@ -22,6 +22,8 @@ import (
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/loader"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/trace"
+	"github.com/lunixbochs/usercorn/go/ui"
 )
 
 // #cgo LDFLAGS: -Wl,-rpath -Wl,$ORIGIN/deps/lib:$ORIGIN/lib
@@ -53,18 +55,8 @@ type Usercorn struct {
 	StackBase uint64
 	brk       uint64
 
-	traceMatching bool
-
-	status     models.StatusDiff
-	stacktrace models.Stacktrace
-	blockloop  *models.LoopDetect
-	memlog     models.MemLog
-
-	lastSourceLine string
-
 	final      sync.Once
 	exitStatus error
-	inscount   uint64
 
 	running     bool
 	trampolines []tramp
@@ -78,11 +70,24 @@ type Usercorn struct {
 	breaks       []*models.Breakpoint
 	futureBreaks []*models.Breakpoint
 
-	hooks []uc.Hook
+	hooks    []uc.Hook
+	sysHooks []*models.SysHook
+
+	trace *trace.Trace
+	ui    *ui.StreamUI
+	// obsolete tracing flags
+	lastSourceLine string
+	status         models.StatusDiff
+	inscount       uint64
+	traceMatching  bool
+	stacktrace     models.Stacktrace
+	blockloop      *models.LoopDetect
+	memlog         models.MemLog
 }
 
 func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	config = config.Init()
+
 	a, OS, err := arch.GetArch(l.Arch(), l.OS())
 	if err != nil {
 		return nil, err
@@ -99,6 +104,19 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 		exit:          0xffffffffffffffff,
 		debugFiles:    make(map[string]*models.DebugFile),
 	}
+	if config.Trace.Tracefile == "" {
+		u.ui = ui.NewStreamUI(u.config.Output, u.arch, u.os)
+		config.Trace.OpCallback = func(op models.Op) {
+			u.ui.Feed(op)
+		}
+		defer u.ui.Flush()
+	}
+
+	u.trace, err = trace.NewTrace(u, &config.Trace)
+	if err != nil {
+		return nil, errors.Wrap(err, "NewTrace() failed")
+	}
+
 	if config.Output == os.Stderr && readline.IsTerminal(int(os.Stderr.Fd())) {
 		config.Color = true
 	}
@@ -108,8 +126,8 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 			if err := u.MemReadInto(p, addr); err != nil {
 				return 0, err
 			}
-			if u.config.TraceMemBatch {
-				u.memlog.UpdateBytes(addr, p, false)
+			if u.trace != nil && u.config.Trace.Mem {
+				u.trace.OnMemRead(addr, len(p))
 			}
 			return len(p), nil
 		},
@@ -118,8 +136,8 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 			if err := u.MemWrite(addr, p); err != nil {
 				return 0, err
 			}
-			if u.config.TraceMemBatch {
-				u.memlog.UpdateBytes(addr, p, true)
+			if u.trace != nil && u.config.Trace.Mem {
+				u.trace.OnMemWrite(addr, p)
 			}
 			return len(p), nil
 		},
@@ -229,6 +247,22 @@ func (u *Usercorn) HookDel(hh uc.Hook) error {
 	return u.Unicorn.HookDel(hh)
 }
 
+func (u *Usercorn) HookSysAdd(before, after models.SysCb) *models.SysHook {
+	hook := &models.SysHook{Before: before, After: after}
+	u.sysHooks = append(u.sysHooks, hook)
+	return hook
+}
+
+func (u *Usercorn) HookSysDel(hook *models.SysHook) {
+	tmp := make([]*models.SysHook, 0, len(u.sysHooks)-1)
+	for _, v := range u.sysHooks {
+		if v != hook {
+			tmp = append(tmp, v)
+		}
+	}
+	u.sysHooks = tmp
+}
+
 func (u *Usercorn) Run(args, env []string) error {
 	// panic/exit handler
 	verboseExit := func() {
@@ -237,22 +271,15 @@ func (u *Usercorn) Run(args, env []string) error {
 			u.Printf("  %s\n", m)
 		}
 		u.Println("[registers]")
-		u.Printf("%s", u.status.Changes(false).String(u.config.Color))
-		u.Println("[stacktrace]")
-		pc, _ := u.RegRead(u.arch.PC)
-		sp, _ := u.RegRead(u.arch.SP)
-		for _, frame := range u.stacktrace.Freeze(pc, sp) {
-			sym, _ := u.Symbolicate(frame.PC, true)
-			if sym == "" {
-				sym = fmt.Sprintf("%#x", frame.PC)
-				if file := u.addr2file(frame.PC); u.config.SymFile && file != nil {
-					sym = fmt.Sprintf("%#x@%s", frame.PC, file.Name)
-				}
-			} else {
-				sym = fmt.Sprintf("%#x %s", frame.PC, sym)
+		regs, err := u.RegDump()
+		if err == nil {
+			for _, reg := range regs {
+				u.Printf("%s: %#x\n", reg.Name, reg.Val)
 			}
-			u.Printf("  %s\n", sym)
 		}
+		u.Println("[stacktrace]")
+		// TODO: walk stacktrace from binary tracer here?
+		// TODO: verbose exit should be handled by UI module
 	}
 	defer func() {
 		if e := recover(); e != nil {
@@ -275,6 +302,14 @@ func (u *Usercorn) Run(args, env []string) error {
 		if err := u.os.Init(u, args, env); err != nil {
 			return err
 		}
+	}
+	// TODO: defers are expensive I hear
+	if err := u.trace.Attach(); err != nil {
+		return err
+	} else {
+		defer func() {
+			u.trace.Detach()
+		}()
 	}
 	if err := u.addHooks(); err != nil {
 		return err
@@ -310,20 +345,11 @@ func (u *Usercorn) Run(args, env []string) error {
 			u.Printf("  %s\n", m)
 		}
 	}
-	if u.config.Verbose || u.config.TraceReg {
-		u.Printf("%s", u.status.Changes(false).String(u.config.Color))
-	}
+	// TODO: print starting registers here if TraceReg or Verbose
 	if u.config.Verbose {
 		u.Println("=====================================")
 		u.Println("==== Program output begins here. ====")
 		u.Println("=====================================")
-	}
-	if u.config.TraceBlock || u.config.TraceReg || u.config.TraceExec {
-		sp, _ := u.RegRead(u.arch.SP)
-		u.stacktrace.Update(u.entry, sp)
-	}
-	if u.config.TraceMemBatch {
-		u.memlog = *models.NewMemLog(u.ByteOrder())
 	}
 	if u.config.SavePre != "" {
 		u.RegWrite(u.arch.PC, u.entry)
@@ -369,6 +395,7 @@ func (u *Usercorn) Run(args, env []string) error {
 		u.trampolines = nil
 		// TODO: trampolines should be annotated in trace
 		// trampolines should show up during symbolication?
+		// FIXME: binary tracer does NOT handle this yet
 		u.trampolined = true
 		for _, tramp := range trampolines {
 			if err = tramp.fun(); err != nil {
@@ -381,14 +408,18 @@ func (u *Usercorn) Run(args, env []string) error {
 	}
 	if err != nil || u.config.Verbose {
 		verboseExit()
-	} else if u.config.TraceReg {
-		u.Printf("\n%s", u.status.Changes(false).String(u.config.Color))
+	} else if u.config.Trace.Reg {
+		// TODO: print all registers here
+		// TODO: that's really a UI choice
 	}
 	if u.config.InsCount {
 		u.Printf("inscount: %d\n", u.inscount)
 	}
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus
+	}
+	if u.trace != nil {
+		u.trace.OnExit()
 	}
 	return err
 }
@@ -584,182 +615,9 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 	return u.brk, nil
 }
 
-func (u *Usercorn) checkTraceMatch(addr uint64, sym string) bool {
-	if len(u.config.TraceMatch) == 0 {
-		return true
-	}
-	match := func(addr uint64, sym string, trace string) bool {
-		return sym == trace || strings.HasPrefix(sym, trace+"+") || fmt.Sprintf("0x%x", addr) == strings.ToLower(trace)
-	}
-	for _, v := range u.config.TraceMatch {
-		if match(addr, sym, v) {
-			return true
-		}
-	}
-	l := u.stacktrace.Len()
-	for i := 0; i < u.config.TraceMatchDepth && i < l; i++ {
-		frame := u.stacktrace.Stack[l-i-1]
-		for _, v := range u.config.TraceMatch {
-			sym, _ := u.Symbolicate(frame.PC, false)
-			if match(frame.PC, sym, v) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func (u *Usercorn) addHooks() error {
-	if u.config.TraceBlock {
-		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
-			if !u.trampolined && !(u.config.TraceExec || u.config.TraceReg) {
-				if sp, err := u.RegRead(u.arch.SP); err == nil {
-					u.stacktrace.Update(addr, sp)
-				}
-			}
-			u.Printf("0x%x %d %d\n", addr, size, u.stacktrace.Len())
-		}, 1, 0)
-	}
-	if u.config.TraceExec || u.config.TraceReg || u.config.TraceSource {
-		u.HookAdd(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
-			sym, _ := u.Symbolicate(addr, false)
-			if !u.checkTraceMatch(addr, sym) {
-				u.traceMatching = false
-				return
-			}
-			u.traceMatching = true
-			// TODO: mark stack depth changes in a different way
-			if u.blockloop != nil {
-				if looped, loop, count := u.blockloop.Update(addr); looped {
-					return
-				} else if count > 1 {
-					// TODO: maybe print a message when we start collapsing loops
-					// with the symbols or even all disassembly involved encapsulated
-					chain := u.blockloop.String(u, loop)
-					u.Printf("- (%d) loops over %s\n", count, chain)
-				}
-			}
-			if u.config.TraceSource && !(u.config.TraceExec || u.config.TraceReg) {
-				return
-			}
-			// stacktrace dir
-			dir := "  "
-			oldpos := u.stacktrace.Len()
-
-			u.Printf("%s", u.memlog.Flush(u.arch.Bits))
-			if !u.trampolined {
-				if sp, err := u.RegRead(u.arch.SP); err == nil {
-					u.stacktrace.Update(addr, sp)
-				}
-			}
-			if sym != "" {
-				sym = " (" + sym + ")"
-			}
-
-			newpos := u.stacktrace.Len()
-			if newpos > oldpos {
-				dir = ">>"
-			} else if newpos < oldpos {
-				dir = "<<"
-			}
-
-			addrStr := fmt.Sprintf("%#x", addr)
-			if sym == "" && u.config.SymFile {
-				if file := u.addr2file(addr); file != nil {
-					addrStr = fmt.Sprintf("%#x@%s", addr, file.Name)
-				}
-			}
-			blockLine := fmt.Sprintf("\n%s %s%s", dir, addrStr, sym)
-			changes := u.status.Changes(true)
-			if !u.config.TraceExec && u.config.TraceReg {
-				// if only registers are being traced, we don't need to print
-				// the block if no registers were modified
-				if changes.Count() > 0 {
-					u.Println(blockLine)
-					u.Printf("  %s", changes.String(u.config.Color))
-				}
-			} else {
-				if changes.Count() > 0 {
-					u.Printf("  %s", changes.String(u.config.Color))
-				}
-				u.Println(blockLine)
-			}
-		}, 1, 0)
-	}
-	if u.config.TraceExec || u.config.TraceSource || u.config.InsCount {
-		u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
-			u.inscount++
-			if !u.traceMatching {
-				return
-			}
-			if u.blockloop == nil || u.blockloop.Loops == 0 || u.trampolined {
-				if u.config.TraceSource {
-					file := u.addr2file(addr)
-					if file != nil {
-						if sl := file.FileLine(addr); sl != nil {
-							sln := fmt.Sprintf("%s:%d", path.Base(sl.File.Name), sl.Line)
-							if sln != u.lastSourceLine {
-								u.Printf("   %-20s | %s\n", sln, sl.Source)
-								u.lastSourceLine = sln
-							}
-						}
-					}
-				}
-				if u.config.TraceExec {
-					// TODO: don't track regs if not TraceReg
-					changes := u.status.Changes(true)
-					dis, _ := u.Disas(addr, uint64(size), u.config.DisBytes)
-					u.Printf("   %s", dis)
-					if !u.config.TraceReg || changes.Count() == 0 {
-						u.Println("")
-					} else {
-						dindent := ""
-						// TODO: I can count the max dis length in the block and reuse it here
-						// TODO: base of 60 is right for 32-bit and wrong for hexdump
-						// so I should give hexdump a fixed base too
-						pad := 60 - len(dis) - 3 - 2
-						if pad > 0 {
-							dindent = strings.Repeat(" ", pad)
-						}
-						u.Printf("%s%s", dindent, changes.String(u.config.Color))
-					}
-				}
-			}
-		}, 1, 0)
-	}
-	if u.config.TraceMem || u.config.TraceMemBatch {
-		u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) {
-			if !u.traceMatching {
-				return
-			}
-			var letter string
-			if access == uc.MEM_WRITE {
-				letter = "W"
-			} else {
-				letter = "R"
-				if data, err := u.MemRead(addr, uint64(size)); err == nil {
-					e := u.ByteOrder()
-					switch size {
-					case 1:
-						value = int64(data[0])
-					case 2:
-						value = int64(e.Uint16(data))
-					case 4:
-						value = int64(e.Uint32(data))
-					case 8:
-						value = int64(e.Uint64(data))
-					}
-				}
-			}
-			if u.config.TraceMem {
-				memFmt := fmt.Sprintf("%%s  0x%%0%dx 0x%%0%dx\n", u.Bsz*2, size*2)
-				u.Printf(memFmt, letter, addr, value)
-			}
-			if u.config.TraceMemBatch {
-				u.memlog.Update(addr, size, value, letter == "W")
-			}
-		}, 1, 0)
-	}
+	// TODO: this sort of error should be handled in ui module?
+	// issue #244
 	invalid := uc.HOOK_MEM_READ_INVALID | uc.HOOK_MEM_WRITE_INVALID | uc.HOOK_MEM_FETCH_INVALID
 	u.HookAdd(invalid, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) bool {
 		switch access {
@@ -942,7 +800,7 @@ func (u *Usercorn) AddKernel(kernel interface{}, first bool) {
 	}
 }
 
-func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error) {
+func (u *Usercorn) Syscall(num int, name string, getArgs models.SysGetArgs) (uint64, error) {
 	if name == "" {
 		msg := fmt.Sprintf("Syscall missing: %d", num)
 		if u.config.StubSyscalls {
@@ -954,32 +812,23 @@ func (u *Usercorn) Syscall(num int, name string, getArgs func(n int) ([]uint64, 
 	if u.config.BlockSyscalls {
 		return 0, nil
 	}
-	if u.config.TraceSys {
-		u.Printf("%s", u.memlog.Flush(u.arch.Bits))
-	}
 	for _, k := range u.kernels {
 		if sys := co.Lookup(u, k, name); sys != nil {
 			args, err := getArgs(len(sys.In))
 			if err != nil {
 				return 0, err
 			}
-			if u.config.TraceSys {
-				u.Printf("s  ")
-				u.Printf("%s", sys.Trace(args))
-				// don't memlog our strace
-				u.memlog.Reset()
+			for _, v := range u.sysHooks {
+				v.Before(num, args, 0)
 			}
 			ret := sys.Call(args)
-			if u.config.TraceSys {
-				// don't memlog ret either
-				u.memlog.Freeze()
-				// TODO: print this manually?
-				u.Printf("%s", sys.TraceRet(args, ret))
+			for _, v := range u.sysHooks {
+				v.After(num, args, ret)
 			}
-			u.Printf("%s", u.memlog.Flush(u.arch.Bits))
 			return ret, nil
 		}
 	}
+	// TODO: hook unknown syscalls?
 	msg := errors.Errorf("Kernel not found for syscall '%s'", name)
 	if u.config.StubSyscalls {
 		u.Println(msg)

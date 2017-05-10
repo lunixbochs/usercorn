@@ -16,6 +16,8 @@ type Unicorn struct {
 	Bsz    int
 	order  binary.ByteOrder
 	memory []*models.Mmap
+
+	mapHooks []*models.MapHook
 }
 
 func NewUnicorn(arch *models.Arch, os *models.OS, order binary.ByteOrder) (*Unicorn, error) {
@@ -80,6 +82,11 @@ func (u *Unicorn) MemMapProt(addr, size uint64, prot int) error {
 	}
 	mmap.Prot = prot
 	err = u.Unicorn.MemMapProt(mmap.Addr, mmap.Size, prot)
+	if err == nil {
+		for _, v := range u.mapHooks {
+			v.Map(mmap.Addr, mmap.Size, prot, true)
+		}
+	}
 	return errors.Wrap(err, "u.MemMapProt() failed")
 }
 
@@ -94,10 +101,19 @@ func (u *Unicorn) MemProtect(addr, size uint64, prot int) error {
 		mmap.Prot = prot
 	}
 	err := u.Unicorn.MemProtect(addr, size, prot)
+	if err == nil {
+		for _, v := range u.mapHooks {
+			v.Map(addr, size, prot, false)
+		}
+	}
 	return errors.Wrap(err, "u.MemProtect() failed")
 }
 
 func (u *Unicorn) MemUnmap(addr, size uint64) error {
+	// note: if there are errors during map, this could generate more unmap events than maps *shrug*
+	for _, v := range u.mapHooks {
+		v.Unmap(addr, size)
+	}
 	// TODO: alignment check?
 	for {
 		mmap := u.mapping(addr, size)
@@ -282,4 +298,20 @@ func (u *Unicorn) MemWrite(addr uint64, p []byte) error {
 func (u *Unicorn) MemReadInto(p []byte, addr uint64) error {
 	err := u.Unicorn.MemReadInto(p, addr)
 	return errors.Wrap(err, "u.MemReadInto() failed")
+}
+
+func (u *Unicorn) HookMapAdd(mapCb models.MapCb, unmap models.UnmapCb) *models.MapHook {
+	hook := &models.MapHook{Map: mapCb, Unmap: unmap}
+	u.mapHooks = append(u.mapHooks, hook)
+	return hook
+}
+
+func (u *Unicorn) HookMapDel(hook *models.MapHook) {
+	tmp := make([]*models.MapHook, 0, len(u.mapHooks)-1)
+	for _, v := range u.mapHooks {
+		if v != hook {
+			tmp = append(tmp, v)
+		}
+	}
+	u.mapHooks = tmp
 }

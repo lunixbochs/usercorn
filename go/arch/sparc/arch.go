@@ -9,12 +9,13 @@ import (
 )
 
 var Arch = &models.Arch{
+	Name:    "sparc",
 	Bits:    32,
 	Radare:  "sparc",
 	CS_ARCH: cs.CS_ARCH_SPARC,
-	CS_MODE: cs.CS_MODE_32,
+	CS_MODE: cs.CS_MODE_BIG_ENDIAN,
 	KS_ARCH: ks.ARCH_SPARC,
-	KS_MODE: ks.MODE_SPARC32,
+	KS_MODE: ks.MODE_SPARC32 | ks.MODE_BIG_ENDIAN,
 	UC_ARCH: uc.ARCH_SPARC,
 	UC_MODE: uc.MODE_SPARC32 | uc.MODE_BIG_ENDIAN,
 	PC:      uc.SPARC_REG_PC,

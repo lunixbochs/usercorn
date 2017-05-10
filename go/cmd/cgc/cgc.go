@@ -218,7 +218,8 @@ func main() {
 	var btrace = fs.Bool("btrace", false, "")
 	var etrace = fs.Bool("etrace", false, "")
 	var mtrace = fs.Bool("mtrace", false, "")
-	var mtrace2 = fs.Bool("mtrace2", false, "")
+	// FIXME: victim of binary tracing
+	// var mtrace2 = fs.Bool("mtrace2", false, "")
 	var rtrace = fs.Bool("rtrace", false, "")
 	var strace = fs.Bool("strace", false, "")
 	var icount = fs.Bool("icount", false, "")
@@ -236,12 +237,14 @@ func main() {
 	}
 
 	setFlags := func(c *models.Config) {
-		c.TraceBlock = *btrace
-		c.TraceExec = *etrace || *trace
-		c.TraceMem = *mtrace
-		c.TraceMemBatch = *mtrace2 || *trace
-		c.TraceReg = *rtrace || *trace
-		c.TraceSys = *strace || *trace
+		c.Trace.Everything = *trace
+		c.Trace.Block = *btrace
+		c.Trace.Ins = *etrace
+		c.Trace.Mem = *mtrace
+		c.Trace.Reg = *rtrace
+		c.Trace.Sys = *strace
+		// victim of binary trace rewrite
+		// c.TraceMemBatch = *mtrace2 || *trace
 	}
 
 	log.SetFlags(log.Lmicroseconds)

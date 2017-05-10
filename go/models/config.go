@@ -7,41 +7,73 @@ import (
 	"strings"
 )
 
+type TraceConfig struct {
+	Tracefile   string
+	TraceWriter io.WriteCloser
+
+	Everything bool // enables all other flags
+	// TODO: what about only tracing specific address ranges?
+	Block      bool // implied by Ins
+	Ins        bool
+	Mem        bool
+	Reg        bool
+	SpecialReg bool
+	Sys        bool
+
+	OpCallback func(Op)
+}
+
+func (t *TraceConfig) Init() {
+	if t.Ins {
+		t.Block = true
+	}
+	// mtrace is required as the UI doesn't have access to main memory anymore
+	if t.Ins || t.Block {
+		t.Mem = true
+	}
+	if t.Everything {
+		t.Block = true
+		t.Ins = true
+		t.Mem = true
+		t.Reg = true
+		t.SpecialReg = true
+		t.Sys = true
+	}
+}
+
 type Config struct {
 	Output io.WriteCloser
 
 	Color           bool
 	ForceBase       uint64
 	ForceInterpBase uint64
-	InsCount        bool
 	LoadPrefix      string
-	LoopCollapse    int
 	NativeFallback  bool
 	SavePost        string
 	SavePre         string
 	SkipInterp      bool
 	Strsize         int
-	TraceBlock      bool
-	TraceExec       bool
-	TraceMatch      []string
-	TraceMatchDepth int
-	TraceMem        bool
-	TraceMemBatch   bool
-	TraceReg        bool
-	TraceSource     bool
-	TraceSys        bool
 	Verbose         bool
 
-	SourcePaths []string
+	Trace TraceConfig
 
-	Demangle bool
-	SymFile  bool
-	DisBytes bool
+	SymFile bool
 
 	BlockSyscalls bool
 	StubSyscalls  bool
 
 	PrefixArgs []string
+
+	// FIXME: these were UI tracing flags and now broken
+	Demangle        bool
+	DisBytes        bool
+	InsCount        bool
+	LoopCollapse    int
+	SourcePaths     []string
+	TraceMatch      []string
+	TraceMatchDepth int
+	TraceMemBatch   bool
+	TraceSource     bool
 }
 
 func (c *Config) Init() *Config {
@@ -51,6 +83,7 @@ func (c *Config) Init() *Config {
 	if c.Output == nil {
 		c.Output = os.Stderr
 	}
+	c.Trace.Init()
 	return c
 }
 

@@ -9,6 +9,7 @@ import (
 )
 
 var Arch = &models.Arch{
+	Name:   "m68k",
 	Bits:   32,
 	Radare: "m68k",
 	// no capstone support for m68k

@@ -2,6 +2,8 @@ package models
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -52,6 +54,7 @@ func (r regMap) Items() regList {
 }
 
 type Arch struct {
+	Name    string
 	Bits    int
 	Radare  string
 	CS_ARCH int
@@ -73,8 +76,14 @@ type Arch struct {
 	regList  regList
 	regEnums []int
 
+	regBatch *uc.RegBatch
+
 	cs *cs.Engine
 	ks *ks.Keystone
+}
+
+func (a *Arch) String() string {
+	return fmt.Sprintf("<Arch %s>", a.Name)
 }
 
 func (a *Arch) RegNames() map[int]string {
@@ -145,15 +154,119 @@ func (a *Arch) SmokeTest(t *testing.T) {
 	testReg("SP", a.SP)
 }
 
-func (a *Arch) RegDump(u uc.Unicorn) ([]RegVal, error) {
-	regList := a.getRegList()
-	if a.regEnums == nil {
-		a.regEnums = make([]int, len(regList))
-		for i, r := range regList {
-			a.regEnums[i] = r.Enum
+type execTest struct {
+	u          uc.Unicorn
+	a          *Arch
+	start, end uint64
+	dis        string
+}
+
+func (t *execTest) Setup(asm string) error {
+	base := uint64(0x1000)
+	u, err := uc.NewUnicorn(t.a.UC_ARCH, t.a.UC_MODE)
+	if err != nil {
+		return errors.Wrapf(err, "NewUnicorn(%#x, %#x) failed: %v", t.a.UC_ARCH, t.a.UC_MODE)
+	}
+	t.u = u
+	shellcode, err := Assemble(asm, base, t.a)
+	if err != nil {
+		return errors.Wrap(err, "Assemble() failed")
+	}
+	dis, err := Disas(shellcode, base, t.a, true)
+	if err != nil {
+		return errors.Wrap(err, "Disas() failed")
+	}
+	t.dis = dis
+
+	size := (uint64(len(shellcode)) + 0xfff) &^ 0xfff
+	if err := u.MemMap(base, size); err != nil {
+		return errors.Wrapf(err, "u.MemMap(%#x, %#x) failed", base)
+	}
+	if err := u.MemWrite(base, shellcode); err != nil {
+		return errors.Wrapf(err, "u.MemWrite(%#x, [%d]byte) failed", base, size)
+	}
+	t.start = base
+	t.end = base + uint64(len(shellcode))
+	return nil
+}
+
+func (t *execTest) Run() error {
+	if err := t.u.Start(t.start, t.end); err != nil {
+		pc, _ := t.u.RegRead(t.a.PC)
+		fmt.Fprintf(os.Stderr, "%s\n", t.dis)
+		return errors.Wrapf(err, "u.Start(%#x, %#x) failed: [pc=%#x]", t.start, t.end, pc)
+	}
+	return nil
+}
+
+func (t *execTest) Close() {
+	t.u.Close()
+}
+
+func (a *Arch) TestExec(t *testing.T, asm string) {
+	test := &execTest{a: a}
+	if err := test.Setup(asm); err != nil {
+		t.Fatal(err)
+	}
+	if err := test.Run(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TODO: bench with each set of hooks enabled? using sub-benchmarks
+func (a *Arch) BenchExec(b *testing.B, asm string) {
+	test := &execTest{a: a}
+	if err := test.Setup(asm); err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err := test.Run(); err != nil {
+			b.Fatal(err)
 		}
 	}
-	regs, err := u.RegReadBatch(a.regEnums)
+}
+
+func (a *Arch) BenchRegs(b *testing.B) {
+	u, err := uc.NewUnicorn(a.UC_ARCH, a.UC_MODE)
+	if err != nil {
+		b.Fatal(err)
+	}
+	if _, err := a.RegDumpFast(u); err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := a.RegDumpFast(u); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func (a *Arch) RegEnums() []int {
+	regList := a.getRegList()
+	enums := make([]int, len(regList))
+	for i, r := range regList {
+		enums[i] = r.Enum
+	}
+	return enums
+}
+
+func (a *Arch) RegDumpFast(u uc.Unicorn) ([]uint64, error) {
+	if a.regBatch == nil {
+		var err error
+		enums := a.RegEnums()
+		a.regBatch, err = uc.NewRegBatch(enums)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return a.regBatch.ReadFast(u)
+}
+
+func (a *Arch) RegDump(u uc.Unicorn) ([]RegVal, error) {
+	regList := a.getRegList()
+	regs, err := a.RegDumpFast(u)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,19 @@ import (
 	"os"
 )
 
+type SysGetArgs func(n int) ([]uint64, error)
+type SysCb func(num int, args []uint64, ret uint64)
+type SysHook struct {
+	Before, After SysCb
+}
+
+type MapCb func(addr, size uint64, prot int, zero bool)
+type UnmapCb func(addr, size uint64)
+type MapHook struct {
+	Map   MapCb
+	Unmap UnmapCb
+}
+
 type Usercorn interface {
 	uc.Unicorn
 	Arch() *Arch
@@ -66,8 +79,13 @@ type Usercorn interface {
 	// TODO: PrefixPath will be replaced by a full VFS subsystem
 	PrefixPath(s string, force bool) string
 
+	HookSysAdd(before, after SysCb) *SysHook
+	HookSysDel(cb *SysHook)
+	HookMapAdd(mapCb MapCb, unmapCb UnmapCb) *MapHook
+	HookMapDel(cb *MapHook)
+
 	AddKernel(kernel interface{}, first bool)
-	Syscall(num int, name string, getArgs func(n int) ([]uint64, error)) (uint64, error)
+	Syscall(num int, name string, getArgs SysGetArgs) (uint64, error)
 
 	Exit(err error)
 }
