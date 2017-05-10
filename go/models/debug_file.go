@@ -59,7 +59,7 @@ func (m *DebugFile) CacheSource(srcPaths []string) {
 
 func findFile(srcPaths []string, parent string, shortname string, fullname string) []string {
 	// TODO: if path is absolute, try -prefix
-	// TODO: relative path to the exectuable?
+	// TODO: relative path to the executable?
 	basename := path.Base(shortname)
 	parname := path.Join(parent, shortname)
 	names := []string{shortname, fullname, basename, parname}
