@@ -40,12 +40,12 @@ var socketCallMap = map[int]string{
 
 // TODO: move this to arch.go or something
 func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) error {
-	entry := uint64(limit & 0xFFFF)
-	entry |= uint64(((limit >> 16) & 0xF) << 48)
-	entry |= uint64((base & 0xFFFFFF) << 16)
-	entry |= uint64(((base >> 24) & 0xFF) << 56)
-	entry |= uint64((access & 0xFF) << 40)
-	entry |= uint64((flags & 0xFF) << 52)
+	entry := uint64(limit) & 0xFFFF
+	entry |= ((uint64(limit) >> 16) & 0xF) << 48
+	entry |= (uint64(base) & 0xFFFFFF) << 16
+	entry |= ((uint64(base) >> 24) & 0xFF) << 56
+	entry |= (uint64(access) & 0xFF) << 40
+	entry |= (uint64(flags) & 0xFF) << 52
 
 	if k.gdt == nil {
 		k.gdt, _ = k.U.Mmap(0, 0x1000)

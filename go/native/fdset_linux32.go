@@ -9,5 +9,5 @@ import (
 
 // TODO: 32-bit vs 64-bit
 func (f *Fdset32) Native() *syscall.FdSet {
-	return &syscall.FdSet{f.Bits}
+	return &syscall.FdSet{Bits: f.Bits}
 }

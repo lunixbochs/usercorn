@@ -35,7 +35,7 @@ func demangleMiss(name string) string {
 		return name
 	}
 	if err = cmd.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "cmd error", err)
+		fmt.Fprintf(os.Stderr, "cmd error: %v", err)
 		return name
 	}
 	stdin.Write([]byte(name + "\n"))

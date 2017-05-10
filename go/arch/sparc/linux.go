@@ -33,7 +33,7 @@ func LinuxSyscall(u models.Usercorn) {
 
 // TODO: add sparc syscall convention support
 func LinuxInterrupt(u models.Usercorn, intno uint32) {
-	panic(fmt.Sprintf("unknown interrupt", intno))
+	panic(fmt.Sprintf("unknown interrupt: %d", intno))
 }
 
 func init() {

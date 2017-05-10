@@ -19,7 +19,7 @@ func (k *PosixKernel) Time(out co.Obuf) uint64 {
 
 func (k *PosixKernel) ClockGettime(_ int, out co.Obuf) uint64 {
 	ts := syscall.NsecToTimespec(time.Now().UnixNano())
-	err := out.Pack(&native.Timespec{int64(ts.Sec), int64(ts.Nsec)})
+	err := out.Pack(&native.Timespec{Sec: int64(ts.Sec), Nsec: int64(ts.Nsec)})
 	if err != nil {
 		return UINT64_MAX // FIXME
 	}

@@ -16,5 +16,5 @@ func (f *Fdset32) To64() (out [16]int64) {
 
 // TODO: 32-bit vs 64-bit
 func (f *Fdset32) Native() *syscall.FdSet {
-	return &syscall.FdSet{f.To64()}
+	return &syscall.FdSet{Bits: f.To64()}
 }

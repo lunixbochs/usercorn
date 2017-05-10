@@ -854,7 +854,7 @@ outer:
 			continue
 		}
 		addr, size := align(seg.Addr, seg.Size, true)
-		s := &models.Segment{addr, addr + size, seg.Prot}
+		s := &models.Segment{Start: addr, End: addr + size, Prot: seg.Prot}
 		for _, s2 := range merged {
 			if s2.Overlaps(s) {
 				s2.Merge(s)

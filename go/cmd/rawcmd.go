@@ -22,7 +22,7 @@ func NewUsercornRawCmd() *UsercornCmd {
 		case "big":
 			byteOrder = binary.BigEndian
 		default:
-			return nil, errors.Errorf("%s is not a valid byte order ('little' or 'big')", endian)
+			return nil, errors.Errorf("%s is not a valid byte order ('little' or 'big')", *endian)
 		}
 		var err error
 		l := loader.NewNullLoader(*arch, *osStr, byteOrder, *entry)
