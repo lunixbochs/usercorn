@@ -81,6 +81,7 @@ var dosSysNum = map[int]string{
 	0x3E: "close",
 	0x3F: "read",
 	0x40: "write",
+	0x41: "unlink",
 	0x4C: "terminate_with_code",
 }
 
@@ -88,7 +89,7 @@ var dosSysNum = map[int]string{
 var abiMap = map[int][]int{
 	0x00: {},
 	0x01: {DX},
-	0x02: {DX}, // Actually DL
+	0x02: {DX},
 	0x09: {DX, DS},
 	0x30: {},
 	0x3C: {DX, DS, CX},
@@ -96,6 +97,7 @@ var abiMap = map[int][]int{
 	0x3E: {BX},
 	0x3F: {BX, DX, CX, DS},
 	0x40: {BX, DX, CX, DS},
+	0x41: {DX, DS, CX},
 	0x4C: {AL},
 }
 
@@ -280,6 +282,18 @@ func (k *DosKernel) Write(fd uint, buf co.Buf, n co.Len) int {
 	k.setFlagC(false)
 	k.wreg16(AX, uint16(written))
 	return written
+}
+
+func (k *DosKernel) Unlink(filename string, _ int, attr int) int {
+	err := syscall.Unlink(filename)
+	if err != nil {
+		k.setFlagC(true)
+		k.wreg16(AX, 0xFFFF)
+		return 0xFFFF
+	}
+	k.setFlagC(false)
+	k.wreg16(AX, 0)
+	return 0
 }
 
 func (k *DosKernel) TerminateWithCode(code int) {
