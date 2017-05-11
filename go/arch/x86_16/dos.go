@@ -1,10 +1,12 @@
 package x86_16
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"syscall"
+
+	"github.com/lunixbochs/argjoy"
+	"github.com/pkg/errors"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/models"
@@ -90,14 +92,14 @@ var abiMap = map[int][]int{
 	0x00: {},
 	0x01: {DX},
 	0x02: {DX},
-	0x09: {DX, DS},
+	0x09: {DX},
 	0x30: {},
-	0x3C: {DX, DS, CX},
-	0x3D: {DX, DS, AL},
+	0x3C: {DX, CX},
+	0x3D: {DX, AL},
 	0x3E: {BX},
-	0x3F: {BX, DX, CX, DS},
-	0x40: {BX, DX, CX, DS},
-	0x41: {DX, DS, CX},
+	0x3F: {BX, DX, CX},
+	0x40: {BX, DX, CX},
+	0x41: {DX, CX},
 	0x4C: {AL},
 }
 
@@ -235,7 +237,7 @@ func (k *DosKernel) openFile(filename string, mode int) uint16 {
 	return dosfd
 }
 
-func (k *DosKernel) CreateOrTruncate(buf co.Buf, _ int, attr int) uint16 {
+func (k *DosKernel) CreateOrTruncate(buf co.Buf, attr int) uint16 {
 	filename := string(k.readUntilChar(buf.Addr, '$'))
 	return k.openFile(filename, syscall.O_CREAT|syscall.O_TRUNC|syscall.O_RDWR)
 }
@@ -284,7 +286,7 @@ func (k *DosKernel) Write(fd uint, buf co.Buf, n co.Len) int {
 	return written
 }
 
-func (k *DosKernel) Unlink(filename string, _ int, attr int) int {
+func (k *DosKernel) Unlink(filename string, attr int) int {
 	err := syscall.Unlink(filename)
 	if err != nil {
 		k.setFlagC(true)
@@ -312,6 +314,8 @@ func NewKernel() *DosKernel {
 	k.fds[0] = 0
 	k.fds[1] = 1
 	k.fds[2] = 2
+
+	k.Argjoy.Register(k.getDosArgCodec())
 	return k
 }
 
@@ -337,7 +341,35 @@ func DosSyscall(u models.Usercorn) {
 	// TODO: Set error
 }
 
-func dosArgs(u models.Usercorn, num int) func(n int) ([]uint64, error) {
+func (k *DosKernel) getDosArgCodec() func(interface{}, []interface{}) error {
+	return func(arg interface{}, vals []interface{}) error {
+		// DOS takes address as DS+DX
+		if reg, ok := vals[0].(uint64); ok && len(vals) > 1 {
+			ds, _ := k.U.RegRead(DS)
+			reg += ds
+			switch v := arg.(type) {
+			case *co.Buf:
+				*v = co.NewBuf(k, reg)
+			case *co.Obuf:
+				*v = co.Obuf{co.NewBuf(k, reg)}
+			case *co.Ptr:
+				*v = co.Ptr(reg)
+			case *string:
+				s, err := k.U.Mem().ReadStrAt(reg)
+				if err != nil {
+					return errors.Wrapf(err, "ReadStrAt(%#x) failed", reg)
+				}
+				*v = s
+			default:
+				return argjoy.NoMatch
+			}
+			return nil
+		}
+		return argjoy.NoMatch
+	}
+}
+
+func dosArgs(u models.Usercorn, num int) func(int) ([]uint64, error) {
 	return co.RegArgs(u, abiMap[num])
 }
 
