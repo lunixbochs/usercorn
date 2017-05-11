@@ -94,8 +94,8 @@ var abiMap = map[int][]int{
 	0x3C: {DX, DS, CX},
 	0x3D: {DX, DS, AL},
 	0x3E: {BX},
-	0x3F: {BX, CX, DX, DS},
-	0x40: {BX, CX, DX, DS},
+	0x3F: {BX, DX, CX, DS},
+	0x40: {BX, DX, CX, DS},
 	0x4C: {AL},
 }
 
@@ -188,33 +188,37 @@ func (k *DosKernel) Terminate() {
 	k.U.Exit(models.ExitStatus(0))
 }
 
-func (k *DosKernel) CharIn(buf co.Buf) {
+func (k *DosKernel) CharIn(buf co.Buf) byte {
 	var char byte
 	fmt.Scanf("%c", &char)
 	k.U.MemWrite(buf.Addr, []byte{char})
+	return char
 }
 
-func (k *DosKernel) CharOut(char uint16) {
-	fmt.Printf("%c", uint8(char&0xFF))
+func (k *DosKernel) CharOut(char uint16) byte {
+	fmt.Printf("%c", byte(char&0xFF))
+	return byte(char & 0xFF)
 }
 
-func (k *DosKernel) Display(buf co.Buf) {
+func (k *DosKernel) Display(buf co.Buf) int {
 	mem := k.readUntilChar(buf.Addr, '$')
 
 	syscall.Write(1, mem)
 	k.wreg8(AL, 0x24)
+	return 0x24
 }
 
-func (k *DosKernel) GetDosVersion() {
+func (k *DosKernel) GetDosVersion() int {
 	k.wreg16(AX, 0x7)
+	return 0x7
 }
 
-func (k *DosKernel) openFile(filename string, mode int) {
+func (k *DosKernel) openFile(filename string, mode int) uint16 {
 	realfd, err := syscall.Open(filename, mode, 0)
 	if err != nil {
 		k.wreg16(AX, 0xFFFF)
 		k.setFlagC(true)
-		return
+		return 0xFFFF
 	}
 
 	// Find an internal fd number
@@ -222,20 +226,20 @@ func (k *DosKernel) openFile(filename string, mode int) {
 	if err != nil {
 		k.wreg16(AX, dosfd)
 		k.setFlagC(true)
-		return
+		return 0xFFFF
 	}
 	k.setFlagC(false)
 	k.wreg16(AX, dosfd)
+	return dosfd
 }
 
-func (k *DosKernel) CreateOrTruncate(buf co.Buf) {
+func (k *DosKernel) CreateOrTruncate(buf co.Buf, _ int, attr int) uint16 {
 	filename := string(k.readUntilChar(buf.Addr, '$'))
-	k.openFile(filename, syscall.O_CREAT|syscall.O_TRUNC|syscall.O_RDWR)
+	return k.openFile(filename, syscall.O_CREAT|syscall.O_TRUNC|syscall.O_RDWR)
 }
 
-func (k *DosKernel) Open(buf co.Buf, mode int) {
-	filename := string(k.readUntilChar(buf.Addr, '\x00'))
-	k.openFile(filename, mode)
+func (k *DosKernel) Open(filename string, mode int) uint16 {
+	return k.openFile(filename, mode)
 }
 
 func (k *DosKernel) Close(fd int) {
@@ -251,7 +255,7 @@ func (k *DosKernel) Close(fd int) {
 	k.wreg16(AX, 0)
 }
 
-func (k *DosKernel) Read(fd int, len int, buf co.Buf) {
+func (k *DosKernel) Read(fd int, buf co.Obuf, len co.Len) int {
 	mem := make([]byte, len)
 	n, err := syscall.Read(fd, mem)
 	if err != nil {
@@ -262,9 +266,10 @@ func (k *DosKernel) Read(fd int, len int, buf co.Buf) {
 	k.U.MemWrite(buf.Addr, mem)
 	k.setFlagC(false)
 	k.wreg16(AX, uint16(n))
+	return n
 }
 
-func (k *DosKernel) Write(fd uint, n uint, buf co.Buf, _ int) {
+func (k *DosKernel) Write(fd uint, buf co.Buf, n co.Len) int {
 	mem, _ := k.U.MemRead(buf.Addr, uint64(n))
 	written, err := syscall.Write(k.fds[fd], mem)
 	if err != nil {
@@ -274,6 +279,7 @@ func (k *DosKernel) Write(fd uint, n uint, buf co.Buf, _ int) {
 	}
 	k.setFlagC(false)
 	k.wreg16(AX, uint16(written))
+	return written
 }
 
 func (k *DosKernel) TerminateWithCode(code int) {
@@ -293,11 +299,6 @@ func NewKernel() *DosKernel {
 	k.fds[1] = 1
 	k.fds[2] = 2
 	return k
-}
-
-var regNames = []string{
-	"ip", "sp", "bp", "ax", "bx", "cx", "dx",
-	"si", "di", "flags", "cs", "ds", "es", "ss",
 }
 
 func DosInit(u models.Usercorn, args, env []string) error {
@@ -333,7 +334,7 @@ func DosInterrupt(u models.Usercorn, cause uint32) {
 	} else if intno == 0x20 {
 		u.Syscall(0, "terminate", func(int) ([]uint64, error) { return []uint64{}, nil })
 	} else {
-		panic(fmt.Sprintf("unhandled X86 interrupt %d", intno))
+		panic(fmt.Sprintf("unhandled X86 interrupt %#X", intno))
 	}
 }
 func DosKernels(u models.Usercorn) []interface{} {
