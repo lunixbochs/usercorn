@@ -217,7 +217,7 @@ func (k *DosKernel) GetDosVersion() int {
 	return 0x7
 }
 
-func (k *DosKernel) openFile(filename string, mode int) uint16 {
+func (k *DosKernel) openFile(filename string, mode int) co.Fd {
 	realfd, err := syscall.Open(filename, mode, 0)
 	if err != nil {
 		k.wreg16(AX, 0xFFFF)
@@ -234,21 +234,21 @@ func (k *DosKernel) openFile(filename string, mode int) uint16 {
 	}
 	k.setFlagC(false)
 	k.wreg16(AX, dosfd)
-	return dosfd
+	return co.Fd(dosfd)
 }
 
-func (k *DosKernel) CreateOrTruncate(buf co.Buf, attr int) uint16 {
+func (k *DosKernel) CreateOrTruncate(buf co.Buf, attr int) co.Fd {
 	filename := string(k.readUntilChar(buf.Addr, '$'))
 	return k.openFile(filename, syscall.O_CREAT|syscall.O_TRUNC|syscall.O_RDWR)
 }
 
-func (k *DosKernel) Open(filename string, mode int) uint16 {
+func (k *DosKernel) Open(filename string, mode int) co.Fd {
 	return k.openFile(filename, mode)
 }
 
-func (k *DosKernel) Close(fd int) {
+func (k *DosKernel) Close(fd co.Fd) {
 	// Find and free the internal fd
-	realfd, _ := k.freeFd(fd)
+	realfd, _ := k.freeFd(int(fd))
 	err := syscall.Close(realfd)
 	if err != nil {
 		k.setFlagC(true)
@@ -259,9 +259,9 @@ func (k *DosKernel) Close(fd int) {
 	k.wreg16(AX, 0)
 }
 
-func (k *DosKernel) Read(fd int, buf co.Obuf, len co.Len) int {
+func (k *DosKernel) Read(fd co.Fd, buf co.Obuf, len co.Len) int {
 	mem := make([]byte, len)
-	n, err := syscall.Read(fd, mem)
+	n, err := syscall.Read(int(fd), mem)
 	if err != nil {
 		k.setFlagC(true)
 		// TODO: Set AX to error code
@@ -273,7 +273,7 @@ func (k *DosKernel) Read(fd int, buf co.Obuf, len co.Len) int {
 	return n
 }
 
-func (k *DosKernel) Write(fd uint, buf co.Buf, n co.Len) int {
+func (k *DosKernel) Write(fd co.Fd, buf co.Buf, n co.Len) int {
 	mem, _ := k.U.MemRead(buf.Addr, uint64(n))
 	written, err := syscall.Write(k.fds[fd], mem)
 	if err != nil {
