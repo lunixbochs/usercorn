@@ -18,9 +18,6 @@ type TraceHeader struct {
 	Magic string `struc:"[4]byte" json:"-"`
 	// file format version
 	Version uint32 `json:"version"`
-	// Unicorn UC_ARCH and UC_MODE enums
-	UcArch uint32 `json:"uc_arch"`
-	UcMode uint32 `json:"uc_mode"`
 
 	// Emulated architecture. Possible values include "x86_64", "x86", "mips", "arm", "arm64". Right-null-padded.
 	Arch string `struc:"[32]byte" json:"arch"`
@@ -35,12 +32,9 @@ type TraceWriter struct {
 
 func NewWriter(w io.WriteCloser, u models.Usercorn) (*TraceWriter, error) {
 	// TODO: handle errors here (with github.com/pkg/errors too)
-	arch := u.Arch()
 	header := &TraceHeader{
 		Magic:   TRACE_MAGIC,
 		Version: 1,
-		UcArch:  uint32(arch.UC_ARCH),
-		UcMode:  uint32(arch.UC_MODE),
 		Arch:    u.Loader().Arch(),
 		OS:      u.Loader().OS(),
 	}

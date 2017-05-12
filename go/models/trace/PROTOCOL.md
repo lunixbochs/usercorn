@@ -12,8 +12,6 @@ Header
 |------|------|------|
 | magic|      | `UCIR`
 | version|uint32| File format version (0 for now)
-| arch |uint32| Unicorn architecture enum
-| mode |uint32| Unicorn architecture mode
 | str\_arch | 32 bytes (null-padded) | Arch, such as "x86\_64", "x86", "mips", "sparc", "sparc64", "arm", "arm64"
 | str\_os   | 32 bytes (null-padded) | OS, such as "linux", "darwin", "netbsd", "cgc"
 
