@@ -8,7 +8,6 @@ import (
 	"github.com/lunixbochs/readline"
 	"github.com/lunixbochs/struc"
 	"github.com/pkg/errors"
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,6 +20,7 @@ import (
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/loader"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 	"github.com/lunixbochs/usercorn/go/models/trace"
 	"github.com/lunixbochs/usercorn/go/ui"
 )
@@ -34,7 +34,8 @@ type tramp struct {
 }
 
 type Usercorn struct {
-	*Unicorn
+	*Task
+
 	sync.Mutex
 	config       *models.Config
 	exe          string
@@ -69,7 +70,7 @@ type Usercorn struct {
 	breaks       []*models.Breakpoint
 	futureBreaks []*models.Breakpoint
 
-	hooks    []uc.Hook
+	hooks    []cpu.Hook
 	sysHooks []*models.SysHook
 
 	trace *trace.Trace
@@ -91,12 +92,13 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	if err != nil {
 		return nil, err
 	}
-	unicorn, err := NewUnicorn(a, OS, l.ByteOrder())
+	cpu, err := a.Cpu.New()
 	if err != nil {
 		return nil, err
 	}
+	task := NewTask(cpu, a, OS, l.ByteOrder())
 	u := &Usercorn{
-		Unicorn:       unicorn,
+		Task:          task,
 		traceMatching: true,
 		config:        config,
 		loader:        l,
@@ -155,7 +157,7 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	if u.config.LoopCollapse > 0 {
 		u.blockloop = models.NewLoopDetect(u.config.LoopCollapse)
 	}
-	// TODO: if we error, should close Usercorn/Unicorn instance?
+	// TODO: if we error, should close Usercorn/Cpu instance?
 	// GC might take its time
 	if err := u.mapStack(); err != nil {
 		return nil, err
@@ -209,7 +211,7 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 		return nil, err
 	}
 	for _, seg := range segments {
-		if seg.Prot&uc.PROT_WRITE != 0 {
+		if seg.Prot&cpu.PROT_WRITE != 0 {
 			addr := u.base + seg.Addr + seg.Size
 			if addr > u.brk {
 				u.brk = addr
@@ -227,23 +229,23 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	return u, nil
 }
 
-func (u *Usercorn) HookAdd(htype int, cb interface{}, begin, end uint64, extra ...int) (uc.Hook, error) {
-	hh, err := u.Unicorn.HookAdd(htype, cb, begin, end, extra...)
+func (u *Usercorn) HookAdd(htype int, cb interface{}, begin, end uint64, extra ...int) (cpu.Hook, error) {
+	hh, err := u.Cpu.HookAdd(htype, cb, begin, end, extra...)
 	if err == nil {
 		u.hooks = append(u.hooks, hh)
 	}
 	return hh, err
 }
 
-func (u *Usercorn) HookDel(hh uc.Hook) error {
-	tmp := make([]uc.Hook, 0, len(u.hooks))
+func (u *Usercorn) HookDel(hh cpu.Hook) error {
+	tmp := make([]cpu.Hook, 0, len(u.hooks))
 	for _, v := range u.hooks {
 		if v != hh {
 			tmp = append(tmp, v)
 		}
 	}
 	u.hooks = tmp
-	return u.Unicorn.HookDel(hh)
+	return u.Cpu.HookDel(hh)
 }
 
 func (u *Usercorn) HookSysAdd(before, after models.SysCb) *models.SysHook {
@@ -321,7 +323,7 @@ func (u *Usercorn) Run(args, env []string) error {
 	}
 	if u.config.Verbose {
 		u.Printf("[entry @ 0x%x]\n", u.entry)
-		dis, err := u.Disas(u.entry, 64, u.config.DisBytes)
+		dis, err := u.Dis(u.entry, 64, u.config.DisBytes)
 		if err != nil {
 			u.Println(err)
 		} else {
@@ -352,7 +354,7 @@ func (u *Usercorn) Run(args, env []string) error {
 	}
 	// in case this isn't the first run
 	u.exitStatus = nil
-	// loop to restart Unicorn if we need to call a trampoline function
+	// loop to restart Cpu if we need to call a trampoline function
 	pc := u.entry
 	var err error
 	for err == nil && u.exitStatus == nil {
@@ -412,7 +414,7 @@ func (u *Usercorn) Gate() *models.Gate {
 
 func (u *Usercorn) Start(pc, end uint64) error {
 	u.running = true
-	err := u.Unicorn.Start(pc, end)
+	err := u.Cpu.Start(pc, end)
 	u.running = false
 	return err
 }
@@ -572,7 +574,7 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 	cur := u.brk
 	if addr > 0 {
 		// take brk protections from last brk segment (not sure if this is right)
-		prot := uc.PROT_READ | uc.PROT_WRITE
+		prot := cpu.PROT_READ | cpu.PROT_WRITE
 		if brk := u.mapping(cur, 1); brk != nil {
 			prot = brk.Prot
 		}
@@ -592,14 +594,14 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 func (u *Usercorn) addHooks() error {
 	// TODO: this sort of error should be handled in ui module?
 	// issue #244
-	invalid := uc.HOOK_MEM_READ_INVALID | uc.HOOK_MEM_WRITE_INVALID | uc.HOOK_MEM_FETCH_INVALID
-	u.HookAdd(invalid, func(_ uc.Unicorn, access int, addr uint64, size int, value int64) bool {
+	invalid := cpu.HOOK_MEM_ERR
+	u.HookAdd(invalid, func(_ cpu.Cpu, access int, addr uint64, size int, value int64) bool {
 		switch access {
-		case uc.MEM_WRITE_UNMAPPED, uc.MEM_WRITE_PROT:
+		case cpu.MEM_WRITE_UNMAPPED, cpu.MEM_WRITE_PROT:
 			u.Printf("invalid write")
-		case uc.MEM_READ_UNMAPPED, uc.MEM_READ_PROT:
+		case cpu.MEM_READ_UNMAPPED, cpu.MEM_READ_PROT:
 			u.Printf("invalid read")
-		case uc.MEM_FETCH_UNMAPPED, uc.MEM_FETCH_PROT:
+		case cpu.MEM_FETCH_UNMAPPED, cpu.MEM_FETCH_PROT:
 			u.Printf("invalid fetch")
 		default:
 			u.Printf("unknown memory error")
@@ -607,7 +609,7 @@ func (u *Usercorn) addHooks() error {
 		u.Printf(": @0x%x, 0x%x = 0x%x\n", addr, size, uint64(value))
 		return false
 	}, 1, 0)
-	u.HookAdd(uc.HOOK_INTR, func(_ uc.Unicorn, intno uint32) {
+	u.HookAdd(cpu.HOOK_INTR, func(_ cpu.Cpu, intno uint32) {
 		u.os.Interrupt(u, intno)
 	}, 1, 0)
 	return nil
@@ -699,7 +701,7 @@ outer:
 	for _, seg := range merged {
 		prot := seg.Prot
 		if prot == 0 {
-			prot = uc.PROT_ALL
+			prot = cpu.PROT_ALL
 		}
 		if !dynamic {
 			err = u.MemMapProt(loadBias+seg.Start, seg.End-seg.Start, prot)
@@ -762,7 +764,7 @@ func (u *Usercorn) mapStack() error {
 	if err := u.RegWrite(u.arch.SP, stackEnd); err != nil {
 		return err
 	}
-	return u.MemMapProt(stackEnd, UC_MEM_ALIGN, uc.PROT_NONE)
+	return u.MemMapProt(stackEnd, UC_MEM_ALIGN, cpu.PROT_NONE)
 }
 
 func (u *Usercorn) AddKernel(kernel interface{}, first bool) {
@@ -820,7 +822,7 @@ func (u *Usercorn) Exit(err error) {
 func (u *Usercorn) Close() error {
 	var err error
 	u.final.Do(func() {
-		err = u.Unicorn.Close()
+		err = u.Cpu.Close()
 	})
 	return err
 }
@@ -938,7 +940,7 @@ func (u *Usercorn) RunAsm(addr uint64, asm string, setRegs map[int]uint64, regsC
 		if i > 100 {
 			return errors.Errorf("RunAsm() took too many tries (>%d) to map memory", i)
 		}
-		code, err = u.Assemble(asm, addr)
+		code, err = u.Asm(asm, addr)
 		if err != nil {
 			return err
 		}

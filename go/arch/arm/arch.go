@@ -5,21 +5,22 @@ import (
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
+	"github.com/lunixbochs/usercorn/go/cpu"
+	"github.com/lunixbochs/usercorn/go/cpu/unicorn"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
 var Arch = &models.Arch{
-	Name:    "arm",
-	Bits:    32,
-	Radare:  "arm",
-	CS_ARCH: cs.CS_ARCH_ARM,
-	CS_MODE: cs.CS_MODE_ARM,
-	KS_ARCH: ks.ARCH_ARM,
-	KS_MODE: ks.MODE_ARM,
-	UC_ARCH: uc.ARCH_ARM,
-	UC_MODE: uc.MODE_ARM,
-	PC:      uc.ARM_REG_PC,
-	SP:      uc.ARM_REG_SP,
+	Name:   "arm",
+	Bits:   32,
+	Radare: "arm",
+
+	Cpu: &unicorn.Builder{Arch: uc.ARCH_ARM, Mode: uc.MODE_ARM},
+	Dis: &cpu.Capstone{Arch: cs.CS_ARCH_ARM, Mode: cs.CS_MODE_ARM},
+	Asm: &cpu.Keystone{Arch: ks.ARCH_ARM, Mode: ks.MODE_ARM},
+
+	PC: uc.ARM_REG_PC,
+	SP: uc.ARM_REG_SP,
 	Regs: map[string]int{
 		"r0":  uc.ARM_REG_R0,
 		"r1":  uc.ARM_REG_R1,
@@ -52,7 +53,7 @@ func EnterUsermode(u models.Usercorn) error {
         orr r0, r0, $0x10
         msr cpsr_c, r0
     `
-	modeSwitch, err := u.Assemble(modeSwitchAsm, 0)
+	modeSwitch, err := u.Asm(modeSwitchAsm, 0)
 	if err != nil {
 		return err
 	}

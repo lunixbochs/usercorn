@@ -91,7 +91,7 @@ func (k *CgcKernel) Allocate(size uint32, executable int32, ret co.Obuf) int {
 	mmap, _ := k.U.Mmap(0, uint64(size))
 	mmap.Desc = "heap"
 	if executable != 0 {
-		k.U.MemProtect(mmap.Addr, mmap.Size, uc.PROT_ALL)
+		k.U.MemProt(mmap.Addr, mmap.Size, uc.PROT_ALL)
 	}
 	ret.Pack(uint32(mmap.Addr))
 	return 0

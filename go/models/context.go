@@ -3,7 +3,6 @@ package models
 import (
 	"fmt"
 	"github.com/pkg/errors"
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"strings"
 )
 
@@ -18,8 +17,8 @@ type ContextMem struct {
 }
 
 type Context struct {
-	mem   []*ContextMem
-	ucCtx uc.Context
+	mem       []*ContextMem
+	ctxHandle interface{}
 }
 
 func ContextSave(u Usercorn) (*Context, error) {
@@ -27,7 +26,7 @@ func ContextSave(u Usercorn) (*Context, error) {
 	ctx := &Context{}
 
 	// save regs/cpu state
-	ctx.ucCtx, err = u.ContextSave(nil)
+	ctx.ctxHandle, err = u.ContextSave(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +52,7 @@ func ContextSave(u Usercorn) (*Context, error) {
 
 func ContextRestore(u Usercorn, ctx *Context) error {
 	// restore regs/cpu state
-	if err := u.ContextRestore(ctx.ucCtx); err != nil {
+	if err := u.ContextRestore(ctx.ctxHandle); err != nil {
 		return err
 	}
 	// unmap all memory

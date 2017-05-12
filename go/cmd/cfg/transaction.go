@@ -4,12 +4,13 @@ import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 type Transaction struct {
-	ctx uc.Context
+	ctx interface{}
 	u   models.Usercorn
-	hh  uc.Hook
+	hh  cpu.Hook
 
 	memWrites map[uint64]byte
 }
@@ -17,7 +18,7 @@ type Transaction struct {
 func NewTransaction(u models.Usercorn) *Transaction {
 	ctx, _ := u.ContextSave(nil)
 	memWrites := make(map[uint64]byte)
-	hh, _ := u.HookAdd(uc.HOOK_MEM_WRITE, func(_ uc.Unicorn, addr uint64, size uint32) {
+	hh, _ := u.HookAdd(uc.HOOK_MEM_WRITE, func(_ cpu.Cpu, addr uint64, size uint32) {
 		data, _ := u.MemRead(addr, uint64(size))
 		for i, b := range data {
 			pos := addr + uint64(i)

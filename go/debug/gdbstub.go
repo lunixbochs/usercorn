@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 func escape(p []byte) []byte {
@@ -89,7 +90,7 @@ func (d *Gdbstub) Run(c net.Conn) {
 		stub: d,
 		u:    d.instances[0],
 
-		breakpoints: make(map[uint64]uc.Hook),
+		breakpoints: make(map[uint64]cpu.Hook),
 
 		verbose: false,
 	}).Run()
@@ -106,7 +107,7 @@ type gdbClient struct {
 	regEnums map[int]int
 	regList  []int
 
-	breakpoints map[uint64]uc.Hook
+	breakpoints map[uint64]cpu.Hook
 
 	verbose bool
 }

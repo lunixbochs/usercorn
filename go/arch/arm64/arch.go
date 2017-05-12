@@ -5,21 +5,22 @@ import (
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
+	"github.com/lunixbochs/usercorn/go/cpu"
+	"github.com/lunixbochs/usercorn/go/cpu/unicorn"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
 var Arch = &models.Arch{
-	Name:    "arm64",
-	Bits:    64,
-	Radare:  "arm64",
-	CS_ARCH: cs.CS_ARCH_ARM64,
-	CS_MODE: cs.CS_MODE_ARM,
-	KS_ARCH: ks.ARCH_ARM64,
-	KS_MODE: ks.MODE_LITTLE_ENDIAN,
-	UC_ARCH: uc.ARCH_ARM64,
-	UC_MODE: uc.MODE_ARM,
-	PC:      uc.ARM64_REG_PC,
-	SP:      uc.ARM64_REG_SP,
+	Name:   "arm64",
+	Bits:   64,
+	Radare: "arm64",
+
+	Cpu: &unicorn.Builder{Arch: uc.ARCH_ARM64, Mode: uc.MODE_ARM},
+	Dis: &cpu.Capstone{Arch: cs.CS_ARCH_ARM64, Mode: cs.CS_MODE_ARM},
+	Asm: &cpu.Keystone{Arch: ks.ARCH_ARM64, Mode: ks.MODE_LITTLE_ENDIAN},
+
+	PC: uc.ARM64_REG_PC,
+	SP: uc.ARM64_REG_SP,
 	Regs: map[string]int{
 		"x0":  uc.ARM64_REG_X0,
 		"x1":  uc.ARM64_REG_X1,

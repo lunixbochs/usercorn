@@ -4,15 +4,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
-
-	cs "github.com/bnagy/gapstone"
-	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 )
 
 var demangleRe = regexp.MustCompile(`^[^(]+`)
@@ -67,85 +65,43 @@ func Demangle(name string) string {
 }
 
 func Assemble(asm string, addr uint64, arch *Arch) ([]byte, error) {
-	if arch.ks == nil {
-		engine, err := ks.New(arch.KS_ARCH, arch.KS_MODE)
-		if err != nil {
-			return nil, err
-		}
-		arch.ks = engine
+	if arch.Asm != nil {
+		return arch.Asm.Asm(asm, addr)
 	}
-	out, _, ok := arch.ks.Assemble(asm, addr)
-	if !ok {
-		return nil, arch.ks.LastError()
-	}
-	return out, nil
+	return nil, errors.Errorf("Arch<%s>.Asm not initialized", arch.Name)
 }
 
-var discache = make(map[string]string)
-var discacheLock sync.RWMutex
-var thumbCs *cs.Engine
-
 func Disas(mem []byte, addr uint64, arch *Arch, showBytes bool, pad ...int) (string, error) {
-	var asm []cs.Instruction
-	var err error
-	cacheKey := fmt.Sprintf("%d|%s", addr, mem)
 	if len(mem) == 0 {
 		return "", nil
 	}
-	discacheLock.RLock()
-	if cached, ok := discache[cacheKey]; ok {
-		discacheLock.RUnlock()
-		return cached, nil
+	if arch.Dis == nil {
+		return "", errors.Errorf("Arch<%s>.Dis not initialized", arch.Name)
 	}
-	discacheLock.RUnlock()
-	// detect thumb
-	// FIXME: global hack, needs to go on Arch somehow
-	if len(mem) == 2 && arch.CS_ARCH == cs.CS_ARCH_ARM && arch.CS_MODE == cs.CS_MODE_ARM {
-		if thumbCs == nil {
-			engine, err := cs.New(cs.CS_ARCH_ARM, cs.CS_MODE_THUMB)
-			if err != nil {
-				return "", err
-			}
-			thumbCs = &engine
-		}
-		asm, err = thumbCs.Disasm(mem, addr, 0)
-	} else {
-		if arch.cs == nil {
-			engine, err := cs.New(arch.CS_ARCH, arch.CS_MODE)
-			if err != nil {
-				return "", err
-			}
-			arch.cs = &engine
-		}
-		asm, err = arch.cs.Disasm(mem, addr, 0)
-	}
+	asm, err := arch.Dis.Dis(mem, addr)
 	if err != nil {
 		return "", err
 	}
-	var width uint
+	var width int
 	if len(pad) > 0 {
-		width = uint(pad[0])
+		width = int(pad[0])
 	}
 	for _, insn := range asm {
-		if insn.Size > width {
-			width = insn.Size
+		if len(insn.Bytes()) > width {
+			width = len(insn.Bytes())
 		}
 	}
 	var out []string
 	for _, insn := range asm {
 		if showBytes {
-			pad := strings.Repeat(" ", int(width-insn.Size)*2)
-			data := pad + hex.EncodeToString(insn.Bytes)
-			out = append(out, fmt.Sprintf("0x%x: %s %s %s", insn.Address, data, insn.Mnemonic, insn.OpStr))
+			pad := strings.Repeat(" ", (width-len(insn.Bytes()))*2)
+			data := pad + hex.EncodeToString(insn.Bytes())
+			out = append(out, fmt.Sprintf("0x%x: %s %s %s", insn.Addr(), data, insn.Mnemonic(), insn.OpStr()))
 		} else {
-			out = append(out, fmt.Sprintf("0x%x: %s %s", insn.Address, insn.Mnemonic, insn.OpStr))
+			out = append(out, fmt.Sprintf("0x%x: %s %s", insn.Addr(), insn.Mnemonic(), insn.OpStr()))
 		}
 	}
-	ret := strings.Join(out, "\n")
-	discacheLock.Lock()
-	discache[cacheKey] = ret
-	discacheLock.Unlock()
-	return ret, nil
+	return strings.Join(out, "\n"), nil
 }
 
 func Repr(p []byte, strsize int) string {

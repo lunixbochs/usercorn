@@ -12,7 +12,20 @@ import (
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	"github.com/lunixbochs/fvbommel-util/sortorder"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
+
+// platform interfaces
+type Asm interface {
+	Asm(asm string, addr uint64) ([]byte, error)
+}
+type Dis interface {
+	Dis(mem []byte, addr uint64) ([]Ins, error)
+}
+type CpuBuilder interface {
+	New() (cpu.Cpu, error)
+}
 
 type Reg struct {
 	Enum    int
@@ -54,20 +67,19 @@ func (r regMap) Items() regList {
 }
 
 type Arch struct {
-	Name    string
-	Bits    int
-	Radare  string
-	CS_ARCH int
-	CS_MODE uint
-	KS_ARCH ks.Architecture
-	KS_MODE ks.Mode
-	UC_ARCH int
-	UC_MODE int
-	PC      int
-	SP      int
-	OS      map[string]*OS
-	Regs    regMap
-	GdbXml  string
+	Name   string
+	Bits   int
+	Radare string
+
+	Cpu CpuBuilder
+	Asm Asm
+	Dis Dis
+
+	PC     int
+	SP     int
+	OS     map[string]*OS
+	Regs   regMap
+	GdbXml string
 
 	DefaultRegs []string
 
@@ -125,7 +137,7 @@ func (a *Arch) getRegList() regList {
 }
 
 func (a *Arch) SmokeTest(t *testing.T) {
-	u, err := uc.NewUnicorn(a.UC_ARCH, a.UC_MODE)
+	u, err := a.Cpu.New()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +150,7 @@ func (a *Arch) SmokeTest(t *testing.T) {
 			t.Fatal(err)
 		}
 		if val != 0x1000 {
-			t.Fatal(a.Radare + " failed to read/write register " + name)
+			t.Fatal(a.Name + " failed to read/write register " + name)
 		}
 		// clear the register in case registers are aliased
 		if u.RegWrite(enum, 0); err != nil {
@@ -155,7 +167,7 @@ func (a *Arch) SmokeTest(t *testing.T) {
 }
 
 type execTest struct {
-	u          uc.Unicorn
+	u          cpu.Cpu
 	a          *Arch
 	start, end uint64
 	dis        string
@@ -163,9 +175,9 @@ type execTest struct {
 
 func (t *execTest) Setup(asm string) error {
 	base := uint64(0x1000)
-	u, err := uc.NewUnicorn(t.a.UC_ARCH, t.a.UC_MODE)
+	u, err := t.a.Cpu.New()
 	if err != nil {
-		return errors.Wrapf(err, "NewUnicorn(%#x, %#x) failed: %v", t.a.UC_ARCH, t.a.UC_MODE)
+		return errors.Wrapf(err, "Arch<%s>.Cpu.New() failed", t.a.Name)
 	}
 	t.u = u
 	shellcode, err := Assemble(asm, base, t.a)
@@ -179,7 +191,7 @@ func (t *execTest) Setup(asm string) error {
 	t.dis = dis
 
 	size := (uint64(len(shellcode)) + 0xfff) &^ 0xfff
-	if err := u.MemMap(base, size); err != nil {
+	if err := u.MemMapProt(base, size, cpu.PROT_ALL); err != nil {
 		return errors.Wrapf(err, "u.MemMap(%#x, %#x) failed", base)
 	}
 	if err := u.MemWrite(base, shellcode); err != nil {
@@ -228,7 +240,7 @@ func (a *Arch) BenchExec(b *testing.B, asm string) {
 }
 
 func (a *Arch) BenchRegs(b *testing.B) {
-	u, err := uc.NewUnicorn(a.UC_ARCH, a.UC_MODE)
+	u, err := a.Cpu.New()
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -252,6 +264,21 @@ func (a *Arch) RegEnums() []int {
 	return enums
 }
 
+// FIXME (slow stub)
+func (a *Arch) RegDumpFast(u cpu.Cpu) ([]uint64, error) {
+	enums := a.RegEnums()
+	out := make([]uint64, len(enums))
+	for i, e := range enums {
+		val, err := u.RegRead(e)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = val
+	}
+	return out, nil
+}
+
+/*
 func (a *Arch) RegDumpFast(u uc.Unicorn) ([]uint64, error) {
 	if a.regBatch == nil {
 		var err error
@@ -263,8 +290,9 @@ func (a *Arch) RegDumpFast(u uc.Unicorn) ([]uint64, error) {
 	}
 	return a.regBatch.ReadFast(u)
 }
+*/
 
-func (a *Arch) RegDump(u uc.Unicorn) ([]RegVal, error) {
+func (a *Arch) RegDump(u cpu.Cpu) ([]RegVal, error) {
 	regList := a.getRegList()
 	regs, err := a.RegDumpFast(u)
 	if err != nil {

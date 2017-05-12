@@ -116,7 +116,7 @@ func main() {
 					continue
 				}
 			}
-			sc, err := u.Assemble(text, addr)
+			sc, err := u.Asm(text, addr)
 			if err != nil {
 				fmt.Printf("asm err: %s\n", err)
 				continue

@@ -8,6 +8,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 var LinuxRegs = []int{uc.ARM_REG_R0, uc.ARM_REG_R1, uc.ARM_REG_R2, uc.ARM_REG_R3, uc.ARM_REG_R4, uc.ARM_REG_R5, uc.ARM_REG_R6}
@@ -34,7 +35,7 @@ func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
 			return err
 		}
 	}
-	_, err := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+	_, err := u.HookAdd(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
 		switch addr {
 		case 0xffff0fa0:
 			// __kuser_memory_barrier

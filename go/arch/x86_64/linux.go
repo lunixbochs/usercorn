@@ -10,6 +10,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 type LinuxKernel struct {
@@ -38,7 +39,7 @@ func setupVsyscall(u models.Usercorn, kernel *LinuxKernel) error {
 		return err
 	}
 
-	_, err := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+	_, err := u.HookAdd(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
 		switch addr {
 		case vgettimeofday:
 			ret, _ := u.Syscall(96, "gettimeofday", common.RegArgs(u, AbiRegs))

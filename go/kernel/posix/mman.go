@@ -86,7 +86,7 @@ func (k *PosixKernel) Munmap(addr, size uint64) uint64 {
 func (k *PosixKernel) Mprotect(addr, size uint64, prot enum.MmapProt) uint64 {
 	// FIXME: Issue #137
 	prot = enum.MmapProt(uc.PROT_ALL)
-	if err := k.U.MemProtect(addr, size, int(prot)); err != nil {
+	if err := k.U.MemProt(addr, size, int(prot)); err != nil {
 		return UINT64_MAX // FIXME
 	}
 	return 0

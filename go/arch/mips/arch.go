@@ -5,21 +5,22 @@ import (
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
+	"github.com/lunixbochs/usercorn/go/cpu"
+	"github.com/lunixbochs/usercorn/go/cpu/unicorn"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
 var Arch = &models.Arch{
-	Name:    "mips",
-	Bits:    32,
-	Radare:  "mips",
-	CS_ARCH: cs.CS_ARCH_MIPS,
-	CS_MODE: cs.CS_MODE_MIPS32 + cs.CS_MODE_LITTLE_ENDIAN,
-	KS_ARCH: ks.ARCH_MIPS,
-	KS_MODE: ks.MODE_MIPS32 + ks.MODE_LITTLE_ENDIAN,
-	UC_ARCH: uc.ARCH_MIPS,
-	UC_MODE: uc.MODE_MIPS32 + uc.MODE_LITTLE_ENDIAN,
-	PC:      uc.MIPS_REG_PC,
-	SP:      uc.MIPS_REG_SP,
+	Name:   "mips",
+	Bits:   32,
+	Radare: "mips",
+
+	Cpu: &unicorn.Builder{Arch: uc.ARCH_MIPS, Mode: uc.MODE_MIPS32 + uc.MODE_LITTLE_ENDIAN},
+	Dis: &cpu.Capstone{Arch: cs.CS_ARCH_MIPS, Mode: cs.CS_MODE_MIPS32 + cs.CS_MODE_LITTLE_ENDIAN},
+	Asm: &cpu.Keystone{Arch: ks.ARCH_MIPS, Mode: ks.MODE_MIPS32 + ks.MODE_LITTLE_ENDIAN},
+
+	PC: uc.MIPS_REG_PC,
+	SP: uc.MIPS_REG_SP,
 	Regs: map[string]int{
 		"at": uc.MIPS_REG_AT,
 		"v0": uc.MIPS_REG_V0,

@@ -5,6 +5,8 @@ import (
 	// ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
+	// "github.com/lunixbochs/usercorn/go/cpu"
+	"github.com/lunixbochs/usercorn/go/cpu/unicorn"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
@@ -12,15 +14,14 @@ var Arch = &models.Arch{
 	Name:   "m68k",
 	Bits:   32,
 	Radare: "m68k",
+
+	Cpu: &unicorn.Builder{Arch: uc.ARCH_M68K, Mode: uc.MODE_BIG_ENDIAN},
 	// no capstone support for m68k
-	CS_ARCH: 0,
-	CS_MODE: 0,
-	KS_ARCH: 0,
-	KS_MODE: 0,
-	UC_ARCH: uc.ARCH_M68K,
-	UC_MODE: uc.MODE_BIG_ENDIAN,
-	PC:      uc.M68K_REG_PC,
-	SP:      uc.M68K_REG_A7,
+	Asm: nil,
+	Dis: nil,
+
+	PC: uc.M68K_REG_PC,
+	SP: uc.M68K_REG_A7,
 	Regs: map[string]int{
 		"d0": uc.M68K_REG_D0,
 		"d1": uc.M68K_REG_D1,

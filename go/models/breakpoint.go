@@ -6,6 +6,8 @@ import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"regexp"
 	"strconv"
+
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 var breakRe = regexp.MustCompile(`^((?P<addr>\*?0x[0-9a-fA-F]+|\d+)|(?P<source>.+):(?P<line>\d+)|(?P<sym>.+?(?P<off>\+0x[0-9a-fA-F]+|\d+)?))(@(?P<file>.+))?$`)
@@ -34,7 +36,7 @@ type Breakpoint struct {
 
 type bpHook struct {
 	addr uint64
-	hook uc.Hook
+	hook cpu.Hook
 }
 
 var BreakpointParseErr = fmt.Errorf("breakpoint parse failed")

@@ -5,21 +5,22 @@ import (
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
+	"github.com/lunixbochs/usercorn/go/cpu"
+	"github.com/lunixbochs/usercorn/go/cpu/unicorn"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
 var Arch = &models.Arch{
-	Name:    "sparc",
-	Bits:    32,
-	Radare:  "sparc",
-	CS_ARCH: cs.CS_ARCH_SPARC,
-	CS_MODE: cs.CS_MODE_BIG_ENDIAN,
-	KS_ARCH: ks.ARCH_SPARC,
-	KS_MODE: ks.MODE_SPARC32 | ks.MODE_BIG_ENDIAN,
-	UC_ARCH: uc.ARCH_SPARC,
-	UC_MODE: uc.MODE_SPARC32 | uc.MODE_BIG_ENDIAN,
-	PC:      uc.SPARC_REG_PC,
-	SP:      uc.SPARC_REG_SP,
+	Name:   "sparc",
+	Bits:   32,
+	Radare: "sparc",
+
+	Cpu: &unicorn.Builder{Arch: uc.ARCH_SPARC, Mode: uc.MODE_SPARC32 | uc.MODE_BIG_ENDIAN},
+	Dis: &cpu.Capstone{Arch: cs.CS_ARCH_SPARC, Mode: cs.CS_MODE_BIG_ENDIAN},
+	Asm: &cpu.Keystone{Arch: ks.ARCH_SPARC, Mode: ks.MODE_SPARC32 | ks.MODE_BIG_ENDIAN},
+
+	PC: uc.SPARC_REG_PC,
+	SP: uc.SPARC_REG_SP,
 	Regs: map[string]int{
 		// "g0": uc.SPARC_REG_G0, // g0 is always zero
 		"g1": uc.SPARC_REG_G1,

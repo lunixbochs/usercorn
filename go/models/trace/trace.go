@@ -3,11 +3,11 @@ package trace
 import (
 	"bytes"
 	"github.com/pkg/errors"
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io"
 	"os"
 
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 type Trace struct {
@@ -15,7 +15,7 @@ type Trace struct {
 	pc       int
 
 	regs    []uint64
-	hooks   []uc.Hook
+	hooks   []cpu.Hook
 	sysHook *models.SysHook
 	mapHook *models.MapHook
 
@@ -97,7 +97,7 @@ func (t *Trace) Attach() error {
 	t.Send(kf)
 
 	if t.config.Block || t.config.Ins || t.config.Reg || t.config.SpecialReg {
-		if err := t.hook(uc.HOOK_BLOCK, func(_ uc.Unicorn, addr uint64, size uint32) {
+		if err := t.hook(cpu.HOOK_BLOCK, func(_ cpu.Cpu, addr uint64, size uint32) {
 			if t.config.Reg && !t.config.Ins {
 				t.OnRegUpdate()
 			}
@@ -109,7 +109,7 @@ func (t *Trace) Attach() error {
 		}
 	}
 	if t.config.Ins {
-		if err := t.hook(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+		if err := t.hook(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
 			if t.config.Reg {
 				t.OnRegUpdate()
 			}
@@ -119,9 +119,9 @@ func (t *Trace) Attach() error {
 		}
 	}
 	if t.config.Mem {
-		if err := t.hook(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE,
-			func(_ uc.Unicorn, access int, addr uint64, size int, val int64) {
-				if access == uc.MEM_WRITE {
+		if err := t.hook(cpu.HOOK_MEM_READ|cpu.HOOK_MEM_WRITE,
+			func(_ cpu.Cpu, access int, addr uint64, size int, val int64) {
+				if access == cpu.MEM_WRITE {
 					var data []byte
 					var tmp [8]byte
 					e := t.u.ByteOrder()
