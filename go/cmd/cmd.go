@@ -161,9 +161,6 @@ func (c *UsercornCmd) Run(argv, env []string) {
 
 	outfile := fs.String("o", "", "redirect debugging output to file (default stderr)")
 
-	savepre := fs.String("savepre", "", "save state to file and exit before emulation starts")
-	savepost := fs.String("savepost", "", "save state to file after emulation ends")
-
 	gdb := fs.Int("gdb", -1, "listen for gdb connection on localhost:<port>")
 	listen := fs.Int("listen", -1, "listen for debug connection on localhost:<port>")
 	connect := fs.Int("connect", -1, "connect to remote usercorn debugger on localhost:<port>")
@@ -259,8 +256,6 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		ForceInterpBase: *ibase,
 		LoadPrefix:      absPrefix,
 		NativeFallback:  *native,
-		SavePost:        *savepost,
-		SavePre:         *savepre,
 		SkipInterp:      *skipinterp,
 		Strsize:         *strsize,
 		Verbose:         *verbose,

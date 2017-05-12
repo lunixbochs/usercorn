@@ -49,8 +49,6 @@ type Config struct {
 	ForceInterpBase uint64
 	LoadPrefix      string
 	NativeFallback  bool
-	SavePost        string
-	SavePre         string
 	SkipInterp      bool
 	Strsize         int
 	Verbose         bool

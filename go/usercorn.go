@@ -9,7 +9,6 @@ import (
 	"github.com/lunixbochs/struc"
 	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -351,23 +350,6 @@ func (u *Usercorn) Run(args, env []string) error {
 		u.Println("==== Program output begins here. ====")
 		u.Println("=====================================")
 	}
-	if u.config.SavePre != "" {
-		u.RegWrite(u.arch.PC, u.entry)
-		if err := u.save(u.config.SavePre); err != nil {
-			u.Printf("failed to save pre-state: %s\n", err)
-			os.Exit(1)
-		}
-		os.Exit(0)
-	}
-	// handle savestate even under panic
-	if u.config.SavePost != "" {
-		defer func() {
-			if err := u.save(u.config.SavePost); err != nil {
-				u.Printf("failed to save post-state: %s\n", err)
-			}
-		}()
-	}
-
 	// in case this isn't the first run
 	u.exitStatus = nil
 	// loop to restart Unicorn if we need to call a trampoline function
@@ -426,14 +408,6 @@ func (u *Usercorn) Run(args, env []string) error {
 
 func (u *Usercorn) Gate() *models.Gate {
 	return &u.gate
-}
-
-func (u *Usercorn) save(filename string) error {
-	data, err := models.Save(u)
-	if err == nil {
-		err = ioutil.WriteFile(filename, data, 0644)
-	}
-	return err
 }
 
 func (u *Usercorn) Start(pc, end uint64) error {
