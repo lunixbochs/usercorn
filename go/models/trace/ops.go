@@ -356,6 +356,7 @@ func (o *OpSyscall) Unpack(r io.Reader) (int, error) {
 }
 
 type OpKeyframe struct {
+	Pid uint64
 	Ops []models.Op
 }
 
@@ -385,14 +386,16 @@ func (o *OpKeyframe) Unpack(r io.Reader) (int, error) {
 }
 
 type OpFrame struct {
+	Pid uint64
 	Ops []models.Op
 }
 
 func (o *OpFrame) Pack(w io.Writer) (int, error) {
 	// pack header
-	var tmp [1 + 4]byte
+	var tmp [1 + 8 + 4]byte
 	tmp[0] = OP_FRAME
-	order.PutUint32(tmp[1:], uint32(len(o.Ops)))
+	order.PutUint64(tmp[1:], o.Pid)
+	order.PutUint32(tmp[9:], uint32(len(o.Ops)))
 	total, err := w.Write(tmp[:])
 	if err != nil {
 		return total, err
@@ -409,12 +412,13 @@ func (o *OpFrame) Pack(w io.Writer) (int, error) {
 }
 
 func (o *OpFrame) Unpack(r io.Reader) (int, error) {
-	var tmp [4]byte
+	var tmp [8 + 4]byte
 	total, err := io.ReadFull(r, tmp[:])
 	if err != nil {
 		return total, errors.Wrap(err, "frame unpack")
 	} else {
-		ops := int(order.Uint32(tmp[:]))
+		o.Pid = order.Uint64(tmp[:])
+		ops := int(order.Uint32(tmp[8:]))
 		// unpack sub-ops
 		o.Ops = make([]models.Op, ops)
 		for i := 0; i < ops; i++ {

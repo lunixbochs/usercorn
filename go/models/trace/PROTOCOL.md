@@ -66,7 +66,7 @@ Encapsulates a series of operations. Keyframes contain a collapsed representatio
 | name | type | desc |
 |------|------|------|
 | op   |uint8 | OP\_FRAME \|\| OP\_KEYFRAME
-| pid  | uint32 | process id (unique from first observation to the next OP\_EXIT)
+| pid  |uint64| process id (unique from first observation to the next OP\_EXIT)
 | op\_count | uint32 | number of operations to follow
 | data | .... | op\_count packed operations
 
