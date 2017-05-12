@@ -1,4 +1,4 @@
-.PHONY: get test deps usercorn imgtrace shellcode repl fuzz cfg trace
+.PHONY: get test deps usercorn imgtrace shellcode repl fuzz cfg trace com
 .DEFAULT_GOAL := build
 
 build: get all
