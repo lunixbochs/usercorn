@@ -76,6 +76,9 @@ func NewReader(r io.ReadCloser) (*TraceReader, error) {
 	if err := struc.Unpack(r, &t.Header); err != nil {
 		return nil, errors.Wrap(err, "failed to unpack header")
 	}
+	if t.Header.Magic != TRACE_MAGIC {
+		return nil, errors.New("invalid trace file magic")
+	}
 	t.Header.Arch = strings.TrimRight(t.Header.Arch, "\x00")
 	t.Header.OS = strings.TrimRight(t.Header.OS, "\x00")
 
