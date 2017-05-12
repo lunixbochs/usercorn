@@ -32,4 +32,7 @@ type Cpu interface {
 
 	// cleanup
 	Close() error
+
+	// leaky abstraction
+	Backend() interface{}
 }

@@ -23,6 +23,10 @@ type UnicornCpu struct {
 	uc.Unicorn
 }
 
+func (u *UnicornCpu) Backend() interface{} {
+	return u.Unicorn
+}
+
 func (u *UnicornCpu) ContextSave(reuse interface{}) (interface{}, error) {
 	return u.Unicorn.ContextSave(reuse.(uc.Context))
 }

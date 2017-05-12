@@ -264,33 +264,32 @@ func (a *Arch) RegEnums() []int {
 	return enums
 }
 
-// FIXME (slow stub)
-func (a *Arch) RegDumpFast(u cpu.Cpu) ([]uint64, error) {
-	enums := a.RegEnums()
-	out := make([]uint64, len(enums))
-	for i, e := range enums {
-		val, err := u.RegRead(e)
-		if err != nil {
-			return nil, err
+// FIXME: abstraction hack
+func (a *Arch) RegDumpFast(c cpu.Cpu) ([]uint64, error) {
+	// manual check for Unicorn because Cpu interface doesn't have RegBatch for now
+	if u, ok := c.Backend().(uc.Unicorn); ok {
+		if a.regBatch == nil {
+			var err error
+			enums := a.RegEnums()
+			a.regBatch, err = uc.NewRegBatch(enums)
+			if err != nil {
+				return nil, err
+			}
 		}
-		out[i] = val
-	}
-	return out, nil
-}
-
-/*
-func (a *Arch) RegDumpFast(u uc.Unicorn) ([]uint64, error) {
-	if a.regBatch == nil {
-		var err error
+		return a.regBatch.ReadFast(u)
+	} else {
 		enums := a.RegEnums()
-		a.regBatch, err = uc.NewRegBatch(enums)
-		if err != nil {
-			return nil, err
+		out := make([]uint64, len(enums))
+		for i, e := range enums {
+			val, err := c.RegRead(e)
+			if err != nil {
+				return nil, err
+			}
+			out[i] = val
 		}
+		return out, nil
 	}
-	return a.regBatch.ReadFast(u)
 }
-*/
 
 func (a *Arch) RegDump(u cpu.Cpu) ([]RegVal, error) {
 	regList := a.getRegList()
