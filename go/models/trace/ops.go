@@ -26,6 +26,33 @@ const (
 	OP_EXIT      = 12
 )
 
+// used by frame, keyframe, and syscall
+func packOps(w io.Writer, ops []models.Op) (total int, err error) {
+	for _, v := range ops {
+		if n, err := v.Pack(w); err != nil {
+			return total + n, errors.Wrap(err, "packing op list")
+		} else {
+			total += n
+		}
+	}
+	return total, nil
+}
+
+// used by frame, keyframe, and syscall
+func unpackOps(r io.Reader, count int) (ops []models.Op, total int, err error) {
+	ops = make([]models.Op, count)
+	for i := 0; i < count; i++ {
+		op, n, err := Unpack(r)
+		if err != nil {
+			return ops, total + n, errors.Wrap(err, "unpacking op list")
+		} else {
+			total += n
+		}
+		ops[i] = op
+	}
+	return ops, total, nil
+}
+
 func Unpack(r io.Reader) (models.Op, int, error) {
 	var tmp [1]byte
 	if _, err := r.Read(tmp[:]); err != nil {
@@ -308,14 +335,8 @@ func (o *OpSyscall) Pack(w io.Writer) (total int, err error) {
 	}
 
 	// pack sub-ops
-	for _, v := range o.Ops {
-		if n, err := v.Pack(w); err != nil {
-			return total + n, err
-		} else {
-			total += n
-		}
-	}
-	return total, nil
+	n, err := packOps(w, o.Ops)
+	return total + n, err
 }
 
 func (o *OpSyscall) Unpack(r io.Reader) (int, error) {
@@ -326,11 +347,12 @@ func (o *OpSyscall) Unpack(r io.Reader) (int, error) {
 		o.Num = order.Uint32(tmp[:])
 		o.Ret = order.Uint64(tmp[4:])
 		args := int(order.Uint16(tmp[12:]))
-		ops := int(order.Uint16(tmp[14:]))
+		count := int(order.Uint16(tmp[14:]))
 
 		// unpack args
 		tmp2 := make([]byte, 8*args)
-		if n, err := io.ReadFull(r, tmp2[:]); err != nil {
+		n, err := io.ReadFull(r, tmp2[:])
+		if err != nil {
 			return total + n, errors.Wrap(err, "syscall unpack")
 		} else {
 			total += n
@@ -340,17 +362,9 @@ func (o *OpSyscall) Unpack(r io.Reader) (int, error) {
 			o.Args[i] = order.Uint64(tmp2[i*8:])
 		}
 
-		// unpack subops
-		o.Ops = make([]models.Op, ops)
-		for i := 0; i < ops; i++ {
-			op, n, err := Unpack(r)
-			if err != nil {
-				return total + n, errors.Wrap(err, "syscall unpack")
-			} else {
-				total += n
-			}
-			o.Ops[i] = op
-		}
+		// unpack sub-ops
+		o.Ops, n, err = unpackOps(r, count)
+		total += n
 	}
 	return total, errors.Wrap(err, "syscall unpack")
 }
@@ -362,23 +376,16 @@ type OpKeyframe struct {
 
 func (o *OpKeyframe) Pack(w io.Writer) (int, error) {
 	// pack header
-	var tmp [1 + 4]byte
+	var tmp [1 + 8 + 4]byte
 	tmp[0] = OP_KEYFRAME
-	order.PutUint32(tmp[1:], uint32(len(o.Ops)))
+	order.PutUint64(tmp[1:], o.Pid)
+	order.PutUint32(tmp[9:], uint32(len(o.Ops)))
 	total, err := w.Write(tmp[:])
 	if err != nil {
 		return total, err
 	}
-	// TODO: centralize "pack this list of ops"?
-	// pack sub-ops
-	for _, v := range o.Ops {
-		if n, err := v.Pack(w); err != nil {
-			return total + n, err
-		} else {
-			total += n
-		}
-	}
-	return total, err
+	n, err := packOps(w, o.Ops)
+	return total + n, err
 }
 
 func (o *OpKeyframe) Unpack(r io.Reader) (int, error) {
@@ -401,14 +408,8 @@ func (o *OpFrame) Pack(w io.Writer) (int, error) {
 		return total, err
 	}
 	// pack sub-ops
-	for _, v := range o.Ops {
-		if n, err := v.Pack(w); err != nil {
-			return total + n, err
-		} else {
-			total += n
-		}
-	}
-	return total, err
+	n, err := packOps(w, o.Ops)
+	return total + n, err
 }
 
 func (o *OpFrame) Unpack(r io.Reader) (int, error) {
@@ -418,18 +419,10 @@ func (o *OpFrame) Unpack(r io.Reader) (int, error) {
 		return total, errors.Wrap(err, "frame unpack")
 	} else {
 		o.Pid = order.Uint64(tmp[:])
-		ops := int(order.Uint32(tmp[8:]))
+		count := int(order.Uint32(tmp[8:]))
 		// unpack sub-ops
-		o.Ops = make([]models.Op, ops)
-		for i := 0; i < ops; i++ {
-			op, n, err := Unpack(r)
-			if err != nil {
-				return total + n, errors.Wrap(err, "frame unpack")
-			} else {
-				total += n
-			}
-			o.Ops[i] = op
-		}
+		ops, n, err := unpackOps(r, count)
+		o.Ops = ops
+		return total + n, err
 	}
-	return total, nil
 }

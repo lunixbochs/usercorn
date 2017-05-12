@@ -72,7 +72,7 @@ func (o *OpKeyframe) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bprintf(`{"op":%d,"ops":%s}`, OP_KEYFRAME, ops), nil
+	return bprintf(`{"op":%d,"pid":%d,"ops":%s}`, OP_KEYFRAME, o.Pid, ops), nil
 }
 
 func (o *OpFrame) MarshalJSON() ([]byte, error) {
@@ -80,5 +80,5 @@ func (o *OpFrame) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bprintf(`{"op":%d,"ops":%s}`, OP_FRAME, ops), nil
+	return bprintf(`{"op":%d,"pid":%d,"ops":%s}`, OP_FRAME, o.Pid, ops), nil
 }
