@@ -218,7 +218,7 @@ func (k *DosKernel) GetDosVersion() int {
 }
 
 func (k *DosKernel) openFile(filename string, mode int) co.Fd {
-	realfd, err := syscall.Open(filename, mode, 0)
+	realfd, err := syscall.Open(filename, mode, 0666)
 	if err != nil {
 		k.wreg16(AX, 0xFFFF)
 		k.setFlagC(true)
