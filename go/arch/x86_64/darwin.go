@@ -1,17 +1,17 @@
 package x86_64
 
 import (
+	"encoding/binary"
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
-
-	"github.com/lunixbochs/usercorn/go/kernel/common"
-	"github.com/lunixbochs/usercorn/go/kernel/darwin"
-	"github.com/lunixbochs/usercorn/go/models"
-
-	"encoding/binary"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/lunixbochs/usercorn/go/arch/x86"
+	"github.com/lunixbochs/usercorn/go/kernel/common"
+	"github.com/lunixbochs/usercorn/go/kernel/darwin"
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type DarwinKernel struct {
@@ -334,8 +334,7 @@ func (k *DarwinKernel) Gettimeofday(timeval common.Obuf, timezone common.Obuf) u
 
 func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
 	gsmsr := uint64(0xC0000101)
-	Wrmsr(k.U, gsmsr, addr)
-
+	x86.Wrmsr(k.U, gsmsr, addr)
 	return 0
 }
 
@@ -343,7 +342,7 @@ func (k *DarwinKernel) Syscall(syscallNum int) uint64 {
 	//TODO: check if there is such a thing as an "indirect indirect syscall" - in that case we need to fix this to support recursion
 	syscallNum |= 0x2000000
 	name, _ := num.Darwin_x86_mach[syscallNum]
-	ret, _ := k.U.Syscall(syscallNum, name, common.RegArgsShifted(k.U, AbiRegs, 1))
+	ret, _ := k.U.Syscall(syscallNum, name, common.RegArgs(k.U, AbiRegs[1:]))
 	return ret
 }
 
