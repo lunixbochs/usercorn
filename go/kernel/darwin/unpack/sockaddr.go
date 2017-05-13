@@ -2,22 +2,22 @@ package unpack
 
 import (
 	"encoding/binary"
-	"syscall"
 	"fmt"
+	"syscall"
 
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
 const (
-	AF_LOCAL   = 1
-	AF_INET    = 2
-	AF_INET6   = 30
-	AF_PACKET  = 18
+	AF_LOCAL  = 1
+	AF_INET   = 2
+	AF_INET6  = 30
+	AF_PACKET = 18
 )
 
 type SockaddrHeader struct {
-    Length      uint8
-    Family      uint8
+	Length uint8
+	Family uint8
 }
 
 type SockaddrInet4 struct {
@@ -55,8 +55,8 @@ func Sockaddr(buf common.Buf, length int) syscall.Sockaddr {
 	// TODO: handle insufficient length
 	var header SockaddrHeader
 	if err := buf.Unpack(&header); err != nil {
-	    fmt.Println("unpack error", err)
-	    panic("sockaddr unpack error")
+		fmt.Println("unpack error", err)
+		panic("sockaddr unpack error")
 		return nil
 	}
 	// TODO: handle errors?
@@ -83,8 +83,8 @@ func Sockaddr(buf common.Buf, length int) syscall.Sockaddr {
 		st.Unpack(&a)
 		return sockaddrToNative(&a)
 	default:
-	    fmt.Println("AF not known", header.Family)
-	    panic("unknown socket address family")
+		fmt.Println("AF not known", header.Family)
+		panic("unknown socket address family")
 	}
 	return nil
 }

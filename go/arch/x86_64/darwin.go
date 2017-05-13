@@ -7,10 +7,10 @@ import (
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/darwin"
 	"github.com/lunixbochs/usercorn/go/models"
-	
-	"strings"
+
 	"encoding/binary"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -19,167 +19,167 @@ type DarwinKernel struct {
 }
 
 type NameMapEntry struct {
-	id		int
-	subMap	map[string]NameMapEntry
+	id     int
+	subMap map[string]NameMapEntry
 }
 
 var SysctlNameMapKern = map[string]NameMapEntry{
-	"ostype": 			NameMapEntry{1, nil},
-	"osrelease":		NameMapEntry{2, nil},
-	"osrevision":		NameMapEntry{3, nil},
-	"version": 			NameMapEntry{4, nil},
-	"maxvnodes":		NameMapEntry{5, nil},
-	"maxproc": 			NameMapEntry{6, nil},
-	"maxfiles": 		NameMapEntry{7, nil},
-	"argmax": 			NameMapEntry{8, nil},
-	"securelevel":		NameMapEntry{9, nil},
-	"hostname": 		NameMapEntry{10, nil},
-	"hostid": 			NameMapEntry{11, nil},
-	"clockrate":		NameMapEntry{12, nil},
-	"vnode": 			NameMapEntry{13, nil},
-	"proc": 			NameMapEntry{14, nil},
-	"file": 			NameMapEntry{15, nil},
-	"profiling":		NameMapEntry{16, nil},
-	"posix1version": 	NameMapEntry{17, nil},
-	"ngroups": 			NameMapEntry{18, nil},
-	"job_control": 		NameMapEntry{19, nil},
-	"saved_ids": 		NameMapEntry{20, nil},
-	"boottime": 		NameMapEntry{21, nil},
-	"nisdomainname": 	NameMapEntry{22, nil},
-	"maxpartitions": 	NameMapEntry{23, nil},
-	"kdebug":			NameMapEntry{24, nil},
-	"update":			NameMapEntry{25, nil},
-	"osreldate": 		NameMapEntry{26, nil},
-	"ntp_pll": 			NameMapEntry{27, nil},
-	"bootfile": 		NameMapEntry{28, nil},
-	"maxfilesperproc": 	NameMapEntry{29, nil},
-	"maxprocperuid": 	NameMapEntry{30, nil},
-	"dumpdev": 			NameMapEntry{31, nil},/* we lie; don't print as int */
-	"ipc": 				NameMapEntry{32, nil},
-	
-	"usrstack": 		NameMapEntry{35, nil},
-	"logsigexit": 		NameMapEntry{36, nil},
-	"symfile": 			NameMapEntry{37, nil},
-	"procargs": 		NameMapEntry{38, nil},
-	
-	"netboot": 			NameMapEntry{40, nil},
-	"panicinfo":		NameMapEntry{41, nil},
-	"sysv": 			NameMapEntry{42, nil},
-	
-	"exec": 			NameMapEntry{45, nil},
-	"aiomax": 			NameMapEntry{46, nil},
-	"aioprocmax": 		NameMapEntry{47, nil},
-	"aiothreads": 		NameMapEntry{48, nil},
-	"procargs2": 		NameMapEntry{49, nil},
-	"corefile": 		NameMapEntry{50, nil},
-	"coredump": 		NameMapEntry{51, nil},
-	"sugid_coredump": 	NameMapEntry{52, nil},
-	"delayterm": 		NameMapEntry{53, nil},
-	"shreg_private": 	NameMapEntry{54, nil},
-	
-	"low_pri_window": 	NameMapEntry{56, nil},
-	"low_pri_delay": 	NameMapEntry{57, nil},
-	"posix": 			NameMapEntry{58, nil},
-	"usrstack64": 		NameMapEntry{59, nil},
-	"nx": 				NameMapEntry{60, nil},
-	"tfp": 				NameMapEntry{61, nil},
-	"procname": 		NameMapEntry{62, nil},
-	"threadsigaltstack": 	NameMapEntry{63, nil},
-	"speculative_reads_disabled": 	NameMapEntry{64, nil},
-	"osversion": 		NameMapEntry{65, nil},
-	"safeboot": 		NameMapEntry{66, nil},
-	"lctx": 			NameMapEntry{67, nil},
-	"rage_vnode": 		NameMapEntry{68, nil},
-	"tty": 				NameMapEntry{69, nil},
-	"check_openevt": 	NameMapEntry{70, nil},
-	"thread_name": 		NameMapEntry{71, nil},
+	"ostype":          {1, nil},
+	"osrelease":       {2, nil},
+	"osrevision":      {3, nil},
+	"version":         {4, nil},
+	"maxvnodes":       {5, nil},
+	"maxproc":         {6, nil},
+	"maxfiles":        {7, nil},
+	"argmax":          {8, nil},
+	"securelevel":     {9, nil},
+	"hostname":        {10, nil},
+	"hostid":          {11, nil},
+	"clockrate":       {12, nil},
+	"vnode":           {13, nil},
+	"proc":            {14, nil},
+	"file":            {15, nil},
+	"profiling":       {16, nil},
+	"posix1version":   {17, nil},
+	"ngroups":         {18, nil},
+	"job_control":     {19, nil},
+	"saved_ids":       {20, nil},
+	"boottime":        {21, nil},
+	"nisdomainname":   {22, nil},
+	"maxpartitions":   {23, nil},
+	"kdebug":          {24, nil},
+	"update":          {25, nil},
+	"osreldate":       {26, nil},
+	"ntp_pll":         {27, nil},
+	"bootfile":        {28, nil},
+	"maxfilesperproc": {29, nil},
+	"maxprocperuid":   {30, nil},
+	"dumpdev":         {31, nil}, /* we lie; don't print as int */
+	"ipc":             {32, nil},
+
+	"usrstack":   {35, nil},
+	"logsigexit": {36, nil},
+	"symfile":    {37, nil},
+	"procargs":   {38, nil},
+
+	"netboot":   {40, nil},
+	"panicinfo": {41, nil},
+	"sysv":      {42, nil},
+
+	"exec":           {45, nil},
+	"aiomax":         {46, nil},
+	"aioprocmax":     {47, nil},
+	"aiothreads":     {48, nil},
+	"procargs2":      {49, nil},
+	"corefile":       {50, nil},
+	"coredump":       {51, nil},
+	"sugid_coredump": {52, nil},
+	"delayterm":      {53, nil},
+	"shreg_private":  {54, nil},
+
+	"low_pri_window":             {56, nil},
+	"low_pri_delay":              {57, nil},
+	"posix":                      {58, nil},
+	"usrstack64":                 {59, nil},
+	"nx":                         {60, nil},
+	"tfp":                        {61, nil},
+	"procname":                   {62, nil},
+	"threadsigaltstack":          {63, nil},
+	"speculative_reads_disabled": {64, nil},
+	"osversion":                  {65, nil},
+	"safeboot":                   {66, nil},
+	"lctx":                       {67, nil},
+	"rage_vnode":                 {68, nil},
+	"tty":                        {69, nil},
+	"check_openevt":              {70, nil},
+	"thread_name":                {71, nil},
 }
 
 var SysctlNameMapVfs = map[string]NameMapEntry{
-	"vfsconf": 			NameMapEntry{0, nil},
+	"vfsconf": {0, nil},
 }
 
 var SysctlNameMapVm = map[string]NameMapEntry{
-	"vmmeter": 			NameMapEntry{1, nil},
-	"loadavg": 			NameMapEntry{2, nil},
-	
-	"swapusage": 		NameMapEntry{5, nil},
+	"vmmeter": {1, nil},
+	"loadavg": {2, nil},
+
+	"swapusage": {5, nil},
 }
 
 var SysctlNameMapHw = map[string]NameMapEntry{
-	"machine": 			NameMapEntry{1, nil},
-	"model": 			NameMapEntry{2, nil},
-	"ncpu": 			NameMapEntry{3, nil},
-	"byteorder": 		NameMapEntry{4, nil},
-	"physmem": 			NameMapEntry{5, nil},
-	"usermem": 			NameMapEntry{6, nil},
-	"pagesize": 		NameMapEntry{7, nil},
-	"disknames": 		NameMapEntry{8, nil},
-	"diskstats": 		NameMapEntry{9, nil},
-	"epoch": 			NameMapEntry{10, nil},
-	"floatingpoint": 	NameMapEntry{11, nil},
-	"machinearch": 		NameMapEntry{12, nil},
-	"vectorunit": 		NameMapEntry{13, nil},
-	"busfrequency": 	NameMapEntry{14, nil},
-	"cpufrequency": 	NameMapEntry{15, nil},
-	"cachelinesize": 	NameMapEntry{16, nil},
-	"l1icachesize": 	NameMapEntry{17, nil},
-	"l1dcachesize": 	NameMapEntry{18, nil},
-	"l2settings": 		NameMapEntry{19, nil},
-	"l2cachesize": 		NameMapEntry{20, nil},
-	"l3settings": 		NameMapEntry{21, nil},
-	"l3cachesize": 		NameMapEntry{22, nil},
-	"tbfrequency": 		NameMapEntry{23, nil},
-	"memsize": 			NameMapEntry{24, nil},
-	"availcpu": 		NameMapEntry{25, nil},
+	"machine":       {1, nil},
+	"model":         {2, nil},
+	"ncpu":          {3, nil},
+	"byteorder":     {4, nil},
+	"physmem":       {5, nil},
+	"usermem":       {6, nil},
+	"pagesize":      {7, nil},
+	"disknames":     {8, nil},
+	"diskstats":     {9, nil},
+	"epoch":         {10, nil},
+	"floatingpoint": {11, nil},
+	"machinearch":   {12, nil},
+	"vectorunit":    {13, nil},
+	"busfrequency":  {14, nil},
+	"cpufrequency":  {15, nil},
+	"cachelinesize": {16, nil},
+	"l1icachesize":  {17, nil},
+	"l1dcachesize":  {18, nil},
+	"l2settings":    {19, nil},
+	"l2cachesize":   {20, nil},
+	"l3settings":    {21, nil},
+	"l3cachesize":   {22, nil},
+	"tbfrequency":   {23, nil},
+	"memsize":       {24, nil},
+	"availcpu":      {25, nil},
 }
 
 var SysctlNameMapUser = map[string]NameMapEntry{
-	"cs_path": 				NameMapEntry{1, nil},
-	"bc_base_max": 			NameMapEntry{2, nil},
-	"bc_dim_max": 			NameMapEntry{3, nil},
-	"bc_scale_max": 		NameMapEntry{4, nil},
-	"bc_string_max": 		NameMapEntry{5, nil},
-	"coll_weights_max": 	NameMapEntry{6, nil},
-	"expr_nest_max": 		NameMapEntry{7, nil},
-	"line_max": 			NameMapEntry{8, nil},
-	"re_dup_max": 			NameMapEntry{9, nil},
-	"posix2_version": 		NameMapEntry{10, nil},
-	"posix2_c_bind": 		NameMapEntry{11, nil},
-	"posix2_c_dev": 		NameMapEntry{12, nil},
-	"posix2_char_term": 	NameMapEntry{13, nil},
-	"posix2_fort_dev": 		NameMapEntry{14, nil},
-	"posix2_fort_run":		NameMapEntry{15, nil},
-	"posix2_localedef": 	NameMapEntry{16, nil},
-	"posix2_sw_dev": 		NameMapEntry{17, nil},
-	"posix2_upe": 			NameMapEntry{18, nil},
-	"stream_max": 			NameMapEntry{19, nil},
-	"tzname_max": 			NameMapEntry{20, nil},
+	"cs_path":          {1, nil},
+	"bc_base_max":      {2, nil},
+	"bc_dim_max":       {3, nil},
+	"bc_scale_max":     {4, nil},
+	"bc_string_max":    {5, nil},
+	"coll_weights_max": {6, nil},
+	"expr_nest_max":    {7, nil},
+	"line_max":         {8, nil},
+	"re_dup_max":       {9, nil},
+	"posix2_version":   {10, nil},
+	"posix2_c_bind":    {11, nil},
+	"posix2_c_dev":     {12, nil},
+	"posix2_char_term": {13, nil},
+	"posix2_fort_dev":  {14, nil},
+	"posix2_fort_run":  {15, nil},
+	"posix2_localedef": {16, nil},
+	"posix2_sw_dev":    {17, nil},
+	"posix2_upe":       {18, nil},
+	"stream_max":       {19, nil},
+	"tzname_max":       {20, nil},
 }
 
 var SysctlNameMapCTL = map[string]NameMapEntry{
-	"kern": 	NameMapEntry{1, SysctlNameMapKern},
-	"vm": 		NameMapEntry{2, SysctlNameMapVm},
-	"vfs": 		NameMapEntry{3, SysctlNameMapVfs},
-	"net": 		NameMapEntry{4, nil},
-	"debug": 	NameMapEntry{5, nil},
-	"hw": 		NameMapEntry{6, SysctlNameMapHw},
-	"machdep": 	NameMapEntry{7, nil},
-	"user": 	NameMapEntry{8, SysctlNameMapUser},
+	"kern":    {1, SysctlNameMapKern},
+	"vm":      {2, SysctlNameMapVm},
+	"vfs":     {3, SysctlNameMapVfs},
+	"net":     {4, nil},
+	"debug":   {5, nil},
+	"hw":      {6, SysctlNameMapHw},
+	"machdep": {7, nil},
+	"user":    {8, SysctlNameMapUser},
 }
 
 func (k *DarwinKernel) Literal__sysctl(name common.Buf, namelen uint64, olddata common.Buf, oldlenp common.Buf, newdata common.Buf, newlen uint64) uint64 {
 	//TODO: implement name-resolved sysctl invokations similar to syscalls
 	result := 0
-	mem, err := k.U.MemRead(name.Addr, namelen * 4)//TODO: replace all occurences of "4" by "sizeof int" for the platform
-	
+	mem, err := k.U.MemRead(name.Addr, namelen*4) //TODO: replace all occurences of "4" by "sizeof int" for the platform
+
 	nameArr := make([]int, namelen)
 	namelenInt := int(namelen)
 	for i := 0; i < namelenInt; i++ {
-		nameArr[i] = int(binary.LittleEndian.Uint32(mem[i*4:(i+1)*4]))
+		nameArr[i] = int(binary.LittleEndian.Uint32(mem[i*4 : (i+1)*4]))
 	}
-	
-	//special case magic numbers name == []int{0, 3} for sysctlByName: 
+
+	//special case magic numbers name == []int{0, 3} for sysctlByName:
 	//lookup actual name from namestring (given by newData)
 	//reference: Libc sysctlbyname.c
 	if namelen == 2 && nameArr[0] == 0 && nameArr[1] == 3 {
@@ -187,7 +187,7 @@ func (k *DarwinKernel) Literal__sysctl(name common.Buf, namelen uint64, olddata 
 		nameString := string(nameStringBytes)
 		k.U.Printf("nameString", nameString)
 		k.U.Printf("\n")
-		
+
 		nameNodes := strings.Split(nameString, ".")
 		nameMap := SysctlNameMapCTL
 		oid := make([]int, len(nameNodes))
@@ -196,13 +196,12 @@ func (k *DarwinKernel) Literal__sysctl(name common.Buf, namelen uint64, olddata 
 			entry := nameMap[nodeName]
 			oid[index] = entry.id
 			binary.LittleEndian.PutUint32(oidBytes[index*4:(index+1)*4], uint32(entry.id))
-			
+
 			nameMap = entry.subMap
 		}
 		k.U.Printf("oid", oid, oidBytes)
 		k.U.Printf("\n")
-		
-		
+
 		k.U.MemWrite(olddata.Addr, oidBytes)
 		oidlen := make([]byte, 4)
 		binary.LittleEndian.PutUint32(oidlen, uint32(len(oidBytes)))
@@ -219,19 +218,19 @@ func (k *DarwinKernel) Literal__sysctl(name common.Buf, namelen uint64, olddata 
 	} else if namelen == 2 && nameArr[0] == 1 && nameArr[1] == 59 && newdata.Addr == 0 && newlen == 0 {
 		//kern.usrstack64 query
 		var usrstack64 uint64 = 0
-		
+
 		//search for the stack
-		for _, m := range k.U.Mappings() { 
+		for _, m := range k.U.Mappings() {
 			if m.Desc == "stack" {
 				usrstack64 = uint64(m.Addr) + uint64(m.Size)
 				break
 			}
 		}
-		
+
 		if usrstack64 == 0 {
 			panic("stack not found")
 		}
-		
+
 		olddata.Pack(usrstack64)
 		datalen := uint32(reflect.TypeOf(usrstack64).Size())
 		oldlenp.Pack(datalen)
@@ -245,19 +244,19 @@ func (k *DarwinKernel) Literal__sysctl(name common.Buf, namelen uint64, olddata 
 	k.U.Trampoline(func() error {
 		eflags, err := k.U.RegRead(uc.X86_REG_EFLAGS)
 		//fmt.Printf("In Trampoline", eflags, err)
-		
+
 		const CF uint64 = 1 << 0
-		
-		if result < 0 {// should be "if errorOccurred"
+
+		if result < 0 { // should be "if errorOccurred"
 			eflags |= CF //set carry flag
 		} else {
 			eflags &= ^CF //unset carry flag
 		}
-		
+
 		err = k.U.RegWrite(uc.X86_REG_EFLAGS, eflags)
 		return err
 	})
-	return 0//TODO: return actual error codes
+	return 0 //TODO: return actual error codes
 }
 
 func (k *DarwinKernel) SharedRegionCheckNp(startAddress uint64) uint64 {
@@ -272,12 +271,12 @@ func (k *DarwinKernel) BsdthreadRegister() uint64 {
 
 func (k *DarwinKernel) Sigprocmask(how int32, mask common.Buf, omask common.Obuf) uint64 {
 	/*
-		"how" values:
-	#    define SIG_UNBLOCK 1
-	#    define SIG_BLOCK   2
-	#    define SIG_SETMASK 3
+			"how" values:
+		#    define SIG_UNBLOCK 1
+		#    define SIG_BLOCK   2
+		#    define SIG_SETMASK 3
 	*/
-	
+
 	if mask.Addr != 0 {
 		panic("Sigprocmask set not implemented")
 	} else if omask.Addr != 0 {
@@ -285,14 +284,14 @@ func (k *DarwinKernel) Sigprocmask(how int32, mask common.Buf, omask common.Obuf
 		var blockedSigMask uint64 = 0
 		omask.Pack(blockedSigMask)
 	}
-	
+
 	return 0
 }
 
 type sigaltstack_t struct {
-	Stackpointer	uint64
-	Size			int64
-	Flags			int64
+	Stackpointer uint64
+	Size         int64
+	Flags        int64
 }
 
 func (k *DarwinKernel) Sigaltstack(nss common.Buf, oss common.Obuf) uint64 {
@@ -303,18 +302,18 @@ func (k *DarwinKernel) Sigaltstack(nss common.Buf, oss common.Obuf) uint64 {
 		var altstack sigaltstack_t
 		oss.Pack(&altstack)
 	}
-	
+
 	return 0
 }
 
 type timeval_t struct {
-	Tv_sec		int64
-	Tv_usec		int64
+	Tv_sec  int64
+	Tv_usec int64
 }
 
 type timezone_t struct {
-	Tz_minuteswest		int64
-	Tz_dsttime			int64//daylight saving time
+	Tz_minuteswest int64
+	Tz_dsttime     int64 //daylight saving time
 }
 
 func (k *DarwinKernel) Gettimeofday(timeval common.Obuf, timezone common.Obuf) uint64 {
@@ -325,18 +324,18 @@ func (k *DarwinKernel) Gettimeofday(timeval common.Obuf, timezone common.Obuf) u
 		timedata.Tv_usec = int64(now.Nanosecond()) / 1000
 		timeval.Pack(&timedata)
 	}
-	
+
 	if timezone.Addr != 0 {
 		panic("gettimeofday timezone query not implemented")
 	}
-	
+
 	return 0
 }
 
 func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
 	gsmsr := uint64(0xC0000101)
 	Wrmsr(k.U, gsmsr, addr)
-	
+
 	return 0
 }
 
@@ -357,23 +356,23 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 	if err := darwin.StackInit(u, args, env); err != nil {
 		return err
 	}
-	
+
 	//commpage
 	//TODO: move constants
 	var addr_COMM_PAGE_VERSION uint64 = 0x00007fffffe00000 + 0x1e
 	var addr_COMM_PAGE_GTOD_GENERATION uint64 = 0x00007fffffe00000 + 0x050 + 28
 	var addr_COMM_PAGE_NT_GENERATION uint64 = 0x00007fffffe00000 + 0x050 + 24
-	
+
 	var commpageAddrBegin uint64 = 0x00007fffffe00000
 	var commpageAddrEnd uint64 = 0x00007fffffe01fff
-	if err := u.MemMap(commpageAddrBegin, commpageAddrEnd - commpageAddrBegin); err != nil {
+	if err := u.MemMap(commpageAddrBegin, commpageAddrEnd-commpageAddrBegin); err != nil {
 		return err
 	}
 	u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(mu uc.Unicorn, access int, addr uint64, size int, value int64) {
 		if addr < commpageAddrBegin || addr > commpageAddrEnd {
 			return
 		}
-		
+
 		if access == uc.MEM_WRITE {
 			u.Printf("\ncommpage Mem write")
 		} else {
@@ -403,20 +402,20 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 		}
 		u.Printf(": @0x%x, 0x%x = 0x%x\n", addr, size, value)
 	}, commpageAddrBegin, commpageAddrEnd)
-	
+
 	//temp fix for missing AVX instructions: hook system functions which use them
 	u.BreakAdd("__platform_bzero$VARIANT$Unknown", true, func(u models.Usercorn, addr uint64) {
 		//zero memory
-        dataAddr, _ := u.RegRead(AbiRegs[0])
-        dataSize, _ := u.RegRead(AbiRegs[1])
-        tmp := make([]byte, dataSize)
-        u.MemWrite(dataAddr, tmp)
-		
+		dataAddr, _ := u.RegRead(AbiRegs[0])
+		dataSize, _ := u.RegRead(AbiRegs[1])
+		tmp := make([]byte, dataSize)
+		u.MemWrite(dataAddr, tmp)
+
 		//return
-        retAddr, _ := u.Pop()
-        u.RegWrite(u.Arch().PC, retAddr)
-    })
-	
+		retAddr, _ := u.Pop()
+		u.RegWrite(u.Arch().PC, retAddr)
+	})
+
 	return AbiInit(u, DarwinSyscall)
 }
 

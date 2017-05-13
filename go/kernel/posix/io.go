@@ -8,7 +8,7 @@ import (
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/native/enum"
-	
+
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 )
 
@@ -45,10 +45,10 @@ func (k *PosixKernel) Open(path string, flags enum.OpenFlag, mode uint64) uint64
 	if err != nil {
 		k.U.Trampoline(func() error {
 			eflags, err := k.U.RegRead(uc.X86_REG_EFLAGS)
-			
+
 			const CF uint64 = 1 << 0
 			eflags |= CF //set carry flag
-			
+
 			err = k.U.RegWrite(uc.X86_REG_EFLAGS, eflags)
 			return err
 		})

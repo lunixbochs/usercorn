@@ -37,7 +37,7 @@ var machoMagics = [][]byte{
 
 type MachOLoader struct {
 	LoaderBase
-	file *macho.File
+	file      *macho.File
 	fatOffset uint32
 }
 
@@ -82,9 +82,9 @@ func MatchMachO(r io.ReaderAt) bool {
 
 func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 	var (
-		file    *macho.File
-		fatFile *macho.FatFile
-		err     error
+		file      *macho.File
+		fatFile   *macho.FatFile
+		err       error
 		fatOffset uint32
 	)
 	magic := getMagic(r)
@@ -131,7 +131,7 @@ func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 			os:    "darwin",
 			entry: entry,
 		},
-		file: file,
+		file:      file,
 		fatOffset: fatOffset,
 	}
 	return m, nil
