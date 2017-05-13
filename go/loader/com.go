@@ -2,7 +2,7 @@ package loader
 
 import (
 	"encoding/binary"
-	"errors"
+	"github.com/pkg/errors"
 	"io"
 	"os"
 
@@ -21,9 +21,12 @@ func (c *ComLoader) OS() string {
 
 func NewComLoader(filename string) (models.Loader, error) {
 	r, err := os.Open(filename)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open file")
+	}
 	stat, err := r.Stat()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to stat file")
 	}
 	size := stat.Size()
 

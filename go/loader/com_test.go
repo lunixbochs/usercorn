@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-const comFile = "../../bins/simple.com"
+const comFile = "../../bins/x86_16.dos.com"
 
 func TestComLoad(t *testing.T) {
 	_, err := NewComLoader(comFile)
