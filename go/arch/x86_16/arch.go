@@ -11,8 +11,9 @@ import (
 )
 
 var Arch = &models.Arch{
+	Name:   "x86_16",
 	Bits:   16,
-	Radare: "x86_16", // TODO: Test
+	Radare: "x86",
 
 	Cpu: &unicorn.Builder{Arch: uc.ARCH_X86, Mode: uc.MODE_16},
 	Dis: &cpu.Capstone{Arch: cs.CS_ARCH_X86, Mode: cs.CS_MODE_16},
