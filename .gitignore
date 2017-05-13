@@ -1,8 +1,9 @@
 deps/
 
-cgc
-fuzz
-imgtrace
-repl
-shellcode
-usercorn
+/cgc
+/com
+/fuzz
+/imgtrace
+/repl
+/shellcode
+/usercorn

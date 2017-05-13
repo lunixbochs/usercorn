@@ -3,8 +3,6 @@ package usercorn
 const (
 	BASE         = 0x100000
 	UC_MEM_ALIGN = 0x1000
-	STACK_BASE   = 0x60000000
-	STACK_SIZE   = 0x800000
 )
 
 func align(addr, size uint64, growl ...bool) (uint64, uint64) {
