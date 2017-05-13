@@ -763,9 +763,12 @@ outer:
 func (u *Usercorn) MapStack(base uint64, size uint64, guard bool) error {
 	u.StackBase = base
 	u.StackSize = size
-	stack, err := u.Mmap(base, size)
+	stack, err := u.MemReserve(base, size, true)
 	if err != nil {
 		return err
+	}
+	if err := u.Cpu.MemMapProt(stack.Addr, stack.Size, cpu.PROT_ALL); err != nil {
+		return errors.WithStack(err)
 	}
 	stack.Desc = "stack"
 	u.StackBase = stack.Addr

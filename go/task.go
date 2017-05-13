@@ -155,6 +155,7 @@ func (t *Task) MemUnmap(addr, size uint64) error {
 		}
 		// if unmap range is fully in the middle, split and create a new mapping for each side
 		if inMiddle {
+			t.Cpu.MemUnmap(addr, size)
 			left := &models.Mmap{
 				Addr: mmap.Addr, Size: addr - mmap.Addr,
 				Prot: mmap.Prot, File: mmap.File, Desc: mmap.Desc,
