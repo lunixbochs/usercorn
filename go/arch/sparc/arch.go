@@ -1,8 +1,8 @@
 package sparc
 
 import (
-	cs "github.com/bnagy/gapstone"
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
+	cs "github.com/lunixbochs/capstr"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/cpu"
@@ -16,7 +16,7 @@ var Arch = &models.Arch{
 	Radare: "sparc",
 
 	Cpu: &unicorn.Builder{Arch: uc.ARCH_SPARC, Mode: uc.MODE_SPARC32 | uc.MODE_BIG_ENDIAN},
-	Dis: &cpu.Capstone{Arch: cs.CS_ARCH_SPARC, Mode: cs.CS_MODE_BIG_ENDIAN},
+	Dis: &cpu.Capstr{Arch: cs.ARCH_SPARC, Mode: cs.MODE_BIG_ENDIAN},
 	Asm: &cpu.Keystone{Arch: ks.ARCH_SPARC, Mode: ks.MODE_SPARC32 | ks.MODE_BIG_ENDIAN},
 
 	PC: uc.SPARC_REG_PC,

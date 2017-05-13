@@ -1,8 +1,8 @@
 package x86
 
 import (
-	cs "github.com/bnagy/gapstone"
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
+	cs "github.com/lunixbochs/capstr"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/cpu"
@@ -16,7 +16,7 @@ var Arch = &models.Arch{
 	Radare: "x86",
 
 	Cpu: &unicorn.Builder{Arch: uc.ARCH_X86, Mode: uc.MODE_32},
-	Dis: &cpu.Capstone{Arch: cs.CS_ARCH_X86, Mode: cs.CS_MODE_32},
+	Dis: &cpu.Capstr{Arch: cs.ARCH_X86, Mode: cs.MODE_32},
 	Asm: &cpu.Keystone{Arch: ks.ARCH_X86, Mode: ks.MODE_32},
 
 	PC: uc.X86_REG_EIP,

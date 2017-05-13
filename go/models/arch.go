@@ -8,8 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	cs "github.com/bnagy/gapstone"
-	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	"github.com/lunixbochs/fvbommel-util/sortorder"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
@@ -89,9 +87,6 @@ type Arch struct {
 	regEnums []int
 
 	regBatch *uc.RegBatch
-
-	cs *cs.Engine
-	ks *ks.Keystone
 }
 
 func (a *Arch) String() string {

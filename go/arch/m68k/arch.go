@@ -1,7 +1,7 @@
 package m68k
 
 import (
-	// cs "github.com/bnagy/gapstone"
+	// cs "github.com/lunixbochs/capstr"
 	// ks "github.com/keystone-engine/keystone/bindings/go/keystone"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 

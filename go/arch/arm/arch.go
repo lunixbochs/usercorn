@@ -1,8 +1,8 @@
 package arm
 
 import (
-	cs "github.com/bnagy/gapstone"
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
+	cs "github.com/lunixbochs/capstr"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/cpu"
@@ -16,7 +16,7 @@ var Arch = &models.Arch{
 	Radare: "arm",
 
 	Cpu: &unicorn.Builder{Arch: uc.ARCH_ARM, Mode: uc.MODE_ARM},
-	Dis: &cpu.Capstone{Arch: cs.CS_ARCH_ARM, Mode: cs.CS_MODE_ARM},
+	Dis: &cpu.Capstr{Arch: cs.ARCH_ARM, Mode: cs.MODE_ARM},
 	Asm: &cpu.Keystone{Arch: ks.ARCH_ARM, Mode: ks.MODE_ARM},
 
 	PC: uc.ARM_REG_PC,

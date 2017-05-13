@@ -1,8 +1,8 @@
 package mips
 
 import (
-	cs "github.com/bnagy/gapstone"
 	ks "github.com/keystone-engine/keystone/bindings/go/keystone"
+	cs "github.com/lunixbochs/capstr"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/cpu"
@@ -16,7 +16,7 @@ var Arch = &models.Arch{
 	Radare: "mips",
 
 	Cpu: &unicorn.Builder{Arch: uc.ARCH_MIPS, Mode: uc.MODE_MIPS32 + uc.MODE_LITTLE_ENDIAN},
-	Dis: &cpu.Capstone{Arch: cs.CS_ARCH_MIPS, Mode: cs.CS_MODE_MIPS32 + cs.CS_MODE_LITTLE_ENDIAN},
+	Dis: &cpu.Capstr{Arch: cs.ARCH_MIPS, Mode: cs.MODE_MIPS32 + cs.MODE_LITTLE_ENDIAN},
 	Asm: &cpu.Keystone{Arch: ks.ARCH_MIPS, Mode: ks.MODE_MIPS32 + ks.MODE_LITTLE_ENDIAN},
 
 	PC: uc.MIPS_REG_PC,
