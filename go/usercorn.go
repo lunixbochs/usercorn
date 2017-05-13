@@ -124,17 +124,17 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	u.memio = memio.NewMemIO(
 		// ReadAt() callback
 		func(p []byte, addr uint64) (int, error) {
-			if err := u.MemReadInto(p, addr); err != nil {
+			if err := u.Task.MemReadInto(p, addr); err != nil {
 				return 0, err
 			}
 			if u.trace != nil && u.config.Trace.Mem {
-				u.trace.OnMemRead(addr, len(p))
+				u.trace.OnMemReadData(addr, p)
 			}
 			return len(p), nil
 		},
 		// WriteAt() callback
 		func(p []byte, addr uint64) (int, error) {
-			if err := u.MemWrite(addr, p); err != nil {
+			if err := u.Task.MemWrite(addr, p); err != nil {
 				return 0, err
 			}
 			if u.trace != nil && u.config.Trace.Mem {
@@ -227,6 +227,21 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	// make sure PC is set to entry point for debuggers
 	u.RegWrite(u.Arch().PC, u.Entry())
 	return u, nil
+}
+
+// intercept memory read/write into MemIO to make tracing always work
+func (u *Usercorn) MemWrite(addr uint64, p []byte) error {
+	_, err := u.memio.WriteAt(p, addr)
+	return err
+}
+func (u *Usercorn) MemReadInto(p []byte, addr uint64) error {
+	_, err := u.memio.ReadAt(p, addr)
+	return err
+}
+func (u *Usercorn) MemRead(addr, size uint64) ([]byte, error) {
+	p := make([]byte, size)
+	err := u.MemReadInto(p, addr)
+	return p, err
 }
 
 func (u *Usercorn) HookAdd(htype int, cb interface{}, begin, end uint64, extra ...int) (cpu.Hook, error) {
