@@ -37,7 +37,7 @@ type Usercorn interface {
 
 	Brk(addr uint64) (uint64, error)
 	Mem() memio.MemIO
-	MapStack(base uint64, size uint64) error
+	MapStack(base uint64, size uint64, guard bool) error
 	StrucAt(addr uint64) *StrucStream
 
 	RunShellcodeMapped(mmap *Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error
@@ -56,8 +56,6 @@ type Usercorn interface {
 	BinEntry() uint64
 	SetEntry(entry uint64)
 	SetExit(exit uint64)
-	SetStackBase(base uint64)
-	SetStackSize(base uint64)
 
 	// TODO: PrefixPath will be replaced by a full VFS subsystem
 	PrefixPath(s string, force bool) string

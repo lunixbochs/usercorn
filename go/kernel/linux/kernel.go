@@ -22,7 +22,7 @@ func NewKernel() *LinuxKernel {
 }
 
 func StackInit(u models.Usercorn, args, env []string) error {
-	if err := u.MapStack(STACK_BASE, STACK_SIZE); err != nil {
+	if err := u.MapStack(STACK_BASE, STACK_SIZE, false); err != nil {
 		return err
 	}
 	auxv, err := SetupElfAuxv(u)

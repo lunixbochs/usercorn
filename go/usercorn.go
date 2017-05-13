@@ -461,14 +461,6 @@ func (u *Usercorn) SetExit(exit uint64) {
 	u.exit = exit
 }
 
-func (u *Usercorn) SetStackBase(base uint64) {
-	u.StackBase = base
-}
-
-func (u *Usercorn) SetStackSize(size uint64) {
-	u.StackSize = size
-}
-
 func (u *Usercorn) BinEntry() uint64 {
 	// points to binary entry, even if an interpreter is used
 	return u.binEntry
@@ -768,7 +760,7 @@ outer:
 	}
 }
 
-func (u *Usercorn) MapStack(base uint64, size uint64) error {
+func (u *Usercorn) MapStack(base uint64, size uint64, guard bool) error {
 	u.StackBase = base
 	u.StackSize = size
 	stack, err := u.Mmap(base, size)
@@ -781,7 +773,10 @@ func (u *Usercorn) MapStack(base uint64, size uint64) error {
 	if err := u.RegWrite(u.arch.SP, stackEnd); err != nil {
 		return err
 	}
-	return u.MemMapProt(stackEnd, UC_MEM_ALIGN, cpu.PROT_NONE)
+	if guard {
+		return u.MemMapProt(stackEnd, UC_MEM_ALIGN, cpu.PROT_NONE)
+	}
+	return nil
 }
 
 func (u *Usercorn) AddKernel(kernel interface{}, first bool) {

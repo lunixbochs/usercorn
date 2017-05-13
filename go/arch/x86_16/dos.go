@@ -325,12 +325,8 @@ func DosInit(u models.Usercorn, args, env []string) error {
 	psp := initPsp(0, nil)
 	u.StrucAt(0).Pack(psp)
 
-	// Setup stack
-	u.RegWrite(u.Arch().SP, STACK_BASE+STACK_SIZE)
-	u.SetStackBase(STACK_BASE)
-	u.SetStackSize(STACK_SIZE)
 	u.SetEntry(0x100)
-	return nil
+	return u.MapStack(STACK_BASE, STACK_SIZE, false)
 }
 
 func DosSyscall(u models.Usercorn) {

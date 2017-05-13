@@ -35,7 +35,7 @@ func NewKernel(u models.Usercorn) *DarwinKernel {
 }
 
 func StackInit(u models.Usercorn, args, env []string) error {
-	if err := u.MapStack(STACK_BASE, STACK_SIZE); err != nil {
+	if err := u.MapStack(STACK_BASE, STACK_SIZE, false); err != nil {
 		return err
 	}
 	var tmp [8]byte

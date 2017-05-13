@@ -140,26 +140,7 @@ func CgcInit(u models.Usercorn, args, env []string) error {
 		return err
 	}
 	u.RegWrite(uc.X86_REG_ECX, secretPage)
-
-	for _, m := range u.Mappings() {
-		if m.Desc == "stack" {
-			u.MemUnmap(m.Addr, m.Size)
-			break
-		}
-	}
-	base := uint64(0xbaaab000 - 0x800000)
-	if err := u.MemMapProt(base, 0x800000, uc.PROT_ALL); err != nil {
-		return err
-	}
-	for _, m := range u.Mappings() {
-		if m.Addr == base {
-			m.Desc = "stack"
-			break
-		}
-	}
-	u.RegWrite(u.Arch().SP, 0xbaaaaffc)
-	u.SetStackBase(base)
-	return nil
+	return u.MapStack(0xbaaab000, 0x800000, false)
 }
 
 func CgcSyscall(u models.Usercorn) {
