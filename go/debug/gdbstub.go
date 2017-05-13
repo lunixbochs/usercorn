@@ -7,7 +7,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/pkg/errors"
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"net"
 	"os"
 	"strconv"
@@ -276,7 +275,7 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 			c.Send("OK")
 			break
 		}
-		h, _ := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+		h, _ := u.HookAdd(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
 			u.Trampoline(func() error { return nil })
 		}, addr, addr+1)
 		c.breakpoints[addr] = h
@@ -297,7 +296,7 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 		c.Wait()
 	case 's': // step
 		first := true
-		h, _ := u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+		h, _ := u.HookAdd(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
 			if first {
 				first = false
 			} else {

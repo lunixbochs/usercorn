@@ -1,13 +1,13 @@
 package posix
 
 import (
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io"
 	"os"
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 	"github.com/lunixbochs/usercorn/go/native/enum"
 )
 
@@ -85,7 +85,7 @@ func (k *PosixKernel) Munmap(addr, size uint64) uint64 {
 
 func (k *PosixKernel) Mprotect(addr, size uint64, prot enum.MmapProt) uint64 {
 	// FIXME: Issue #137
-	prot = enum.MmapProt(uc.PROT_ALL)
+	prot = enum.MmapProt(cpu.PROT_ALL)
 	if err := k.U.MemProt(addr, size, int(prot)); err != nil {
 		return UINT64_MAX // FIXME
 	}

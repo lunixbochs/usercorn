@@ -3,7 +3,6 @@ package usercorn
 import (
 	"encoding/binary"
 	"github.com/pkg/errors"
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
@@ -88,7 +87,7 @@ func (t *Task) MemMapProt(addr, size uint64, prot int) error {
 }
 
 func (t *Task) MemMap(addr, size uint64) error {
-	return t.MemMapProt(addr, size, uc.PROT_ALL)
+	return t.MemMapProt(addr, size, cpu.PROT_ALL)
 }
 
 func (t *Task) MemProtect(addr, size uint64, prot int) error {
@@ -183,14 +182,14 @@ func (t *Task) MemReserve(addr, size uint64, force bool) (*models.Mmap, error) {
 	addr, size = align(addr, size, true)
 	if force {
 		t.MemUnmap(addr, size)
-		mmap := &models.Mmap{Addr: addr, Size: size, Prot: uc.PROT_ALL}
+		mmap := &models.Mmap{Addr: addr, Size: size, Prot: cpu.PROT_ALL}
 		t.memory = append(t.memory, mmap)
 		return mmap, nil
 	}
 	lastPage := ^uint64(0)>>uint8(64-t.bits) - UC_MEM_ALIGN + 2
 	for i := addr; i < lastPage; i += UC_MEM_ALIGN {
 		if t.mapping(i, size) == nil {
-			mmap := &models.Mmap{Addr: i, Size: size, Prot: uc.PROT_ALL}
+			mmap := &models.Mmap{Addr: i, Size: size, Prot: cpu.PROT_ALL}
 			t.memory = append(t.memory, mmap)
 			return mmap, nil
 		}
@@ -203,7 +202,7 @@ func (t *Task) Mmap(addr, size uint64) (*models.Mmap, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mmap, t.Cpu.MemMapProt(mmap.Addr, mmap.Size, uc.PROT_ALL)
+	return mmap, t.Cpu.MemMapProt(mmap.Addr, mmap.Size, cpu.PROT_ALL)
 }
 
 func (t *Task) PackAddr(buf []byte, n uint64) ([]byte, error) {

@@ -17,6 +17,7 @@ import (
 	"github.com/lunixbochs/usercorn/go"
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 var secretPage uint64 = 0x4347c000
@@ -292,7 +293,7 @@ func main() {
 	if *icount {
 		var imut sync.Mutex
 		for _, cb := range cs {
-			cb.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+			cb.HookAdd(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
 				imut.Lock()
 				inscount += 1
 				imut.Unlock()
@@ -306,7 +307,7 @@ func main() {
 	if *flagtrace {
 		for i, cb := range cs {
 			name := fmt.Sprintf("CB-%d", i)
-			cb.HookAdd(uc.HOOK_MEM_READ, func(_ uc.Unicorn, access int, addr uint64, size int, val int64) {
+			cb.HookAdd(cpu.HOOK_MEM_READ, func(_ cpu.Cpu, access int, addr uint64, size int, val int64) {
 				if addr >= secretPage && addr <= secretPage+0x1000 {
 					eip, _ := cb.RegRead(uc.X86_REG_EIP)
 					fmt.Printf("%s: FLAG READ eip: 0x%x addr: 0x%x size: %d\n", name, eip, addr, size)

@@ -3,7 +3,6 @@ package models
 import (
 	"fmt"
 	"github.com/pkg/errors"
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"regexp"
 	"strconv"
 
@@ -113,7 +112,7 @@ outer:
 				continue outer
 			}
 		}
-		hook, err := b.u.HookAdd(uc.HOOK_CODE, func(_ uc.Unicorn, addr uint64, size uint32) {
+		hook, err := b.u.HookAdd(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
 			b.cb(b.u, addr)
 		}, addr, addr+1)
 		if err != nil {

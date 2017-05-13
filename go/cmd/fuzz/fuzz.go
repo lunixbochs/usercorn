@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"github.com/pkg/errors"
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"io"
 	"io/ioutil"
 	"os"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/lunixbochs/usercorn/go/cmd"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 /*
@@ -99,7 +99,7 @@ func main() {
 	fuzzMap := []byte((*[1 << 30]byte)(unsafe.Pointer(aflArea))[:])
 
 	var lastPos uint64
-	blockTrace := func(_ uc.Unicorn, addr uint64, size uint32) {
+	blockTrace := func(_ cpu.Cpu, addr uint64, size uint32) {
 		if lastPos == 0 {
 			lastPos = addr >> 1
 			return
@@ -115,7 +115,7 @@ func main() {
 		return nil
 	}
 	addHook := func(u models.Usercorn) error {
-		_, err := u.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0)
+		_, err := u.HookAdd(cpu.HOOK_BLOCK, blockTrace, 1, 0)
 		return errors.Wrap(err, "u.HookAdd() failed")
 	}
 	c.RunUsercorn = func(args, env []string) error {

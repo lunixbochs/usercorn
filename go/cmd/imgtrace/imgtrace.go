@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 	"image/jpeg"
 	"os"
 	"path"
 
 	"github.com/lunixbochs/usercorn/go/cmd"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 
 	frame := 0
 	skip := 0
-	memTrace := func(u uc.Unicorn, access int, addr uint64, size int, value int64) {
+	memTrace := func(u cpu.Cpu, access int, addr uint64, size int, value int64) {
 		var buf [8]byte
 		b, _ := c.Usercorn.PackAddr(buf[:], uint64(value))
 		memImg.traceMem(c.Usercorn, addr, b[:size])
@@ -31,7 +31,7 @@ func main() {
 			memImg.dirty = true
 		}
 	}
-	blockTrace := func(u uc.Unicorn, addr uint64, size uint32) {
+	blockTrace := func(u cpu.Cpu, addr uint64, size uint32) {
 		if !memImg.dirty {
 			return
 		}
@@ -80,10 +80,10 @@ func main() {
 		if err := os.Mkdir(*outdir, 0755); err != nil {
 			return err
 		}
-		if _, err := c.Usercorn.HookAdd(uc.HOOK_MEM_WRITE, memTrace, 1, 0); err != nil {
+		if _, err := c.Usercorn.HookAdd(cpu.HOOK_MEM_WRITE, memTrace, 1, 0); err != nil {
 			return err
 		}
-		if _, err := c.Usercorn.HookAdd(uc.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
+		if _, err := c.Usercorn.HookAdd(cpu.HOOK_BLOCK, blockTrace, 1, 0); err != nil {
 			return err
 		}
 		if *binimg {
