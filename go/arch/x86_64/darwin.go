@@ -12,6 +12,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/darwin"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 type DarwinKernel struct {
@@ -367,7 +368,7 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 	if err := u.MemMap(commpageAddrBegin, commpageAddrEnd-commpageAddrBegin); err != nil {
 		return err
 	}
-	u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(mu uc.Unicorn, access int, addr uint64, size int, value int64) {
+	u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ cpu.Cpu, access int, addr uint64, size int, value int64) {
 		if addr < commpageAddrBegin || addr > commpageAddrEnd {
 			return
 		}
