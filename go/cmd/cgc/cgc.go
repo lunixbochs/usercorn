@@ -410,7 +410,9 @@ func main() {
 			for _, cb := range cs {
 				cb.Stop()
 			}
-			pov.Stop()
+			if pov != nil {
+				pov.Stop()
+			}
 			wg.Done()
 		}()
 		if len(cs) > 1 {
