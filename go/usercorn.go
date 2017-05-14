@@ -332,6 +332,11 @@ func (u *Usercorn) Run(args, env []string) error {
 			}
 		}()
 	}
+	if u.config.InsCount {
+		u.HookAdd(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
+			u.inscount++
+		}, 1, 0)
+	}
 	if u.config.Verbose {
 		u.Printf("[entry @ 0x%x]\n", u.entry)
 		dis, err := u.Dis(u.entry, 64, u.config.DisBytes)
