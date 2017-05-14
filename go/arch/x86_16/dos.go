@@ -87,21 +87,17 @@ var dosSysNum = map[int]string{
 	0x4C: "terminate_with_code",
 }
 
-// TODO: Create a reverse map of this for conciseness
-var abiMap = map[int][]int{
-	0x00: {},
-	0x01: {DX},
-	0x02: {DX},
-	0x09: {DX},
-	0x30: {},
-	0x3C: {DX, CX},
-	0x3D: {DX, AL},
-	0x3E: {BX},
-	0x3F: {BX, DX, CX},
-	0x40: {BX, DX, CX},
-	0x41: {DX, CX},
-	0x4C: {AL},
+type abi []int
+
+// ABI to syscall number mapping
+var abiMap = map[*abi][]int{
+	&abi{BX, DX, CX}: {0x00, 0x30, 0x3E, 0x3F, 0x40},
+	&abi{DX, CX}:     {0x01, 0x02, 0x09, 0x3C, 0x41},
+	&abi{DX, AL}:     {0x3D},
+	&abi{AL}:         {0x4C},
 }
+
+var syscallAbis = map[int][]int{}
 
 type PSP struct {
 	CPMExit                     [2]byte
@@ -315,6 +311,13 @@ func NewKernel() *DosKernel {
 	k.fds[1] = 1
 	k.fds[2] = 2
 
+	// Invert the syscall map
+	for abi, syscalls := range abiMap {
+		for _, syscall := range syscalls {
+			syscallAbis[syscall] = *abi
+		}
+	}
+
 	k.Argjoy.Register(k.getDosArgCodec())
 	return k
 }
@@ -366,7 +369,8 @@ func (k *DosKernel) getDosArgCodec() func(interface{}, []interface{}) error {
 }
 
 func dosArgs(u models.Usercorn, num int) func(int) ([]uint64, error) {
-	return co.RegArgs(u, abiMap[num])
+	// Return a closure over the correct arglist based on the syscall number
+	return co.RegArgs(u, syscallAbis[num])
 }
 
 func DosInterrupt(u models.Usercorn, cause uint32) {
