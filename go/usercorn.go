@@ -315,13 +315,15 @@ func (u *Usercorn) Run(args, env []string) error {
 			return err
 		}
 	}
-	// TODO: defers are expensive I hear
-	if err := u.trace.Attach(); err != nil {
-		return err
-	} else {
-		defer func() {
-			u.trace.Detach()
-		}()
+	if u.config.Trace.Any() {
+		// TODO: defers are expensive I hear
+		if err := u.trace.Attach(); err != nil {
+			return err
+		} else {
+			defer func() {
+				u.trace.Detach()
+			}()
+		}
 	}
 	if err := u.addHooks(); err != nil {
 		return err

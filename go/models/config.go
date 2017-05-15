@@ -23,6 +23,10 @@ type TraceConfig struct {
 	OpCallback func(Op)
 }
 
+func (t *TraceConfig) Any() bool {
+	return t.Everything || t.Block || t.Ins || t.Mem || t.SpecialReg || t.Sys
+}
+
 func (t *TraceConfig) Init() {
 	if t.Ins {
 		t.Block = true
