@@ -1,7 +1,11 @@
 language: c
-sudo: true
-dist: trusty
 cache: ccache
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
+    - os: osx
 
 before_install:
   - date
@@ -12,3 +16,4 @@ script: 'make test'
 
 go:
   - 1.5
+  - 1.8
