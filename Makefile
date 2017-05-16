@@ -1,5 +1,11 @@
-.PHONY: get test deps usercorn imgtrace shellcode repl fuzz cfg trace com cgc
 .DEFAULT_GOAL := build
+ALL_TARGETS := usercorn imgtrace shellcode repl fuzz cfg trace com cgc
+.PHONY: get test deps ${ALL_TARGETS}
+
+all: ${ALL_TARGETS}
+
+clean:
+	rm ${ALL_TARGETS}
 
 build: get all
 
@@ -12,12 +18,18 @@ ARCH := $(shell uname -m)
 
 ifeq "$(OS)" "Darwin"
 	LIBEXT = dylib
-	FIXRPATH = install_name_tool \
+	FIXRPATH = @install_name_tool \
 		-add_rpath @executable_path/lib \
 		-add_rpath @executable_path/deps/lib \
+		-change libunicorn.dylib @rpath/libunicorn.dylib \
 		-change libunicorn.1.dylib @rpath/libunicorn.1.dylib \
+		-change libunicorn.2.dylib @rpath/libunicorn.2.dylib \
 		-change libcapstone.dylib @rpath/libcapstone.dylib \
-		-change libkeystone.0.dylib @rpath/libkeystone.0.dylib
+		-change libcapstone.3.dylib @rpath/libcapstone.3.dylib \
+		-change libcapstone.4.dylib @rpath/libcapstone.4.dylib \
+		-change libkeystone.dylib @rpath/libkeystone.dylib \
+		-change libkeystone.0.dylib @rpath/libkeystone.0.dylib \
+		-change libkeystone.1.dylib @rpath/libkeystone.1.dylib
 endif
 
 # figure out if we can download Go
@@ -104,40 +116,50 @@ else
 endif
 DEPS=$(shell env PATH=$(PATHX) GOROOT=$(GOROOT) GOPATH=$(GOPATH) go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
 
+# TODO: more DRY?
 usercorn: .gopath
-	sh -c "PATH=$(PATHX) $(GOBUILD) -o usercorn ./go/cmd/usercorn"
+	@echo "$(GOBUILD) -o usercorn ./go/cmd/usercorn"
+	@sh -c "PATH=$(PATHX) $(GOBUILD) -o usercorn ./go/cmd/usercorn"
 	$(FIXRPATH) usercorn
 
 imgtrace: .gopath
-	sh -c "PATH=$(PATHX) $(GOBUILD) -o imgtrace ./go/cmd/imgtrace"
+	@echo "$(GOBUILD) -o imgtrace ./go/cmd/imgtrace"
+	@sh -c "PATH=$(PATHX) $(GOBUILD) -o imgtrace ./go/cmd/imgtrace"
 	$(FIXRPATH) imgtrace
 
 shellcode: .gopath
-	sh -c "PATH=$(PATHX) $(GOBUILD) -o shellcode ./go/cmd/shellcode"
+	@echo "$(GOBUILD) -o shellcode ./go/cmd/shellcode"
+	@sh -c "PATH=$(PATHX) $(GOBUILD) -o shellcode ./go/cmd/shellcode"
 	$(FIXRPATH) shellcode
 
 repl: .gopath
-	sh -c "PATH=$(PATHX) $(GOBUILD) -o repl ./go/cmd/repl"
+	@echo "$(GOBUILD) -o repl ./go/cmd/repl"
+	@sh -c "PATH=$(PATHX) $(GOBUILD) -o repl ./go/cmd/repl"
 	$(FIXRPATH) repl
 
 fuzz: .gopath
-	sh -c "PATH=$(PATHX) $(GOBUILD) -o fuzz ./go/cmd/fuzz"
+	@echo "$(GOBUILD) -o fuzz ./go/cmd/fuzz"
+	@sh -c "PATH=$(PATHX) $(GOBUILD) -o fuzz ./go/cmd/fuzz"
 	$(FIXRPATH) fuzz
 
 cfg: .gopath
-	sh -c "PATH=$(PATHX) $(GOBUILD) -o cfg ./go/cmd/cfg"
+	@echo "$(GOBUILD) -o cfg ./go/cmd/cfg"
+	@sh -c "PATH=$(PATHX) $(GOBUILD) -o cfg ./go/cmd/cfg"
 	$(FIXRPATH) cfg
 
 cgc: .gopath
-	sh -c "PATH=$(PATHX) $(GOBUILD) -o cgc ./go/cmd/cgc"
+	@echo "$(GOBUILD) -o cgc ./go/cmd/cgc"
+	@sh -c "PATH=$(PATHX) $(GOBUILD) -o cgc ./go/cmd/cgc"
 	$(FIXRPATH) cgc
 
 trace: .gopath
-	sh -c "PATH=$(PATHX) $(GOBUILD) -o trace ./go/cmd/trace"
+	@echo "$(GOBUILD) -o trace ./go/cmd/trace"
+	@sh -c "PATH=$(PATHX) $(GOBUILD) -o trace ./go/cmd/trace"
 	$(FIXRPATH) trace
 
 com: .gopath
-	sh -c "PATH=$(PATHX) $(GOBUILD) -o com ./go/cmd/com"
+	@echo "$(GOBUILD) -o com ./go/cmd/com"
+	@sh -c "PATH=$(PATHX) $(GOBUILD) -o com ./go/cmd/com"
 	$(FIXRPATH) com
 
 get: .gopath
@@ -148,5 +170,3 @@ test: .gopath
 
 bench: .gopath
 	sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test -v -benchmem -bench=. ./go/..."
-
-all: usercorn imgtrace shellcode repl fuzz cgc
