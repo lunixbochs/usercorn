@@ -3,6 +3,7 @@ package cpu
 import (
 	"bytes"
 	"github.com/pkg/errors"
+	"sort"
 )
 
 type MemRegion struct {
@@ -54,6 +55,12 @@ func (m *MemRegion) Write(addr uint64, p []byte) {
 	copy(m.Data[addr-m.Addr:], p)
 }
 
+type memSort []*MemRegion
+
+func (m memSort) Len() int           { return len(m) }
+func (m memSort) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m memSort) Less(i, j int) bool { return m[i].Addr < m[j].Addr }
+
 type MemSim struct {
 	mem []*MemRegion
 }
@@ -67,30 +74,61 @@ func (m *MemSim) Find(addr uint64) *MemRegion {
 	return nil
 }
 
-// returns whether the address range exists in the currently-mapped memory
-// FIXME: algorithm is terrible
-func (m *MemSim) RangeValid(addr, size uint64) bool {
-	end := addr + size
-outer:
-	for addr < end {
-		for _, mm := range m.mem {
-			if mm.Contains(addr) {
-				addr = mm.Addr + mm.Size
-			}
-			continue outer
-		}
-		return false
+// Checks whether the address range exists in the currently-mapped memory.
+// If prot > 0, ensures that each region has the entire protection mask provided.
+func (m *MemSim) RangeValid(addr, size uint64, prot int) (mapGood bool, protGood bool) {
+	first := m.bsearch(addr)
+	if first == -1 {
+		return false, false
 	}
-	return true
+	protGood = true
+	end := addr + size
+	for _, mm := range m.mem[first:] {
+		if mm.Contains(addr) {
+			addr = mm.Addr + mm.Size
+			if prot > 0 && mm.Prot&prot != prot {
+				protGood = false
+			}
+		} else {
+			break
+		}
+	}
+	return addr >= end, protGood
 }
 
+// binary search to find index of first region containing addr, if any, else -1
+func (m *MemSim) bsearch(addr uint64) int {
+	l := 0
+	r := len(m.mem) - 1
+	for l <= r {
+		mid := (l + r) / 2
+		e := m.mem[mid]
+		if addr >= e.Addr {
+			if addr < e.Addr+e.Size {
+				return mid
+			}
+			l = mid + 1
+		} else if addr < e.Addr {
+			r = mid - 1
+		}
+	}
+	return -1
+}
+
+// Maps <addr> - <addr>+<size> and protects with prot.
+// If zero is false, it first copies any existing data in this range to the new mapping.
+// Any overlapping regions will be unmapped, then then the mapping list will be sorted by address
+// to allow binary search and simpler reads / bound checks.
 func (m *MemSim) Map(addr, size uint64, prot int, zero bool) {
 	data := make([]byte, size)
 	if !zero {
 		m.Read(addr, data, 0)
 	}
-	m.Unmap(addr, size)
+	if gmem, _ := m.RangeValid(addr, size, 0); gmem {
+		m.Unmap(addr, size)
+	}
 	m.mem = append(m.mem, &MemRegion{Addr: addr, Size: size, Prot: prot, Data: data})
+	sort.Sort(memSort(m.mem))
 }
 
 func (m *MemSim) Prot(addr, size uint64, prot int) {
@@ -99,10 +137,10 @@ func (m *MemSim) Prot(addr, size uint64, prot int) {
 
 func (m *MemSim) Unmap(addr, size uint64) {
 	// truncate entries overlapping addr, size
-	var tmp, pop []*MemRegion
+	tmp := make([]*MemRegion, 0, len(m.mem))
+	// TODO: use a binary search to find the leftmost mapping?
 	for _, mm := range m.mem {
 		if mm.Overlaps(addr, size) {
-			pop = append(pop, mm)
 			left, right := mm.Split(addr, size)
 			if left != nil {
 				tmp = append(tmp, left)
@@ -110,44 +148,48 @@ func (m *MemSim) Unmap(addr, size uint64) {
 			if right != nil {
 				tmp = append(tmp, right)
 			}
+		} else {
+			tmp = append(tmp, mm)
 		}
-	}
-	// remove entries in `pop` from m.mem
-outer:
-	for _, mm := range m.mem {
-		for _, p := range pop {
-			if mm == p {
-				continue outer
-			}
-		}
-		tmp = append(tmp, mm)
 	}
 	m.mem = tmp
 }
 
-// TODO: check that read or write covered entire range
+// TODO: allow partial reads, and return amount read?
+// alternatively, return the offset that failed so they can retry
 func (m *MemSim) Read(addr uint64, p []byte, prot int) error {
+	if gmap, gprot := m.RangeValid(addr, uint64(len(p)), prot); !gmap {
+		// TODO: use a standard err type so Mem can wrap it
+		return errors.Errorf("read from unmapped range: %#x-%#x", addr, len(p))
+	} else if !gprot {
+		return errors.Errorf("read from protected range: %#x-%#x", addr, len(p))
+	}
+	// TODO: consecutive read using bsearch
 	for _, mm := range m.mem {
 		if mm.Contains(addr) {
-			// enforce PROT_READ or PROT_EXEC
-			if prot != 0 && mm.Prot&prot != prot {
-				return errors.New("read fault")
-			}
 			o := addr - mm.Addr
-			copy(p, mm.Data[o:])
+			n := copy(p, mm.Data[o:])
+			addr, p = addr+uint64(n), p[n:]
 		}
 	}
 	return nil
 }
 
+// TODO: allow partial writes on error, and return amount read?
+// alternatively, return the offset that failed so they can retry
 func (m *MemSim) Write(addr uint64, p []byte, prot int) error {
+	if gmap, gprot := m.RangeValid(addr, uint64(len(p)), prot); !gmap {
+		// TODO: use a standard err type so Mem can wrap it
+		return errors.Errorf("write to unmapped range: %#x-%#x", addr, len(p))
+	} else if !gprot {
+		return errors.Errorf("write to protected range: %#x-%#x", addr, len(p))
+	}
+	// TODO: consecutive write using bsearch
 	for _, mm := range m.mem {
 		if mm.Contains(addr) {
-			if prot != 0 && mm.Prot&prot != prot {
-				return errors.New("write fault")
-			}
 			o := addr - mm.Addr
-			copy(mm.Data[o:], p)
+			n := copy(mm.Data[o:], p)
+			addr, p = addr+uint64(n), p[n:]
 		}
 	}
 	return nil

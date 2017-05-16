@@ -27,7 +27,7 @@ func (m *Mem) MemMapProt(addr, size uint64, prot int) error {
 }
 
 func (m *Mem) MemProt(addr, size uint64, prot int) error {
-	if !m.RangeValid(addr, size) {
+	if mapped, _ := m.RangeValid(addr, size, 0); !mapped {
 		return errors.New("range not mapped")
 	}
 	m.MemSim.Prot(addr, size, prot)
@@ -35,7 +35,7 @@ func (m *Mem) MemProt(addr, size uint64, prot int) error {
 }
 
 func (m *Mem) MemUnmap(addr, size uint64) error {
-	if !m.RangeValid(addr, size) {
+	if mapped, _ := m.RangeValid(addr, size, 0); !mapped {
 		return errors.New("range not mapped")
 	}
 	m.MemSim.Unmap(addr, size)
