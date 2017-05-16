@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 	"github.com/lunixbochs/usercorn/go/models/trace"
 )
 
@@ -20,7 +21,7 @@ func pad(s string, to int) string {
 type StreamUI struct {
 	Arch   *models.Arch
 	OS     *models.OS
-	Mem    *models.MemSim
+	Mem    *cpu.MemSim
 	Regs   map[int]uint64
 	SpRegs map[int][]byte
 	PC, SP uint64
@@ -45,7 +46,7 @@ func NewStreamUI(w io.Writer, arch *models.Arch, os *models.OS) *StreamUI {
 	return &StreamUI{
 		Arch:   arch,
 		OS:     os,
-		Mem:    &models.MemSim{},
+		Mem:    &cpu.MemSim{},
 		Regs:   make(map[int]uint64),
 		SpRegs: make(map[int][]byte),
 
@@ -78,7 +79,7 @@ func (s *StreamUI) update(op models.Op) {
 	case *trace.OpMemUnmap:
 		s.Mem.Unmap(o.Addr, uint64(o.Size))
 	case *trace.OpMemWrite:
-		s.Mem.Write(o.Addr, o.Data)
+		s.Mem.Write(o.Addr, o.Data, 0)
 
 	case *trace.OpSyscall:
 		for _, v := range o.Ops {
@@ -170,7 +171,7 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 
 	var ins string
 	insmem := make([]byte, size)
-	s.Mem.Read(pc, insmem)
+	s.Mem.Read(pc, insmem, 0)
 	// TODO: disBytes setting?
 	dis, err := models.Disas(insmem, pc, s.Arch, false)
 	if err != nil {
@@ -238,83 +239,3 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 		}
 	}
 }
-
-/*
-func PrintPretty(tf *trace.TraceReader) error {
-		for _, op := range ops {
-			switch o := op.(type) {
-			case *trace.OpStep:
-				mem := make([]byte, o.Size)
-				sim.Read(pc, mem)
-				dis, err := models.Disas(mem, pc, tf.Arch, false)
-				if err != nil {
-					fmt.Printf("   %#x: %x\n", pc, mem)
-				} else {
-					fmt.Printf("   %#x: %s\n", pc, dis)
-				}
-				pc += uint64(o.Size)
-
-			case *trace.OpReg:
-				// TODO: the map lookup here is probably slow
-				// there should be a bounded array lookup instead
-				name, _ := tf.Arch.RegNames()[int(o.Num)]
-				fmt.Printf("     r%d(%s) = %#x\n", o.Num, name, o.Val)
-			case *trace.OpSpReg:
-				fmt.Printf("     sr %d = %x\n", o.Num, o.Val)
-
-			// memory ops (also passed onto MemSim)
-			case *trace.OpMemMap:
-				sim.HandleOp(op)
-				fmt.Printf("  map: addr=%#x size=%#x\n", o.Addr, o.Size)
-			case *trace.OpMemUnmap:
-				sim.HandleOp(op)
-				fmt.Printf("unmap: addr=%#x size=%#x\n", o.Addr, o.Size)
-
-			case *trace.OpMemWrite:
-				// TODO: DRY?
-				// TODO: use mlog2 here
-				sim.HandleOp(op)
-				fmt.Printf("W  %#x", o.Addr)
-				if len(o.Data) > 8 {
-					fmt.Println()
-					for _, line := range models.HexDump(o.Addr, o.Data, tf.Arch.Bits) {
-						fmt.Println(line)
-					}
-				} else {
-					fmt.Printf(": %x\n", o.Data)
-				}
-			case *trace.OpMemRead:
-				sim.HandleOp(op)
-				fmt.Printf("R  %#x", o.Addr)
-				if len(o.Data) > 8 {
-					fmt.Println()
-					for _, line := range models.HexDump(o.Addr, o.Data, tf.Arch.Bits) {
-						fmt.Println(line)
-					}
-				} else {
-					fmt.Printf(": %x\n", o.Data)
-				}
-
-			case *trace.OpSyscall:
-				// FIXME: this is a regression, how do we strace?
-				// I think I need to embed the strace string during trace
-				// until I get a chance to rework the strace backend
-				args := make([]string, len(o.Args))
-				for i, v := range o.Args {
-					args[i] = fmt.Sprintf("%#x", v)
-				}
-				fmt.Printf("syscall(%d, [%s]) = %d\n", o.Num, strings.Join(args, ", "), o.Ret)
-			case *trace.OpExit:
-				fmt.Println("[exit]")
-			default:
-				// probably nop
-			}
-		}
-		if keyframe {
-			fmt.Println("[end keyframe]")
-		}
-		// what if a frame had nothing useful? this will spew newlines
-		fmt.Println()
-	}
-	return nil
-*/

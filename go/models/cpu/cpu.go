@@ -1,7 +1,5 @@
 package cpu
 
-type Hook interface{}
-
 // This interface abstracts the minimum functionality Usercorn requires in a CPU emulator.
 type Cpu interface {
 	// memory mapping
