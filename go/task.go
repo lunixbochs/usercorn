@@ -210,19 +210,33 @@ func (t *Task) PackAddr(buf []byte, n uint64) ([]byte, error) {
 	if len(buf) < t.Bsz {
 		return nil, errors.Errorf("buffer too small (%d < %d)", len(buf), t.Bsz)
 	}
-	if t.bits == 64 {
+	switch t.bits {
+	case 64:
 		t.order.PutUint64(buf[:t.Bsz], n)
-	} else {
+	case 32:
 		t.order.PutUint32(buf[:t.Bsz], uint32(n))
+	case 16:
+		t.order.PutUint16(buf[:t.Bsz], uint16(n))
+	case 8:
+		buf[0] = byte(n)
+	default:
+		return nil, errors.Errorf("unsupported bit size: %d", t.bits)
 	}
 	return buf[:t.Bsz], nil
 }
 
 func (t *Task) UnpackAddr(buf []byte) uint64 {
-	if t.bits == 64 {
+	switch t.bits {
+	case 64:
 		return t.order.Uint64(buf)
-	} else {
+	case 32:
 		return uint64(t.order.Uint32(buf))
+	case 16:
+		return uint64(t.order.Uint16(buf))
+	case 8:
+		return uint64(buf[0])
+	default:
+		panic(errors.Errorf("unsupported bit size: %d", t.bits))
 	}
 }
 
