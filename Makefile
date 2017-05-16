@@ -16,7 +16,7 @@ ifeq "$(OS)" "Darwin"
 		-add_rpath @executable_path/lib \
 		-add_rpath @executable_path/deps/lib \
 		-change libunicorn.1.dylib @rpath/libunicorn.1.dylib \
-		-change libcapstone.dylib @rpath/libcapstone.dylib \
+		-change libcapstone.3.dylib @rpath/libcapstone.3.dylib \
 		-change libkeystone.0.dylib @rpath/libkeystone.0.dylib
 endif
 
