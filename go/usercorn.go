@@ -378,6 +378,10 @@ func (u *Usercorn) Run(args, env []string) error {
 	for err == nil && u.exitStatus == nil {
 		// well there's a huge pile of sync here to make sure everyone's ready to go...
 		u.gate.Start()
+		// allow a repl to break us out with u.Exit() before we run
+		if u.exitStatus != nil {
+			break
+		}
 		err = u.Start(pc, u.exit)
 		u.gate.Stop()
 

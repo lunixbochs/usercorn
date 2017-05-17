@@ -16,6 +16,7 @@ import (
 	usercorn "github.com/lunixbochs/usercorn/go"
 	"github.com/lunixbochs/usercorn/go/debug"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/repl"
 )
 
 type strslice []string
@@ -164,6 +165,8 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	gdb := fs.Int("gdb", -1, "listen for gdb connection on localhost:<port>")
 	listen := fs.Int("listen", -1, "listen for debug connection on localhost:<port>")
 	connect := fs.Int("connect", -1, "connect to remote usercorn debugger on localhost:<port>")
+
+	startrepl := fs.Bool("repl", false, "experimental repl")
 
 	cpuprofile := fs.String("cpuprofile", "", "write cpu profile to <file>")
 	memprofile := fs.String("memprofile", "", "write mem profile to <file>")
@@ -376,6 +379,14 @@ func (c *UsercornCmd) Run(argv, env []string) {
 			os.Exit(1)
 		}
 		go debug.NewDebugger(corn).Run(conn)
+	}
+
+	if *startrepl {
+		if err := repl.Run(corn); err != nil {
+			fmt.Fprintf(os.Stderr, "error starting repl: %v\n", err)
+			teardown()
+			os.Exit(1)
+		}
 	}
 
 	// start executable
