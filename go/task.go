@@ -207,37 +207,15 @@ func (t *Task) Mmap(addr, size uint64) (*models.Mmap, error) {
 }
 
 func (t *Task) PackAddr(buf []byte, n uint64) ([]byte, error) {
-	if len(buf) < t.Bsz {
-		return nil, errors.Errorf("buffer too small (%d < %d)", len(buf), t.Bsz)
-	}
-	switch t.bits {
-	case 64:
-		t.order.PutUint64(buf[:t.Bsz], n)
-	case 32:
-		t.order.PutUint32(buf[:t.Bsz], uint32(n))
-	case 16:
-		t.order.PutUint16(buf[:t.Bsz], uint16(n))
-	case 8:
-		buf[0] = byte(n)
-	default:
-		return nil, errors.Errorf("unsupported bit size: %d", t.bits)
-	}
-	return buf[:t.Bsz], nil
+	return cpu.PackUint(t.order, t.Bsz, buf, n)
 }
 
 func (t *Task) UnpackAddr(buf []byte) uint64 {
-	switch t.bits {
-	case 64:
-		return t.order.Uint64(buf)
-	case 32:
-		return uint64(t.order.Uint32(buf))
-	case 16:
-		return uint64(t.order.Uint16(buf))
-	case 8:
-		return uint64(buf[0])
-	default:
-		panic(errors.Errorf("unsupported bit size: %d", t.bits))
+	n, err := cpu.UnpackUint(t.order, t.Bsz, buf)
+	if err != nil {
+		panic(err)
 	}
+	return n
 }
 
 func (t *Task) PopBytes(p []byte) error {

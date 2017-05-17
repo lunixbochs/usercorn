@@ -85,9 +85,12 @@ func (m *MemSim) RangeValid(addr, size uint64, prot int) (mapGood bool, protGood
 	end := addr + size
 	for _, mm := range m.mem[first:] {
 		if mm.Contains(addr) {
-			addr = mm.Addr + mm.Size
-			if prot > 0 && mm.Prot&prot != prot {
+			if prot > 0 && (mm.Prot == 0 || mm.Prot&prot != prot) {
 				protGood = false
+			}
+			addr = mm.Addr + mm.Size
+			if addr >= end {
+				break
 			}
 		} else {
 			break

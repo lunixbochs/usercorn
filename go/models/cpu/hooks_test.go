@@ -1,6 +1,7 @@
 package cpu
 
 import (
+	"encoding/binary"
 	"fmt"
 	"github.com/pkg/errors"
 	"testing"
@@ -15,7 +16,7 @@ func callAll(h *Hooks) {
 }
 
 func makeHooks() (*Mem, *Hooks) {
-	mem := NewMem(64)
+	mem := NewMem(64, binary.LittleEndian)
 	return mem, NewHooks(nil, mem)
 }
 

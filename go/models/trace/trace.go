@@ -122,23 +122,9 @@ func (t *Trace) Attach() error {
 		if err := t.hook(cpu.HOOK_MEM_READ|cpu.HOOK_MEM_WRITE,
 			func(_ cpu.Cpu, access int, addr uint64, size int, val int64) {
 				if access == cpu.MEM_WRITE {
-					var data []byte
 					var tmp [8]byte
-					e := t.u.ByteOrder()
-					switch size {
-					case 1:
-						tmp[0] = uint8(val)
-						data = tmp[:1]
-					case 2:
-						e.PutUint16(tmp[:], uint16(val))
-						data = tmp[:2]
-					case 4:
-						e.PutUint32(tmp[:], uint32(val))
-						data = tmp[:4]
-					case 8:
-						e.PutUint64(tmp[:], uint64(val))
-						data = tmp[:8]
-					}
+					// FIXME? error swallowed
+					data, _ := cpu.PackUint(t.u.ByteOrder(), size, tmp[:], uint64(val))
 					t.OnMemWrite(addr, data)
 				} else {
 					t.OnMemRead(addr, size)
