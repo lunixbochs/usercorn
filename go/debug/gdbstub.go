@@ -203,7 +203,10 @@ func (c *gdbClient) Handle(cmdb []byte) error {
 			c.Send("")
 		}
 	case 'v': // resume
-		if cmd == "Cont?" {
+		switch cmd {
+		case "MustReplyEmpty":
+			c.Send("")
+		case "Cont?":
 			c.Send("")
 		}
 	case 'g': // read regs
