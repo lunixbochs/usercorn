@@ -70,17 +70,26 @@ func (m *Mem) MemWrite(addr uint64, p []byte) error {
 
 // Read while checking protections. This exists to support a CPU interpreter.
 func (m *Mem) ReadProt(addr, size uint64, prot int) ([]byte, error) {
-	// TODO: issue read hook here?
+	if m.hooks != nil {
+		if prot&PROT_EXEC == PROT_EXEC {
+			m.hooks.OnMem(MEM_FETCH, addr, int(size), 0)
+		} else {
+			m.hooks.OnMem(MEM_READ, addr, int(size), 0)
+		}
+	}
 	p := make([]byte, size)
 	if err := m.sim.Read(addr, p, prot); err != nil {
+		if merr, ok := err.(*MemError); ok && m.hooks != nil {
+			m.hooks.OnFault(merr.Enum, addr, int(size), 0)
+		}
 		return nil, err
 	}
 	return p, nil
 }
 
 // Write while checking protections. This exists to support a CPU interpreter.
+// Write hooks trigger in WriteUint for now.
 func (m *Mem) WriteProt(addr uint64, p []byte, prot int) error {
-	// TODO: issue write hook here?
 	return m.sim.Write(addr, p, prot)
 }
 
@@ -95,13 +104,23 @@ func (m *Mem) ReadUint(addr uint64, size, prot int) (uint64, error) {
 	return UnpackUint(m.order, size, p)
 }
 
+// write hook only triggers here, as we can't fill value in WriteProt
 func (m *Mem) WriteUint(addr uint64, size, prot int, val uint64) error {
 	var buf [8]byte
 	if size > 8 {
 		return errors.Errorf("MemWriteUint size too large: %d > 8", size)
 	}
+	if m.hooks != nil {
+		m.hooks.OnMem(MEM_WRITE, addr, int(size), int64(val))
+	}
 	if _, err := PackUint(m.order, size, buf[:], val); err != nil {
 		return err
 	}
-	return m.WriteProt(addr, buf[:size], prot)
+	err := m.WriteProt(addr, buf[:size], prot)
+	if err != nil {
+		if merr, ok := err.(*MemError); ok && m.hooks != nil {
+			m.hooks.OnFault(merr.Enum, addr, int(size), int64(val))
+		}
+	}
+	return err
 }

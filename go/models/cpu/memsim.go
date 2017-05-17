@@ -2,9 +2,34 @@ package cpu
 
 import (
 	"bytes"
-	"github.com/pkg/errors"
+	"fmt"
 	"sort"
 )
+
+type MemError struct {
+	Addr uint64
+	Size int
+	Enum int
+}
+
+func (m *MemError) Error() string {
+	reason := "memory error"
+	switch m.Enum {
+	case MEM_WRITE_UNMAPPED:
+		reason = "unmapped write"
+	case MEM_READ_UNMAPPED:
+		reason = "unmapped read"
+	case MEM_FETCH_UNMAPPED:
+		reason = "unmapped fetch"
+	case MEM_WRITE_PROT:
+		reason = "protected write"
+	case MEM_READ_PROT:
+		reason = "protected read"
+	case MEM_FETCH_PROT:
+		reason = "protected exec"
+	}
+	return fmt.Sprintf("%s at %#x(%d)", reason, m.Addr, m.Size)
+}
 
 type MemRegion struct {
 	Addr uint64
@@ -162,10 +187,15 @@ func (m *MemSim) Unmap(addr, size uint64) {
 // alternatively, return the offset that failed so they can retry
 func (m *MemSim) Read(addr uint64, p []byte, prot int) error {
 	if gmap, gprot := m.RangeValid(addr, uint64(len(p)), prot); !gmap {
-		// TODO: use a standard err type so Mem can wrap it
-		return errors.Errorf("read from unmapped range: %#x-%#x", addr, len(p))
+		if prot&PROT_EXEC == PROT_EXEC {
+			return &MemError{Addr: addr, Size: len(p), Enum: MEM_FETCH_UNMAPPED}
+		}
+		return &MemError{Addr: addr, Size: len(p), Enum: MEM_READ_UNMAPPED}
 	} else if !gprot {
-		return errors.Errorf("read from protected range: %#x-%#x", addr, len(p))
+		if prot&PROT_EXEC == PROT_EXEC {
+			return &MemError{Addr: addr, Size: len(p), Enum: MEM_FETCH_PROT}
+		}
+		return &MemError{Addr: addr, Size: len(p), Enum: MEM_READ_PROT}
 	}
 	// TODO: consecutive read using bsearch
 	for _, mm := range m.mem {
@@ -182,10 +212,9 @@ func (m *MemSim) Read(addr uint64, p []byte, prot int) error {
 // alternatively, return the offset that failed so they can retry
 func (m *MemSim) Write(addr uint64, p []byte, prot int) error {
 	if gmap, gprot := m.RangeValid(addr, uint64(len(p)), prot); !gmap {
-		// TODO: use a standard err type so Mem can wrap it
-		return errors.Errorf("write to unmapped range: %#x-%#x", addr, len(p))
+		return &MemError{Addr: addr, Size: len(p), Enum: MEM_WRITE_UNMAPPED}
 	} else if !gprot {
-		return errors.Errorf("write to protected range: %#x-%#x", addr, len(p))
+		return &MemError{Addr: addr, Size: len(p), Enum: MEM_WRITE_PROT}
 	}
 	// TODO: consecutive write using bsearch
 	for _, mm := range m.mem {
