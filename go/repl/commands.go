@@ -69,4 +69,17 @@ func s(steps)
 	us:Gate():UnlockStopRelock()
 	u.hook_del(hh)
 end
+
+func b(baddr)
+	local hh = u.hook_add(cpu.HOOK_CODE, func()
+		if bskip == baddr then
+			bskip = nil
+			return
+		end
+		bskip = baddr
+		print 'Breakpoint N hit at 0x%x' % baddr
+		u.stop()
+	end, baddr, baddr)
+	print 'Breakpoint N at 0x%x' % baddr
+end
 `
