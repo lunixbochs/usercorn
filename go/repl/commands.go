@@ -47,4 +47,12 @@ func map(addr, size, prot)
         u.mem_map(addr, size, prot)
     end
 end
+
+func dis(addr, size)
+	if addr == nil then addr = pc end
+	if size == nil then size = 16 end
+	print us:Dis(addr, size, true)
+end
+
+func c() us:Gate():UnlockStopRelock() end
 `

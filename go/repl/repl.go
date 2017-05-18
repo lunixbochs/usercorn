@@ -69,6 +69,13 @@ func (L *LuaRepl) postRun(lv []lua.LValue) {
 		pretty := make([]string, len(lv))
 		for i, v := range lv {
 			switch s := v.(type) {
+			case lua.LNumber:
+				n := uint64(s)
+				if n > 0x10000 {
+					pretty[i] = fmt.Sprintf("%#x", n)
+				} else {
+					pretty[i] = fmt.Sprintf("%#x(%d)", n)
+				}
 			case lua.LString:
 				// for some reason repr doesn't print out null bytes properly
 				// pretty[i] = models.Repr([]byte(s), 0)
