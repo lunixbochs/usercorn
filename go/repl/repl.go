@@ -2,9 +2,9 @@ package repl
 
 import (
 	"fmt"
+	"github.com/chzyer/readline"
 	"github.com/lunixbochs/luaish"
 	"github.com/lunixbochs/luaish/parse"
-	"github.com/lunixbochs/readline"
 	"strings"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -134,12 +134,15 @@ func (L *LuaRepl) Run(fn *lua.LFunction) ([]lua.LValue, error) {
 	return ret, nil
 }
 
+var cleanup []func()
+
 func Run(u models.Usercorn) error {
 	u.Gate().Lock()
 	rl, err := readline.NewEx(&readline.Config{})
 	if err != nil {
 		return err
 	}
+	cleanup = append(cleanup, func() { rl.Close() })
 	go func() {
 		defer func() {
 			u.Exit(models.ExitStatus(0))
@@ -165,4 +168,10 @@ func Run(u models.Usercorn) error {
 		}
 	}()
 	return nil
+}
+
+func Exit() {
+	for _, f := range cleanup {
+		f()
+	}
 }
