@@ -77,13 +77,7 @@ type Usercorn struct {
 	trace *trace.Trace
 	ui    *ui.StreamUI
 	// obsolete tracing flags
-	lastSourceLine string
-	status         models.StatusDiff
-	inscount       uint64
-	traceMatching  bool
-	stacktrace     models.Stacktrace
-	blockloop      *models.LoopDetect
-	memlog         models.MemLog
+	inscount uint64
 }
 
 func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
@@ -99,12 +93,11 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	}
 	task := NewTask(cpu, a, OS, l.ByteOrder())
 	u := &Usercorn{
-		Task:          task,
-		traceMatching: true,
-		config:        config,
-		loader:        l,
-		exit:          0xffffffffffffffff,
-		debugFiles:    make(map[string]*models.DebugFile),
+		Task:       task,
+		config:     config,
+		loader:     l,
+		exit:       0xffffffffffffffff,
+		debugFiles: make(map[string]*models.DebugFile),
 	}
 	if config.Trace.Tracefile == "" {
 		u.ui = ui.NewStreamUI(u.config.Output, u.arch, u.os)
@@ -153,10 +146,6 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 			kernels[i] = k.(co.Kernel)
 		}
 		u.kernels = kernels
-	}
-	u.status = models.StatusDiff{U: u}
-	if u.config.LoopCollapse > 0 {
-		u.blockloop = models.NewLoopDetect(u.config.LoopCollapse)
 	}
 	return u, nil
 }
@@ -385,32 +374,31 @@ func (u *Usercorn) Run(args, env []string) error {
 		err = u.Start(pc, u.exit)
 		u.gate.Stop()
 
-		u.Printf("%s", u.memlog.Flush(u.arch.Bits))
 		if u.restart != nil {
 			err = u.restart(u, err)
 			u.restart = nil
 			if err != nil {
 				break
 			}
-		} else if err != nil || len(u.trampolines) == 0 {
-			break
 		}
 		pc, _ = u.RegRead(u.arch.PC)
-		sp, _ := u.RegRead(u.arch.SP)
-		trampolines := u.trampolines
-		u.trampolines = nil
-		// TODO: trampolines should be annotated in trace
-		// trampolines should show up during symbolication?
-		// FIXME: binary tracer does NOT handle this yet
-		u.trampolined = true
-		for _, tramp := range trampolines {
-			if err = tramp.fun(); err != nil {
-				break
+		if len(u.trampolines) > 0 {
+			sp, _ := u.RegRead(u.arch.SP)
+			trampolines := u.trampolines
+			u.trampolines = nil
+			// TODO: trampolines should be annotated in trace
+			// trampolines should show up during symbolication?
+			// FIXME: binary tracer does NOT handle this yet
+			u.trampolined = true
+			for _, tramp := range trampolines {
+				if err = tramp.fun(); err != nil {
+					break
+				}
 			}
+			u.trampolined = false
+			u.RegWrite(u.arch.PC, pc)
+			u.RegWrite(u.arch.SP, sp)
 		}
-		u.trampolined = false
-		u.RegWrite(u.arch.PC, pc)
-		u.RegWrite(u.arch.SP, sp)
 	}
 	if err != nil || u.config.Verbose {
 		verboseExit()

@@ -55,4 +55,18 @@ func dis(addr, size)
 end
 
 func c() us:Gate():UnlockStopRelock() end
+
+func s(steps)
+	if steps == nil then steps = 1 end
+	local i = 0
+	local hh = 0
+	hh = u.hook_add(cpu.HOOK_CODE, func()
+		i = i + 1
+		if i == steps + 1 then
+			u.stop()
+		end
+	end, 1, 0)
+	us:Gate():UnlockStopRelock()
+	u.hook_del(hh)
+end
 `
