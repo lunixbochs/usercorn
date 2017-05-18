@@ -121,7 +121,7 @@ func (c *UsercornCmd) PrintError(err error) {
 	}
 }
 
-func (c *UsercornCmd) Run(argv, env []string) {
+func (c *UsercornCmd) Run(argv, env []string) int {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -216,7 +216,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		if err := debug.RunClient(addr); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		return
+		return 0
 	}
 
 	if *cpuprofile != "" {
@@ -233,7 +233,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		args = fs.Args()
 		if len(args) < 1 {
 			fs.Usage()
-			os.Exit(1)
+			return 1
 		}
 	} else {
 		args = []string{""}
@@ -331,16 +331,15 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	corn, err := c.MakeUsercorn(args[0])
 	if err != nil {
 		c.PrintError(err)
-		os.Exit(1)
+		return 1
 	}
 	c.Usercorn = corn
 	if c.SetupUsercorn != nil {
 		if err := c.SetupUsercorn(); err != nil {
 			c.PrintError(err)
-			os.Exit(1)
+			return 1
 		}
 	}
-	// won't run on os.Exit(), so it's manually run below
 	teardown := func() {
 		if *cpuprofile != "" {
 			pprof.StopCPUProfile()
@@ -364,8 +363,7 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		conn, err := debug.Accept("localhost", strconv.Itoa(*gdb))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error accepting conn on port %d: %v\n", *gdb, err)
-			teardown()
-			os.Exit(1)
+			return 1
 		}
 		go debug.NewGdbstub(corn).Run(conn)
 	}
@@ -375,17 +373,16 @@ func (c *UsercornCmd) Run(argv, env []string) {
 		conn, err := debug.Accept("localhost", strconv.Itoa(*listen))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error accepting conn on port %d: %v\n", *listen, err)
-			teardown()
-			os.Exit(1)
+			return 1
 		}
 		go debug.NewDebugger(corn).Run(conn)
 	}
 
 	if *startrepl {
+		defer repl.Exit()
 		if err := repl.Run(corn); err != nil {
 			fmt.Fprintf(os.Stderr, "error starting repl: %v\n", err)
-			teardown()
-			os.Exit(1)
+			return 1
 		}
 	}
 
@@ -397,11 +394,11 @@ func (c *UsercornCmd) Run(argv, env []string) {
 	}
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {
-			teardown()
-			os.Exit(int(e))
+			return int(e)
 		} else {
 			c.PrintError(err)
-			os.Exit(1)
+			return 1
 		}
 	}
+	return 0
 }

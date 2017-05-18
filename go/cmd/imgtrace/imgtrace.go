@@ -97,5 +97,5 @@ func main() {
 		}
 		return nil
 	}
-	c.Run(os.Args, os.Environ())
+	os.Exit(c.Run(os.Args, os.Environ()))
 }

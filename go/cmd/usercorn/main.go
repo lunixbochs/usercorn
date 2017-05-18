@@ -1,13 +1,11 @@
 package main
 
 import (
+	"os"
+
 	"github.com/lunixbochs/usercorn/go/cmd"
 )
 
-import (
-	"os"
-)
-
 func main() {
-	cmd.NewUsercornCmd().Run(os.Args, os.Environ())
+	os.Exit(cmd.NewUsercornCmd().Run(os.Args, os.Environ()))
 }

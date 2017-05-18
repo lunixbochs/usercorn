@@ -25,5 +25,5 @@ func main() {
 		}()
 		return CfgMain(c.Usercorn, *backtrack, *json)
 	}
-	c.Run(os.Args, os.Environ())
+	os.Exit(c.Run(os.Args, os.Environ()))
 }
