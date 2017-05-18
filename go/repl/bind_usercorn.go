@@ -126,19 +126,29 @@ func (b *ubinding) HookAdd(L *lua.LState) int {
 	switch htype {
 	case cpu.HOOK_CODE, cpu.HOOK_BLOCK:
 		cb = func(_ cpu.Cpu, addr uint64, size uint32) {
-			if err := L.CallByParam(luap, lua.LNumber(addr), lua.LNumber(size)); err != nil {
+			laddr, lsize := lua.LNumber(addr), lua.LNumber(size)
+			L.SetGlobal("addr", laddr)
+			L.SetGlobal("size", lsize)
+			if err := L.CallByParam(luap, laddr, lsize); err != nil {
 				fmt.Println(err)
 			}
 		}
 	case cpu.HOOK_INTR:
 		cb = func(_ cpu.Cpu, intno uint32) {
-			if err := L.CallByParam(luap, lua.LNumber(intno)); err != nil {
+			lintno := lua.LNumber(intno)
+			L.SetGlobal("intno", lintno)
+			if err := L.CallByParam(luap, lintno); err != nil {
 				fmt.Println(err)
 			}
 		}
 	case cpu.HOOK_MEM_READ, cpu.HOOK_MEM_WRITE, cpu.HOOK_MEM_READ | cpu.HOOK_MEM_WRITE:
 		cb = func(_ cpu.Cpu, access int, addr uint64, size int, val int64) {
-			if err := L.CallByParam(luap, lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)); err != nil {
+			laccess, laddr, lsize, lval := lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)
+			L.SetGlobal("access", laccess)
+			L.SetGlobal("addr", laddr)
+			L.SetGlobal("size", lsize)
+			L.SetGlobal("val", lval)
+			if err := L.CallByParam(luap, laccess, laddr, lsize, lval); err != nil {
 				fmt.Println(err)
 			}
 		}
@@ -147,6 +157,11 @@ func (b *ubinding) HookAdd(L *lua.LState) int {
 		panic("instruction hooking not implemented")
 	case cpu.HOOK_MEM_ERR:
 		cb = func(_ cpu.Cpu, access int, addr uint64, size int, val int64) bool {
+			laccess, laddr, lsize, lval := lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)
+			L.SetGlobal("access", laccess)
+			L.SetGlobal("addr", laddr)
+			L.SetGlobal("size", lsize)
+			L.SetGlobal("val", lval)
 			luap.NRet = 1
 			if err := L.CallByParam(luap, lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)); err != nil {
 				fmt.Println(err)
