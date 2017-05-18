@@ -32,13 +32,16 @@ end
 
 func read(addr, size) return u.mem_read(addr, size) end
 func write(addr, s) u.mem_write(addr, size) end
+func maps()
+	print 'Memory map:'
+	local m = us:Mappings()
+	for i in m() do
+		print m[i]
+	end
+end
 func map(addr, size, prot)
     if addr == nil then
-		print 'Memory map:'
-		local m = us:Mappings()
-		for i in m() do
-			print m[i]
-		end
+		maps()
     else
         if prot == nil then prot = cpu.PROT_ALL end
         u.mem_map(addr, size, prot)

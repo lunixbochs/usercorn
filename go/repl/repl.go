@@ -51,7 +51,21 @@ func (L *LuaRepl) preRun() {
 func (L *LuaRepl) postRun(lv []lua.LValue) {
 	// print returned values
 	// TODO: make _fallback() just add values to a queue, or call the same host printer?
-	if len(lv) > 0 && !(len(lv) == 1 && lv[0] == lua.LNil) {
+
+	// if exactly one value was returned, and it's a function, call it with no args
+	if len(lv) == 1 && lv[0].Type() == lua.LTFunction {
+		L.Push(lv[0])
+		if lv2, err := L.Call(lv[0].(*lua.LFunction)); err != nil {
+			fmt.Println(err)
+			lv = nil
+		} else {
+			lv = lv2
+		}
+	}
+
+	// ignore len(1) if nil, otherwise print all values
+	if len(lv) == 1 && lv[0] == lua.LNil {
+	} else if len(lv) > 0 {
 		pretty := make([]string, len(lv))
 		for i, v := range lv {
 			switch s := v.(type) {
@@ -65,6 +79,20 @@ func (L *LuaRepl) postRun(lv []lua.LValue) {
 		}
 		fmt.Printf("%s\n", strings.Join(pretty, " "))
 	}
+
+	// set the _ global
+	if len(lv) == 1 {
+		L.SetGlobal("_", lv[0])
+	} else if len(lv) > 1 {
+		tmp := L.NewTable()
+		for i, v := range lv {
+			L.RawSetInt(tmp, i+1, v)
+		}
+		L.SetGlobal("_", tmp)
+	} else {
+		L.SetGlobal("_", lua.LNil)
+	}
+
 	// read register values back out
 	// TODO: what about psuedo-registers?
 	u := L.u
@@ -79,18 +107,20 @@ func (L *LuaRepl) postRun(lv []lua.LValue) {
 	}
 }
 
-func (L *LuaRepl) loadstring(code string) (*lua.LFunction, error, bool) {
+func (L *LuaRepl) loadstring(lines []string, recurse bool) (*lua.LFunction, error, bool) {
+	code := strings.Join(L.lines, " ")
+	if len(lines) == 1 && recurse {
+		code = "return " + code
+	}
 	if fn, err := L.LoadString(code); err != nil {
 		// check for incomplete parse
 		if lerr, ok := err.(*lua.ApiError); ok {
 			if perr, ok := lerr.Cause.(*parse.Error); ok {
 				if perr.Pos.Line == parse.EOF {
 					return nil, err, true
-				} else {
-					// still a parse error: try injecting return
-					if !strings.HasPrefix(code, "return ") {
-						return L.loadstring("return " + code)
-					}
+				} else if recurse {
+					// still a parse error: try without return
+					return L.loadstring(lines, false)
 				}
 			}
 		}
@@ -102,15 +132,16 @@ func (L *LuaRepl) loadstring(code string) (*lua.LFunction, error, bool) {
 
 func (L *LuaRepl) Feed(line string) bool {
 	L.lines = append(L.lines, line)
-
-	if fn, err, incomplete := L.loadstring(strings.Join(L.lines, " ")); incomplete {
+	fn, err, incomplete := L.loadstring(L.lines, true)
+	if incomplete {
 		return true
-	} else if err != nil {
+	}
+	L.lines = L.lines[:0]
+	if err != nil {
 		fmt.Println(err)
 	} else {
-		L.lines = L.lines[:0]
 		L.preRun()
-		lv, err := L.Run(fn)
+		lv, err := L.Call(fn)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -120,7 +151,7 @@ func (L *LuaRepl) Feed(line string) bool {
 }
 
 // runs a loaded lua function, returning any errors or return values
-func (L *LuaRepl) Run(fn *lua.LFunction) ([]lua.LValue, error) {
+func (L *LuaRepl) Call(fn *lua.LFunction) ([]lua.LValue, error) {
 	top := L.GetTop()
 	L.Push(fn)
 	if err := L.PCall(0, lua.MultRet, nil); err != nil {
