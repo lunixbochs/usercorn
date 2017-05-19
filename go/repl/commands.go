@@ -1,12 +1,11 @@
 package repl
 
 var cmdRc = `
-func _fallback(a)
-    if type(a) == 'function' then
-        a()
+func _fallback(name, val)
+    if type(val) == 'function' then
+        val()
     else
-        -- TODO: send this to some kind of repl printer instead
-        print a
+        print val
     end
 end
 
@@ -30,15 +29,33 @@ func _on_hook(name, fn, start, stop)
     -- u.on_hook_add(name, fn, start, stop)
 end
 
-func read(addr, size) return u.mem_read(addr, size) end
-func write(addr, s) u.mem_write(addr, size) end
+func off()
+	if hh then
+		u.hook_del(hh)
+		hh = nil
+		print 'Hook removed'
+	else
+		print 'No hook found'
+	end
+end
+
+func read(addr, size)
+	if size == nil then size = 16 end
+	return u.mem_read(addr, size)
+end
+
+func write(addr, s)
+	u.mem_write(addr, s)
+end
+
 func maps()
 	print 'Memory map:'
 	local m = us:Mappings()
 	for i in m() do
-		print m[i]
+	print m[i]:String()
 	end
 end
+
 func map(addr, size, prot)
     if addr == nil then
 		maps()
@@ -51,23 +68,15 @@ end
 func dis(addr, size)
 	if addr == nil then addr = pc end
 	if size == nil then size = 16 end
-	print us:Dis(addr, size, true)
+	local a, b = us:Dis(addr, size, true)
+	print a
 end
 
-func c() us:Gate():UnlockStopRelock() end
+func c() u.continue() end
 
 func s(steps)
 	if steps == nil then steps = 1 end
-	local i = 0
-	local hh = 0
-	hh = u.hook_add(cpu.HOOK_CODE, func()
-		i = i + 1
-		if i == steps + 1 then
-			u.stop()
-		end
-	end, 1, 0)
-	us:Gate():UnlockStopRelock()
-	u.hook_del(hh)
+	u.step(steps)
 end
 
 func b(baddr)

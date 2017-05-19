@@ -4,26 +4,38 @@ import (
 	"fmt"
 	"github.com/lunixbochs/luaish"
 	"github.com/lunixbochs/luaish-luar"
+	"strings"
 
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 func bindUsercorn(L *LuaRepl) error {
-	b := &ubinding{L, L.u}
+	b := &ubind{L: L, u: L.u}
 	mod := L.SetFuncs(L.NewTable(), b.Exports())
 	L.SetGlobal("u", mod)
+	b.mod = mod
 	L.SetGlobal("us", luar.New(L.LState, L.u))
 	return nil
 }
 
-type ubinding struct {
-	L *LuaRepl
-	u models.Usercorn
+type ubind struct {
+	L   *LuaRepl
+	u   models.Usercorn
+	mod *lua.LTable
 }
 
-func (b *ubinding) Exports() map[string]lua.LGFunction {
+func (b *ubind) Exports() map[string]lua.LGFunction {
 	return map[string]lua.LGFunction{
+		// models.Task interface
+		"asm": b.Asm,
+		"dis": b.Dis,
+
+		// bonus features
+		"step":     b.Step,
+		"continue": b.Continue,
+
+		// cpu.Cpu interface
 		"mem_map":   b.MemMap,
 		"mem_prot":  b.MemProt,
 		"mem_unmap": b.MemUnmap,
@@ -47,31 +59,116 @@ func (b *ubinding) Exports() map[string]lua.LGFunction {
 	}
 }
 
-func (b *ubinding) checkErr(err error) {
+func (b *ubind) checkErr(err error) {
 	if err != nil {
 		b.L.RaiseError(err.Error())
 	}
 }
 
-func (b *ubinding) MemMap(L *lua.LState) int {
+// models.Task interface
+
+func (b *ubind) Asm(L *lua.LState) int {
+	asm, addr := L.CheckString(1), L.CheckUint64(2)
+	code, err := b.u.Asm(asm, addr)
+	b.checkErr(err)
+	L.Push(lua.LString(code))
+	return 1
+}
+
+func (b *ubind) Dis(L *lua.LState) int {
+	addr, size := L.CheckUint64(1), L.CheckUint64(2)
+	arch := b.u.Arch()
+	if arch.Dis == nil {
+		L.RaiseError("arch<%T>.Dis not initialized", arch)
+	}
+	mem, err := b.u.MemRead(addr, size)
+	b.checkErr(err)
+	dis, err := arch.Dis.Dis(mem, addr)
+	b.checkErr(err)
+
+	ret := L.NewTable()
+	for i, v := range dis {
+		ins := L.NewTable()
+		ins.RawSetString("mnemonic", lua.LString(v.Mnemonic()))
+		ins.RawSetString("opstr", lua.LString(v.OpStr()))
+
+		ops := L.NewTable()
+		for j, s := range strings.Split(v.OpStr(), ",") {
+			ops.RawSetInt(j+1, lua.LString(strings.TrimSpace(s)))
+		}
+		ins.RawSetString("ops", ops)
+
+		ret.RawSetInt(i+1, ins)
+	}
+	L.Push(ret)
+	return 1
+}
+
+// bonus features
+
+// Steps the CPU without blocking Lua, setting u.running before/after
+func (b *ubind) Step(L *lua.LState) int {
+	steps := 1
+	if L.GetTop() > 0 {
+		steps = L.CheckInt(1)
+	}
+
+	i := 0
+	hh, err := b.u.HookAdd(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
+		i++
+		if i > steps {
+			b.u.Stop()
+		}
+	}, true, 1, 0)
+	b.checkErr(err)
+
+	/* NOTE: How to make an async step:
+	b.mod.RawSetString("running", lua.LTrue)
+	go func() {
+		b.u.Gate().UnlockStopRelock()
+		b.mod.RawSetString("running", lua.LFalse)
+		b.u.HookDel(hh)
+	}()
+	*/
+	b.u.Gate().UnlockStopRelock()
+	b.u.HookDel(hh)
+	return 0
+}
+
+// Continues the CPU without blocking Lua, setting u.running before/after
+func (b *ubind) Continue(L *lua.LState) int {
+	/* NOTE: How to make an async continue:
+	b.mod.RawSetString("running", lua.LTrue)
+	go func() {
+		b.u.Gate().UnlockStopRelock()
+		b.mod.RawSetString("running", lua.LFalse)
+	}()
+	*/
+	b.u.Gate().UnlockStopRelock()
+	return 0
+}
+
+// cpu.Cpu interface
+
+func (b *ubind) MemMap(L *lua.LState) int {
 	addr, size, prot := L.CheckUint64(1), L.CheckUint64(2), L.CheckInt(3)
 	b.checkErr(b.u.MemMapProt(addr, size, prot))
 	return 0
 }
 
-func (b *ubinding) MemProt(L *lua.LState) int {
+func (b *ubind) MemProt(L *lua.LState) int {
 	addr, size, prot := L.CheckUint64(1), L.CheckUint64(2), L.CheckInt(3)
 	b.checkErr(b.u.MemProt(addr, size, prot))
 	return 0
 }
 
-func (b *ubinding) MemUnmap(L *lua.LState) int {
+func (b *ubind) MemUnmap(L *lua.LState) int {
 	addr, size := L.CheckUint64(1), L.CheckUint64(2)
 	b.checkErr(b.u.MemUnmap(addr, size))
 	return 0
 }
 
-func (b *ubinding) MemRead(L *lua.LState) int {
+func (b *ubind) MemRead(L *lua.LState) int {
 	addr, size := L.CheckUint64(1), L.CheckUint64(2)
 	mem, err := b.u.MemRead(addr, size)
 	b.checkErr(err)
@@ -79,14 +176,14 @@ func (b *ubinding) MemRead(L *lua.LState) int {
 	return 1
 }
 
-func (b *ubinding) MemWrite(L *lua.LState) int {
+func (b *ubind) MemWrite(L *lua.LState) int {
 	addr, data := L.CheckUint64(1), L.CheckString(2)
 	b.checkErr(b.u.MemWrite(addr, []byte(data)))
 	return 0
 }
 
 // lua doesn't have reg enums
-func (b *ubinding) RegRead(L *lua.LState) int {
+func (b *ubind) RegRead(L *lua.LState) int {
 	enum := L.CheckInt(1)
 	val, err := b.u.RegRead(enum)
 	b.checkErr(err)
@@ -94,39 +191,45 @@ func (b *ubinding) RegRead(L *lua.LState) int {
 	return 1
 }
 
-func (b *ubinding) RegWrite(L *lua.LState) int {
+func (b *ubind) RegWrite(L *lua.LState) int {
 	enum, val := L.CheckInt(1), L.CheckUint64(2)
 	b.checkErr(b.u.RegWrite(enum, val))
 	return 0
 }
 
-func (b *ubinding) Start(L *lua.LState) int {
+func (b *ubind) Start(L *lua.LState) int {
 	start, end := L.CheckUint64(1), L.CheckUint64(2)
 	b.checkErr(b.u.Start(start, end))
 	return 0
 }
 
-func (b *ubinding) Stop(L *lua.LState) int {
+func (b *ubind) Stop(L *lua.LState) int {
 	b.checkErr(b.u.Stop())
 	return 0
 }
 
 // copy-pasted from models/cpu.Cpu
 // func (h *Hooks) HookAdd(htype int, cb interface{}, start uint64, end uint64, extra ...int) (Hook, error) {
-func (b *ubinding) HookAdd(L *lua.LState) int {
+func (b *ubind) HookAdd(L *lua.LState) int {
 	htype, fn := L.CheckInt(1), L.CheckFunction(2)
 	start := uint64(1)
 	end := uint64(0)
+	front := true
 	if L.GetTop() >= 4 {
 		start, end = L.CheckUint64(3), L.CheckUint64(4)
+		if L.GetTop() >= 5 {
+			front = L.CheckBool(5)
+		}
 	}
 	luap := lua.P{Fn: fn, NRet: 0, Protect: true}
 
+	var hhptr *lua.LUserData
 	var cb interface{}
 	switch htype {
 	case cpu.HOOK_CODE, cpu.HOOK_BLOCK:
 		cb = func(_ cpu.Cpu, addr uint64, size uint32) {
 			laddr, lsize := lua.LNumber(addr), lua.LNumber(size)
+			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("addr", laddr)
 			L.SetGlobal("size", lsize)
 			if err := L.CallByParam(luap, laddr, lsize); err != nil {
@@ -136,6 +239,7 @@ func (b *ubinding) HookAdd(L *lua.LState) int {
 	case cpu.HOOK_INTR:
 		cb = func(_ cpu.Cpu, intno uint32) {
 			lintno := lua.LNumber(intno)
+			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("intno", lintno)
 			if err := L.CallByParam(luap, lintno); err != nil {
 				fmt.Println(err)
@@ -144,6 +248,7 @@ func (b *ubinding) HookAdd(L *lua.LState) int {
 	case cpu.HOOK_MEM_READ, cpu.HOOK_MEM_WRITE, cpu.HOOK_MEM_READ | cpu.HOOK_MEM_WRITE:
 		cb = func(_ cpu.Cpu, access int, addr uint64, size int, val int64) {
 			laccess, laddr, lsize, lval := lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)
+			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("access", laccess)
 			L.SetGlobal("addr", laddr)
 			L.SetGlobal("size", lsize)
@@ -158,6 +263,7 @@ func (b *ubinding) HookAdd(L *lua.LState) int {
 	case cpu.HOOK_MEM_ERR:
 		cb = func(_ cpu.Cpu, access int, addr uint64, size int, val int64) bool {
 			laccess, laddr, lsize, lval := lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)
+			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("access", laccess)
 			L.SetGlobal("addr", laddr)
 			L.SetGlobal("size", lsize)
@@ -172,22 +278,22 @@ func (b *ubinding) HookAdd(L *lua.LState) int {
 	default:
 		L.RaiseError("Unknown hook type: %d", htype)
 	}
-	hh, err := b.u.HookAdd(htype, cb, start, end)
+	hh, err := b.u.HookAdd(htype, cb, front, start, end)
 	b.checkErr(err)
 
-	ptr := L.NewUserData()
-	ptr.Value = hh
-	L.Push(ptr)
+	hhptr = L.NewUserData()
+	hhptr.Value = hh
+	L.Push(hhptr)
 	return 1
 }
 
-func (b *ubinding) HookDel(L *lua.LState) int {
+func (b *ubind) HookDel(L *lua.LState) int {
 	hh := L.CheckUserData(1)
 	b.u.HookDel(hh.Value.(cpu.Hook))
 	return 0
 }
 
-func (b *ubinding) ContextSave(L *lua.LState) int {
+func (b *ubind) ContextSave(L *lua.LState) int {
 	ctx, err := b.u.ContextSave(nil)
 	b.checkErr(err)
 	ptr := L.NewUserData()
@@ -196,13 +302,13 @@ func (b *ubinding) ContextSave(L *lua.LState) int {
 	return 1
 }
 
-func (b *ubinding) ContextRestore(L *lua.LState) int {
+func (b *ubind) ContextRestore(L *lua.LState) int {
 	ptr := L.CheckUserData(1)
 	b.u.ContextRestore(ptr.Value)
 	return 0
 }
 
-func (b *ubinding) Close(L *lua.LState) int {
+func (b *ubind) Close(L *lua.LState) int {
 	b.checkErr(b.u.Close())
 	return 0
 }
