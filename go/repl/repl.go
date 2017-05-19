@@ -38,7 +38,7 @@ func NewLuaRepl(u models.Usercorn, rl *readline.Instance) *LuaRepl {
 	return repl
 }
 
-func (L *LuaRepl) RegsToLua() {
+func (L *LuaRepl) EnvToLua() {
 	u := L.u
 	vals, err := u.RegDump()
 	if err != nil {
@@ -57,9 +57,17 @@ func (L *LuaRepl) RegsToLua() {
 			}
 		}
 	}
+	pc, _ := u.RegRead(u.Arch().PC)
+	mem, _ := u.MemRead(pc, 16)
+	dis, err := u.Arch().Dis.Dis(mem, pc)
+	if err == nil && len(dis) > 0 {
+		ins := disToLua(L, dis[:1])[0]
+		L.SetGlobal("ins", ins)
+		L.SetGlobal("ops", ins.RawGetString("ops"))
+	}
 }
 
-func (L *LuaRepl) RegsFromLua() {
+func (L *LuaRepl) EnvFromLua() {
 	// read register values back out
 	// TODO: what about psuedo-registers?
 	// TODO: gah, what if lua steps so the registers change under us?
@@ -76,7 +84,7 @@ func (L *LuaRepl) RegsFromLua() {
 }
 
 func (L *LuaRepl) preRun() {
-	L.RegsToLua()
+	L.EnvToLua()
 }
 
 func (L *LuaRepl) postRun(lv []lua.LValue) {
@@ -112,7 +120,7 @@ func (L *LuaRepl) postRun(lv []lua.LValue) {
 	} else {
 		L.SetGlobal("_", lua.LNil)
 	}
-	L.RegsFromLua()
+	L.EnvFromLua()
 }
 
 func (L *LuaRepl) loadstring(lines []string, recurse bool) (*lua.LFunction, error, bool) {
@@ -198,9 +206,6 @@ func (L *LuaRepl) Call(fn *lua.LFunction) ([]lua.LValue, error) {
 func (L *LuaRepl) OnChange(line []rune, pos int, key rune) (newLine []rune, newPos int, ok bool) {
 	rl := L.rl
 	if key == '\n' || key == '\r' && !L.Multiline {
-		if L.lastCmd == "" && len(L.lines) == 0 && rl.Config.UniqueEditLine {
-			L.Println()
-		}
 		rl.Config.UniqueEditLine = true
 	} else if key > 0 {
 		rl.Config.UniqueEditLine = false
@@ -246,13 +251,27 @@ func Run(u models.Usercorn) error {
 
 		repl := NewLuaRepl(u, rl)
 		rl.Config.Listener = repl
-		rl.SetPrompt("> ")
+
+		setPrompt := func() {
+			rl.SetPrompt("> ")
+			return
+			// this is just a demo
+			pc, _ := u.RegRead(u.Arch().PC)
+			mem, _ := u.MemRead(pc, 16)
+			dis, err := u.Arch().Dis.Dis(mem, pc)
+			if err == nil && len(dis) > 0 {
+				rl.SetPrompt(fmt.Sprintf("[%s %s] ", dis[0].Mnemonic(), dis[0].OpStr()))
+			} else {
+				rl.SetPrompt("> ")
+			}
+		}
+		setPrompt()
 
 		defer repl.Close()
 		for {
 			ln := rl.Line()
 			if ln.Error == readline.ErrInterrupt {
-				rl.SetPrompt("> ")
+				setPrompt()
 				repl.Multiline = false
 				rl.Config.UniqueEditLine = false
 				repl.Reset()
@@ -268,8 +287,8 @@ func Run(u models.Usercorn) error {
 				rl.SetPrompt("... ")
 				repl.Multiline = true
 			} else {
-				rl.SetPrompt("> ")
 				repl.Multiline = false
+				setPrompt()
 			}
 		}
 	}()

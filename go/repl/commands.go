@@ -33,9 +33,6 @@ func off()
 	if hh then
 		u.hook_del(hh)
 		hh = nil
-		print 'Hook removed'
-	else
-		print 'No hook found'
 	end
 end
 
@@ -85,15 +82,17 @@ func patch(addr, src)
 	write(addr, x)
 end
 
-func dis(addr, size)
+func dis(addr, size, indent)
 	if addr == nil then addr = pc end
 	if size == nil then size = 16 end
+	if indent == nil then indent = 0 end
+	local pad = (' '):rep(indent)
 	local d = u.dis(addr, size)
 	local width = 0
 	for _, ins in ipairs(d) do width = math.max(width, ins.bytes:len()) end
 	for _, ins in ipairs(d) do
-		local fmt = '0x%x: %' .. (width * 2) .. 'x %s %s'
-		print fmt % {ins.addr, ins.bytes, ins.mnemonic, ins.opstr}
+		local fmt = pad .. '0x%x: %' .. (width * 2) .. 'x %s %s'
+		print fmt % {ins.addr, ins.bytes, ins.name, ins.op_str}
 	end
 end
 
@@ -115,5 +114,17 @@ func b(baddr)
 		u.stop()
 	end, baddr, baddr)
 	print 'Breakpoint N at 0x%x' % baddr
+end
+
+func runto(name)
+    on code do
+        if ins.name == name then
+            print '[-] stopping at "%s"' % name
+            dis
+            u.stop()
+            off
+        end
+    end
+    c
 end
 `

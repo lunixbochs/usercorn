@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/lunixbochs/luaish"
 	"github.com/lunixbochs/luaish-luar"
+	"strconv"
 	"strings"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -30,6 +31,7 @@ func (b *ubind) Exports() map[string]lua.LGFunction {
 		// models.Task interface
 		"asm": b.Asm,
 		"dis": b.Dis,
+		"ins": b.Ins,
 
 		// bonus features
 		"step":     b.Step,
@@ -75,8 +77,32 @@ func (b *ubind) Asm(L *lua.LState) int {
 	return 1
 }
 
-func (b *ubind) Dis(L *lua.LState) int {
-	addr, size := L.CheckUint64(1), L.CheckUint64(2)
+func disToLua(L *LuaRepl, dis []models.Ins) []*lua.LTable {
+	ret := make([]*lua.LTable, len(dis))
+	for i, v := range dis {
+		ins := L.NewTable()
+		ins.RawSetString("addr", lua.LNumber(v.Addr()))
+		ins.RawSetString("name", lua.LString(v.Mnemonic()))
+		ins.RawSetString("op_str", lua.LString(v.OpStr()))
+		ins.RawSetString("bytes", lua.LString(v.Bytes()))
+
+		ops := L.NewTable()
+		for j, s := range strings.Split(v.OpStr(), ",") {
+			s = strings.TrimSpace(s)
+			if n, err := strconv.ParseUint(s, 0, 64); err == nil {
+				ops.RawSetInt(j+1, lua.LNumber(n))
+			} else {
+				ops.RawSetInt(j+1, lua.LString(s))
+			}
+		}
+		ins.RawSetString("ops", ops)
+		ret[i] = ins
+	}
+	return ret
+}
+
+func (b *ubind) dis(addr, size uint64) []*lua.LTable {
+	L := b.L
 	arch := b.u.Arch()
 	if arch.Dis == nil {
 		L.RaiseError("arch<%T>.Dis not initialized", arch)
@@ -85,25 +111,29 @@ func (b *ubind) Dis(L *lua.LState) int {
 	b.checkErr(err)
 	dis, err := arch.Dis.Dis(mem, addr)
 	b.checkErr(err)
+	return disToLua(L, dis)
+}
 
+func (b *ubind) Dis(L *lua.LState) int {
+	addr, size := L.CheckUint64(1), L.CheckUint64(2)
+	insns := b.dis(addr, size)
 	ret := L.NewTable()
-	for i, v := range dis {
-		ins := L.NewTable()
-		ins.RawSetString("addr", lua.LNumber(v.Addr()))
-		ins.RawSetString("mnemonic", lua.LString(v.Mnemonic()))
-		ins.RawSetString("opstr", lua.LString(v.OpStr()))
-		ins.RawSetString("bytes", lua.LString(v.Bytes()))
-
-		ops := L.NewTable()
-		for j, s := range strings.Split(v.OpStr(), ",") {
-			ops.RawSetInt(j+1, lua.LString(strings.TrimSpace(s)))
-		}
-		ins.RawSetString("ops", ops)
-
+	for i, ins := range insns {
 		ret.RawSetInt(i+1, ins)
 	}
 	L.Push(ret)
 	return 1
+}
+
+func (b *ubind) Ins(L *lua.LState) int {
+	// TODO: *last* PC? or turn the prompt into the current disassembly
+	r, _ := b.u.RegRead(b.u.Arch().PC)
+	dis := b.dis(r, 16)
+	if len(dis) > 0 {
+		L.Push(dis[0])
+		return 1
+	}
+	return 0
 }
 
 // bonus features
@@ -232,31 +262,31 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 	case cpu.HOOK_CODE, cpu.HOOK_BLOCK:
 		cb = func(_ cpu.Cpu, addr uint64, size uint32) {
 			laddr, lsize := lua.LNumber(addr), lua.LNumber(size)
-			// TODO: replace with a table with a metatable getter/setter
-			L.RegsToLua()
+			// TODO: replace (regs) with a table with a metatable getter/setter
+			L.EnvToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("addr", laddr)
 			L.SetGlobal("size", lsize)
 			if err := L.CallByParam(luap, laddr, lsize); err != nil {
 				fmt.Println(err)
 			}
-			L.RegsFromLua()
+			L.EnvFromLua()
 		}
 	case cpu.HOOK_INTR:
 		cb = func(_ cpu.Cpu, intno uint32) {
 			lintno := lua.LNumber(intno)
-			L.RegsToLua()
+			L.EnvToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("intno", lintno)
 			if err := L.CallByParam(luap, lintno); err != nil {
 				fmt.Println(err)
 			}
-			L.RegsFromLua()
+			L.EnvFromLua()
 		}
 	case cpu.HOOK_MEM_READ, cpu.HOOK_MEM_WRITE, cpu.HOOK_MEM_READ | cpu.HOOK_MEM_WRITE:
 		cb = func(_ cpu.Cpu, access int, addr uint64, size int, val int64) {
 			laccess, laddr, lsize, lval := lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)
-			L.RegsToLua()
+			L.EnvToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("access", laccess)
 			L.SetGlobal("addr", laddr)
@@ -265,7 +295,7 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 			if err := L.CallByParam(luap, laccess, laddr, lsize, lval); err != nil {
 				fmt.Println(err)
 			}
-			L.RegsFromLua()
+			L.EnvFromLua()
 		}
 	case cpu.HOOK_INSN:
 		// TODO: allow instruction hooking
@@ -273,7 +303,7 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 	case cpu.HOOK_MEM_ERR:
 		cb = func(_ cpu.Cpu, access int, addr uint64, size int, val int64) bool {
 			laccess, laddr, lsize, lval := lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)
-			L.RegsToLua()
+			L.EnvToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("access", laccess)
 			L.SetGlobal("addr", laddr)
@@ -284,7 +314,7 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 				fmt.Println(err)
 				return false
 			}
-			L.RegsFromLua()
+			L.EnvFromLua()
 			return L.CheckBool(1)
 		}
 	default:
