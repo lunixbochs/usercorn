@@ -212,7 +212,8 @@ func (b *ubind) Stop(L *lua.LState) int {
 
 // copy-pasted from models/cpu.Cpu
 // func (h *Hooks) HookAdd(htype int, cb interface{}, start uint64, end uint64, extra ...int) (Hook, error) {
-func (b *ubind) HookAdd(L *lua.LState) int {
+func (b *ubind) HookAdd(_ *lua.LState) int {
+	L := b.L
 	htype, fn := L.CheckInt(1), L.CheckFunction(2)
 	start := uint64(1)
 	end := uint64(0)
@@ -231,25 +232,31 @@ func (b *ubind) HookAdd(L *lua.LState) int {
 	case cpu.HOOK_CODE, cpu.HOOK_BLOCK:
 		cb = func(_ cpu.Cpu, addr uint64, size uint32) {
 			laddr, lsize := lua.LNumber(addr), lua.LNumber(size)
+			// TODO: replace with a table with a metatable getter/setter
+			L.RegsToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("addr", laddr)
 			L.SetGlobal("size", lsize)
 			if err := L.CallByParam(luap, laddr, lsize); err != nil {
 				fmt.Println(err)
 			}
+			L.RegsFromLua()
 		}
 	case cpu.HOOK_INTR:
 		cb = func(_ cpu.Cpu, intno uint32) {
 			lintno := lua.LNumber(intno)
+			L.RegsToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("intno", lintno)
 			if err := L.CallByParam(luap, lintno); err != nil {
 				fmt.Println(err)
 			}
+			L.RegsFromLua()
 		}
 	case cpu.HOOK_MEM_READ, cpu.HOOK_MEM_WRITE, cpu.HOOK_MEM_READ | cpu.HOOK_MEM_WRITE:
 		cb = func(_ cpu.Cpu, access int, addr uint64, size int, val int64) {
 			laccess, laddr, lsize, lval := lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)
+			L.RegsToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("access", laccess)
 			L.SetGlobal("addr", laddr)
@@ -258,6 +265,7 @@ func (b *ubind) HookAdd(L *lua.LState) int {
 			if err := L.CallByParam(luap, laccess, laddr, lsize, lval); err != nil {
 				fmt.Println(err)
 			}
+			L.RegsFromLua()
 		}
 	case cpu.HOOK_INSN:
 		// TODO: allow instruction hooking
@@ -265,6 +273,7 @@ func (b *ubind) HookAdd(L *lua.LState) int {
 	case cpu.HOOK_MEM_ERR:
 		cb = func(_ cpu.Cpu, access int, addr uint64, size int, val int64) bool {
 			laccess, laddr, lsize, lval := lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)
+			L.RegsToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("access", laccess)
 			L.SetGlobal("addr", laddr)
@@ -275,6 +284,7 @@ func (b *ubind) HookAdd(L *lua.LState) int {
 				fmt.Println(err)
 				return false
 			}
+			L.RegsFromLua()
 			return L.CheckBool(1)
 		}
 	default:

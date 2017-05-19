@@ -38,7 +38,7 @@ func NewLuaRepl(u models.Usercorn, rl *readline.Instance) *LuaRepl {
 	return repl
 }
 
-func (L *LuaRepl) preRun() {
+func (L *LuaRepl) RegsToLua() {
 	u := L.u
 	vals, err := u.RegDump()
 	if err != nil {
@@ -57,6 +57,26 @@ func (L *LuaRepl) preRun() {
 			}
 		}
 	}
+}
+
+func (L *LuaRepl) RegsFromLua() {
+	// read register values back out
+	// TODO: what about psuedo-registers?
+	// TODO: gah, what if lua steps so the registers change under us?
+	u := L.u
+	vals, _ := u.RegDump()
+	for i, r := range vals {
+		v := L.GetGlobal(r.Name)
+		if val, ok := v.(lua.LNumber); !ok {
+			L.Printf("could not restore %s: bad type: %v\n", r.Name, v)
+		} else if uint64(val) != L.preRegs[i].Val {
+			u.RegWrite(r.Enum, uint64(val))
+		}
+	}
+}
+
+func (L *LuaRepl) preRun() {
+	L.RegsToLua()
 }
 
 func (L *LuaRepl) postRun(lv []lua.LValue) {
@@ -92,20 +112,7 @@ func (L *LuaRepl) postRun(lv []lua.LValue) {
 	} else {
 		L.SetGlobal("_", lua.LNil)
 	}
-
-	// read register values back out
-	// TODO: what about psuedo-registers?
-	// TODO: gah, what if lua steps so the registers change under us?
-	u := L.u
-	vals, _ := u.RegDump()
-	for i, r := range vals {
-		v := L.GetGlobal(r.Name)
-		if val, ok := v.(lua.LNumber); !ok {
-			L.Printf("could not restore %s: bad type: %v\n", r.Name, v)
-		} else if uint64(val) != L.preRegs[i].Val {
-			u.RegWrite(r.Enum, uint64(val))
-		}
-	}
+	L.RegsFromLua()
 }
 
 func (L *LuaRepl) loadstring(lines []string, recurse bool) (*lua.LFunction, error, bool) {
