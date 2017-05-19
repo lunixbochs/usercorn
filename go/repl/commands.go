@@ -89,10 +89,9 @@ func dis(addr, size, indent)
 	local pad = (' '):rep(indent)
 	local d = u.dis(addr, size)
 	local width = 0
-	for _, ins in ipairs(d) do width = math.max(width, ins.bytes:len()) end
 	for _, ins in ipairs(d) do
-		local fmt = pad .. '0x%x: %' .. (width * 2) .. 'x %s %s'
-		print fmt % {ins.addr, ins.bytes, ins.name, ins.op_str}
+		local fmt = pad .. '0x%x: %s %s'
+		print fmt % {ins.addr, ins.name, ins.op_str}
 	end
 end
 
