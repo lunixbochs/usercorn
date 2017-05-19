@@ -2,6 +2,7 @@ package repl
 
 import (
 	"github.com/lunixbochs/luaish"
+	"strconv"
 )
 
 func (L *LuaRepl) printFunc(_ *lua.LState) int {
@@ -9,9 +10,27 @@ func (L *LuaRepl) printFunc(_ *lua.LState) int {
 	return 0
 }
 
+func (L *LuaRepl) intFunc(_ *lua.LState) int {
+	switch v := L.CheckAny(1).(type) {
+	case lua.LString:
+		n, err := strconv.ParseInt(string(v), 0, 64)
+		if err == nil {
+			L.Push(lua.LNumber(n))
+			return 1
+		}
+	case lua.LNumber:
+		L.Push(v)
+		return 1
+	}
+	return 0
+}
+
 func (L *LuaRepl) loadBindings() error {
 	print := L.NewFunction(L.printFunc)
 	L.SetGlobal("print", print)
+
+	toint := L.NewFunction(L.intFunc)
+	L.SetGlobal("int", toint)
 
 	if err := bindCpu(L); err != nil {
 		return err

@@ -168,34 +168,6 @@ func (L *LuaRepl) Feed(line string) bool {
 	return false
 }
 
-func (L *LuaRepl) PrettyPrint(lv []lua.LValue, implicit bool) {
-	pretty := make([]string, len(lv))
-	for i, v := range lv {
-		switch s := v.(type) {
-		case lua.LNumber:
-			n := uint64(s)
-			if n < 10 {
-				pretty[i] = fmt.Sprintf("%d", n)
-			} else if n > 0x10000 {
-				pretty[i] = fmt.Sprintf("%#x", n)
-			} else {
-				pretty[i] = fmt.Sprintf("%#x(%d)", n, n)
-			}
-		case lua.LString:
-			// for some reason repr doesn't print out null bytes properly
-			// pretty[i] = models.Repr([]byte(s), 0)
-			if implicit {
-				pretty[i] = fmt.Sprintf("%#v", s)
-			} else {
-				pretty[i] = string(s)
-			}
-		default:
-			pretty[i] = fmt.Sprintf("%s", s)
-		}
-	}
-	L.Printf("%s\n", strings.Join(pretty, " "))
-}
-
 func (L *LuaRepl) getArgs() []lua.LValue {
 	lv := make([]lua.LValue, L.GetTop())
 	for i := range lv {
