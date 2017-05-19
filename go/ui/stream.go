@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 
@@ -26,7 +25,7 @@ type StreamUI struct {
 	SpRegs map[int][]byte
 	PC, SP uint64
 
-	w      io.Writer
+	c      *models.Config
 	regfmt string
 	inscol int
 	regcol int
@@ -35,7 +34,7 @@ type StreamUI struct {
 	effects []models.Op
 }
 
-func NewStreamUI(w io.Writer, arch *models.Arch, os *models.OS) *StreamUI {
+func NewStreamUI(c *models.Config, arch *models.Arch, os *models.OS) *StreamUI {
 	// find the longest register name
 	longest := 0
 	for _, name := range arch.RegNames() {
@@ -50,7 +49,7 @@ func NewStreamUI(w io.Writer, arch *models.Arch, os *models.OS) *StreamUI {
 		Regs:   make(map[int]uint64),
 		SpRegs: make(map[int][]byte),
 
-		w:      w,
+		c:      c,
 		regfmt: fmt.Sprintf("%%%ds = %%#0%dx", longest, arch.Bits/4),
 		inscol: 60, // FIXME
 		regcol: longest + 5 + arch.Bits/4,
@@ -115,7 +114,7 @@ func (s *StreamUI) Feed(op models.Op) {
 		switch o := op.(type) {
 		case *trace.OpJmp:
 			s.Flush()
-			s.blockPrint(o.Addr)
+			// s.blockPrint(o.Addr)
 			s.update(o)
 		case *trace.OpStep:
 			s.Flush()
@@ -128,6 +127,8 @@ func (s *StreamUI) Feed(op models.Op) {
 			s.effects = append(s.effects, op)
 		}
 	}
+	// flush at end of frame too, so repl isn't an instruction behind when single stepping
+	s.Flush()
 }
 
 // Flush prints and clears the currently queued instruction and side-effects
@@ -145,7 +146,7 @@ func (s *StreamUI) Flush() {
 
 // blockPrint() takes a basic block address to pretty-print
 func (s *StreamUI) blockPrint(addr uint64) {
-	fmt.Fprintf(s.w, "\n%#x\n", addr)
+	fmt.Fprintf(s.c.Output, "\n%#x\n", addr)
 }
 
 // sysPrint() takes a syscall op to pretty-print
@@ -162,7 +163,7 @@ func (s *StreamUI) sysPrint(op *trace.OpSyscall) {
 	for i, v := range op.Args {
 		args[i] = fmt.Sprintf("%#x", v)
 	}
-	fmt.Fprintf(s.w, "syscall(%d, [%s]) = %d\n", op.Num, strings.Join(args, ", "), op.Ret)
+	fmt.Fprintf(s.c.Output, "syscall(%d, [%s]) = %d\n", op.Num, strings.Join(args, ", "), op.Ret)
 }
 
 // insPrint() takes an instruction address and side-effects to pretty-print
@@ -194,7 +195,7 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 			reg := fmt.Sprintf(s.regfmt, name, o.Val)
 			regs = append(regs, reg)
 		case *trace.OpSpReg:
-			fmt.Fprintf(s.w, "<unimplemented special register>\n")
+			fmt.Fprintf(s.c.Output, "<unimplemented special register>\n")
 		case *trace.OpMemRead:
 			// TODO: hexdump -C
 			mem = append(mem, fmt.Sprintf("R %x", o.Addr))
@@ -222,9 +223,9 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 	// 0x1004: mov eax, 1                   | eax = 1
 	// 0x1008: mov eax, dword ptr [eax + 8] | eax = 2 |R 0x1020 0011 2233 4455 6677 [........]
 	if m == "" {
-		fmt.Fprintf(s.w, "%s | %s\n", ins, reg)
+		fmt.Fprintf(s.c.Output, "%s | %s\n", ins, reg)
 	} else {
-		fmt.Fprintf(s.w, "%s | %s | %s\n", ins, reg, m)
+		fmt.Fprintf(s.c.Output, "%s | %s | %s\n", ins, reg, m)
 	}
 
 	// print extra effects
@@ -232,9 +233,9 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 		inspad := strings.Repeat(" ", s.inscol)
 		for i, r := range regs[1:] {
 			if i+1 < len(mem) {
-				fmt.Fprintf(s.w, "%s + %s + %s\n", inspad, r, mem[i+1])
+				fmt.Fprintf(s.c.Output, "%s + %s + %s\n", inspad, r, mem[i+1])
 			} else {
-				fmt.Fprintf(s.w, "%s + %s\n", inspad, r)
+				fmt.Fprintf(s.c.Output, "%s + %s\n", inspad, r)
 			}
 		}
 	}

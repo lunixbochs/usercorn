@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/lunixbochs/usercorn/go/arch"
+	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/trace"
 	"github.com/lunixbochs/usercorn/go/ui"
 )
@@ -37,7 +38,9 @@ func PrintPretty(tf *trace.TraceReader) error {
 	if err != nil {
 		return errors.Wrap(err, "arch.GetArch() failed")
 	}
-	stream := ui.NewStreamUI(os.Stdout, arch, OS)
+	config := &models.Config{}
+	config.Init()
+	stream := ui.NewStreamUI(config, arch, OS)
 	defer stream.Flush()
 	for {
 		op, err := tf.Next()

@@ -100,7 +100,7 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 		debugFiles: make(map[string]*models.DebugFile),
 	}
 	if config.Trace.Tracefile == "" {
-		u.ui = ui.NewStreamUI(u.config.Output, u.arch, u.os)
+		u.ui = ui.NewStreamUI(u.config, u.arch, u.os)
 		config.Trace.OpCallback = func(op models.Op) {
 			u.ui.Feed(op)
 		}
