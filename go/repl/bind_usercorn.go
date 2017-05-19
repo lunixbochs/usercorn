@@ -89,8 +89,10 @@ func (b *ubind) Dis(L *lua.LState) int {
 	ret := L.NewTable()
 	for i, v := range dis {
 		ins := L.NewTable()
+		ins.RawSetString("addr", lua.LNumber(v.Addr()))
 		ins.RawSetString("mnemonic", lua.LString(v.Mnemonic()))
 		ins.RawSetString("opstr", lua.LString(v.OpStr()))
+		ins.RawSetString("bytes", lua.LString(v.Bytes()))
 
 		ops := L.NewTable()
 		for j, s := range strings.Split(v.OpStr(), ",") {

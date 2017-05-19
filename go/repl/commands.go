@@ -65,11 +65,36 @@ func map(addr, size, prot)
     end
 end
 
+func asm(src, addr)
+	if addr == nil then addr = 0 end
+	return u.asm(src, addr)
+end
+
+func patch(addr, src)
+	local x = asm(src, addr)
+	-- autonop
+	local total = 0
+	for _, ins in pairs(u.dis(addr, x:len() + 16)) do
+		total = total + ins.bytes:len()
+		if total == x:len() then break end
+		if total > x:len() then
+			x = x .. asm('nop', 0):rep(total - x:len())
+			break
+		end
+	end
+	write(addr, x)
+end
+
 func dis(addr, size)
 	if addr == nil then addr = pc end
 	if size == nil then size = 16 end
-	local a, b = us:Dis(addr, size, true)
-	print a
+	local d = u.dis(addr, size)
+	local width = 0
+	for _, ins in ipairs(d) do width = math.max(width, ins.bytes:len()) end
+	for _, ins in ipairs(d) do
+		local fmt = '0x%x: %' .. (width * 2) .. 'x %s %s'
+		print fmt % {ins.addr, ins.bytes, ins.mnemonic, ins.opstr}
+	end
 end
 
 func c() u.continue() end
