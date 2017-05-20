@@ -75,6 +75,7 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 	var err error
 	n.exitRequest = false
 	pc := begin
+	n.RegWrite(PC, pc)
 	n.OnBlock(pc, 0)
 
 	for pc != until && err == nil && !n.exitRequest {
@@ -93,6 +94,11 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 		ins := code[0].(*ins)
 
 		n.OnCode(pc, uint32(len(ins.bytes)))
+		// exitRequest needs to be checked here so a hook can interrupt the emulator
+		if n.exitRequest {
+			break
+		}
+		// TODO: allow OnCode and OnBlock to set PC?
 
 		var a, b arg
 		switch len(ins.args) {
@@ -221,7 +227,7 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 		} else {
 			pc = next_pc
 		}
-
+		n.RegWrite(PC, pc)
 	}
 	return n.err
 }
