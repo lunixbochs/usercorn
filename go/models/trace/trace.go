@@ -248,7 +248,17 @@ func (t *Trace) flushStep() {
 	}
 }
 
+func (t *Trace) flushSys() {
+	sys := t.syscall
+	if sys != nil {
+		t.OnRegUpdate()
+		t.syscall = nil
+		t.Append(sys, false)
+	}
+}
+
 func (t *Trace) OnJmp(addr uint64, size uint32) {
+	t.flushSys()
 	// TODO: handle real self-jumps?
 	if t.step != nil && addr != t.stepAddr {
 		t.flushStep()
@@ -257,6 +267,7 @@ func (t *Trace) OnJmp(addr uint64, size uint32) {
 }
 
 func (t *Trace) OnStep(addr uint64, size uint32) {
+	t.flushSys()
 	if addr == t.stepAddr {
 		return
 	}
@@ -304,17 +315,17 @@ func (t *Trace) OnMemUnmap(addr, size uint64) {
 }
 
 func (t *Trace) OnSysPre(num int, args []uint64, ret uint64, desc string) {
+	t.flushSys()
 	syscall := &OpSyscall{uint32(num), 0, args, desc, nil}
 	// TODO: how to add syscall to keyframe?
 	t.syscall = syscall
 }
 
 func (t *Trace) OnSysPost(num int, args []uint64, ret uint64, desc string) {
-	if t.syscall != nil {
-		t.syscall.Desc += desc
-		t.syscall.Ret = ret
-		t.Append(t.syscall, false)
-		t.syscall = nil
+	sys := t.syscall
+	if sys != nil {
+		sys.Desc += desc
+		sys.Ret = ret
 	}
 }
 
