@@ -2,10 +2,19 @@ package ndh
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/pkg/errors"
 
+	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
+
+func rbool(i bool) uint64 {
+	if i {
+		return 1
+	}
+	return 0
+}
 
 type Builder struct{}
 
@@ -26,13 +35,176 @@ type NdhCpu struct {
 	*cpu.Hooks
 	*cpu.Regs
 	*cpu.Mem
+
+	exitRequest bool
+	err         error
+}
+
+func (n *NdhCpu) set(a arg, val uint64) {
+	switch v := a.(type) {
+	case *reg:
+		n.RegWrite(int(v.num), val)
+	case *indirect:
+		addr := n.get(v.arg.(*reg))
+		n.WriteUint(addr, 1, cpu.PROT_WRITE, val)
+	default:
+		panic(fmt.Sprintf("unsupported set: %T", a))
+	}
+}
+
+func (n *NdhCpu) get(a arg) uint64 {
+	var val uint64
+	switch v := a.(type) {
+	case *u8:
+		val = uint64(v.val)
+	case *u16:
+		val = uint64(v.val)
+	case *reg:
+		val, _ = n.RegRead(int(v.num))
+	case *indirect:
+		addr := n.get(v.arg.(*reg))
+		val, n.err = n.ReadUint(addr, 1, cpu.PROT_READ)
+	default:
+		panic(fmt.Sprintf("unsupported get: %T", a))
+	}
+	return val
 }
 
 func (n *NdhCpu) Start(begin, until uint64) error {
-	return errors.New("I don't work")
+	var dis Dis
+	var err error
+	n.exitRequest = false
+	pc := begin
+	n.OnBlock(pc, 0)
+
+	for pc != until && err == nil && !n.exitRequest {
+		var mem []byte
+		var code []models.Ins
+		// 5 is the largest known ndh instruction size
+		if mem, err = n.ReadProt(pc, 5, cpu.PROT_EXEC); err != nil {
+			break
+		}
+		if code, err = dis.Dis(mem, pc); err != nil {
+			break
+		}
+		if len(code) < 1 {
+			panic("eof")
+		}
+		ins := code[0].(*ins)
+
+		n.OnCode(pc, uint32(len(ins.bytes)))
+
+		var a, b arg
+		switch len(ins.args) {
+		case 2:
+			a = ins.args[0]
+			b = ins.args[1]
+		case 1:
+			a = ins.args[0]
+		}
+
+		jmpoff := int32(-1)
+
+		afr, _ := n.RegRead(AF)
+		bfr, _ := n.RegRead(BF)
+		zfr, _ := n.RegRead(ZF)
+		af, bf, zf := afr == 1, bfr == 1, zfr == 1
+		switch ins.op {
+		case OP_ADD:
+			n.set(a, n.get(a)+n.get(b))
+		case OP_AND:
+			n.set(a, n.get(a)&n.get(b))
+		case OP_DEC:
+			n.set(a, n.get(a)-1)
+		case OP_DIV:
+			n.set(a, n.get(a)/n.get(b))
+		case OP_INC:
+			n.set(a, n.get(a)+1)
+		case OP_MOV:
+			n.set(a, n.get(b))
+		case OP_MUL:
+			n.set(a, n.get(a)*n.get(b))
+		case OP_NOT:
+			n.set(a, ^n.get(a))
+		case OP_OR:
+			n.set(a, n.get(a)|n.get(b))
+		case OP_SUB:
+			n.set(a, n.get(a)-n.get(b))
+		case OP_XCHG:
+			xa, xb := n.get(a), n.get(b)
+			n.set(a, xb)
+			n.set(b, xa)
+		case OP_XOR:
+			n.set(a, n.get(a)^n.get(b))
+
+		case OP_CMP:
+			va, vb := n.get(a), n.get(b)
+			if va == vb {
+				zf = true
+			} else if va < vb {
+				af = true
+			} else if va > vb {
+				bf = true
+			}
+		case OP_TEST:
+			zf = n.get(a) == 0 && n.get(b) == 0
+
+		case OP_SYSCALL:
+			n.OnIntr(0)
+		case OP_NOP:
+		case OP_END:
+			return models.ExitStatus(0)
+		case OP_JA:
+			if af {
+				jmpoff = int32(n.get(a))
+			}
+		case OP_JB:
+			if bf {
+				jmpoff = int32(n.get(a))
+			}
+		case OP_JMPL, OP_JMPS:
+			jmpoff = int32(n.get(a))
+		case OP_JNZ:
+			if !zf {
+				jmpoff = int32(n.get(a))
+			}
+		case OP_JZ:
+			if zf {
+				jmpoff = int32(n.get(a))
+			}
+
+		case OP_CALL:
+			// should push ret addr
+			jmpoff = int32(n.get(a))
+		case OP_RET:
+			// pop pc addr, pc - ret
+
+		case OP_POP:
+
+		case OP_PUSH:
+
+		default:
+			return errors.Errorf("invalid op: %#x", ins.op)
+		}
+		n.RegWrite(AF, rbool(af))
+		n.RegWrite(BF, rbool(bf))
+		n.RegWrite(ZF, rbool(zf))
+
+		if jmpoff >= 0 {
+			insend := ins.addr + uint64(len(ins.bytes))
+			pc = (insend + uint64(jmpoff)) & 0xffff
+			jmpoff = 0
+			n.OnBlock(pc, 0)
+		} else {
+			pc += uint64(len(ins.Bytes()))
+		}
+
+	}
+	return r.err
 }
 
 func (n *NdhCpu) Stop() error {
+	n.exitRequest = true
 	return nil
 }
 
