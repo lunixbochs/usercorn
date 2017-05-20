@@ -125,6 +125,8 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 			xa, xb := n.get(a), n.get(b)
 			n.set(a, xb)
 			n.set(b, xa)
+		case OP_MOV:
+			n.set(a, n.get(b))
 
 		case OP_ADD:
 			n.set(a, zfcheck(n.get(a)+n.get(b)))
@@ -132,8 +134,6 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 			n.set(a, zfcheck(n.get(a)&n.get(b)))
 		case OP_DIV:
 			n.set(a, zfcheck(n.get(a)/n.get(b)))
-		case OP_MOV:
-			n.set(a, zfcheck(n.get(b)))
 		case OP_MUL:
 			n.set(a, zfcheck(n.get(a)*n.get(b)))
 		case OP_NOT:
