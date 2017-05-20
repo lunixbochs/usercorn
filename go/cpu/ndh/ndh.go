@@ -103,11 +103,12 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 			a = ins.args[0]
 		}
 
+		next_pc := pc + uint64(len(ins.Bytes()))
 		jmpoff := int32(-1)
-
 		afr, _ := n.RegRead(AF)
 		bfr, _ := n.RegRead(BF)
 		zfr, _ := n.RegRead(ZF)
+		sp, _ := n.RegRead(SP)
 		af, bf, zf := afr == 1, bfr == 1, zfr == 1
 		switch ins.op {
 		case OP_ADD:
@@ -174,14 +175,28 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 			}
 
 		case OP_CALL:
-			// should push ret addr
 			jmpoff = int32(n.get(a))
+			sp -= 2
+			n.err = n.WriteUint(sp, 2, cpu.PROT_WRITE, next_pc)
 		case OP_RET:
-			// pop pc addr, pc - ret
-
-		case OP_POP:
+			var dst uint64
+			dst, n.err = n.ReadUint(sp, 2, cpu.PROT_READ)
+			jmpoff = int32(pc - dst)
+			sp += 2
 
 		case OP_PUSH:
+			size := 2
+			if _, ok := a.(*u8); ok {
+				size = 1
+			}
+			sp -= uint64(size)
+			val := n.get(a)
+			n.err = n.WriteUint(sp, size, cpu.PROT_WRITE, val)
+		case OP_POP:
+			var val uint64
+			val, n.err = n.ReadUint(sp, 2, cpu.PROT_READ)
+			n.set(a, val)
+			sp += 2
 
 		default:
 			return errors.Errorf("invalid op: %#x", ins.op)
@@ -189,6 +204,7 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 		n.RegWrite(AF, rbool(af))
 		n.RegWrite(BF, rbool(bf))
 		n.RegWrite(ZF, rbool(zf))
+		n.RegWrite(SP, sp)
 
 		if jmpoff >= 0 {
 			insend := ins.addr + uint64(len(ins.bytes))
@@ -196,11 +212,11 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 			jmpoff = 0
 			n.OnBlock(pc, 0)
 		} else {
-			pc += uint64(len(ins.Bytes()))
+			pc = next_pc
 		}
 
 	}
-	return r.err
+	return n.err
 }
 
 func (n *NdhCpu) Stop() error {
