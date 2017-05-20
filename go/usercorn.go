@@ -498,7 +498,7 @@ func (u *Usercorn) Run(args, env []string) error {
 			u.RegWrite(u.arch.SP, sp)
 		}
 	}
-	if err != nil || u.config.Verbose {
+	if _, ok := err.(models.ExitStatus); !ok && err != nil || u.config.Verbose {
 		verboseExit()
 	} else if u.config.Trace.Reg {
 		// TODO: print all registers here
