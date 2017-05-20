@@ -45,6 +45,8 @@ func NdhInit(u models.Usercorn, args, env []string) error {
 	if err := u.MapStack(0x0, 0x8000, false); err != nil {
 		return err
 	}
+	sp, _ := u.RegRead(ndh.BP)
+	u.RegWrite(ndh.BP, sp)
 	return nil
 }
 
