@@ -137,6 +137,9 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	ftrace := fs.Bool("ftrace", false, "trace source file:line")
 	tracefile := fs.String("to", "", "binary trace output file")
 
+	rewind := fs.Bool("rewind", false, "enable CPU rewind")
+	ui := fs.Bool("ui", false, "display traced changes")
+
 	match := fs.String("match", "", "trace from specific function(s) (func[,func...][+depth])")
 	looproll := fs.Int("loop", 0, "collapse loop blocks of this depth")
 	demangle := fs.Bool("demangle", false, "demangle symbols using c++filt")
@@ -273,6 +276,8 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			Reg:   *rtrace,
 			Sys:   *strace,
 		},
+		Rewind: *rewind,
+		UI:     *ui,
 
 		// FIXME: these are UI tracing flags and now broken
 		Demangle:      *demangle,

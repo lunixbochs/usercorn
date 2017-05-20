@@ -90,7 +90,10 @@ func (r *Replay) Feed(op models.Op) {
 		// at that point, flush the last OpStep
 		switch o := op.(type) {
 		case *OpJmp:
-			r.Flush()
+			// fixes a bug where single-stepping misattributes registers
+			if o.Addr != r.PC {
+				r.Flush()
+			}
 			r.Emit(o, nil)
 			r.update(o)
 		case *OpStep:

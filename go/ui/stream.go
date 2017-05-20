@@ -90,7 +90,7 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 	insmem := make([]byte, size)
 	s.replay.Mem.Read(pc, insmem, 0)
 	// TODO: disBytes setting?
-	dis, err := models.Disas(insmem, pc, s.replay.Arch, false)
+	dis, err := models.Disas(insmem, pc, s.replay.Arch, s.config.DisBytes)
 	if err != nil {
 		ins = fmt.Sprintf("%#x: %x", pc, insmem)
 	} else {

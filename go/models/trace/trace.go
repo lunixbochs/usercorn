@@ -12,7 +12,7 @@ import (
 
 type Trace struct {
 	regEnums []int
-	pc       int
+	pcReg    int
 
 	regs    []uint64
 	hooks   []cpu.Hook
@@ -23,13 +23,16 @@ type Trace struct {
 	frame    *OpFrame
 	syscall  *OpSyscall
 	op       models.Op
+	step     *OpStep
+	stepAddr uint64
 
 	u      models.Usercorn
 	w      io.WriteCloser
 	tf     *TraceWriter
 	config *models.TraceConfig
 
-	attached bool
+	attached  bool
+	firstStep bool
 }
 
 func NewTrace(u models.Usercorn, config *models.TraceConfig) (*Trace, error) {
@@ -38,7 +41,7 @@ func NewTrace(u models.Usercorn, config *models.TraceConfig) (*Trace, error) {
 		u:        u,
 		config:   config,
 		regEnums: enums,
-		pc:       u.Arch().PC,
+		pcReg:    u.Arch().PC,
 		keyframe: &keyframe{regEnums: enums},
 	}
 	t.keyframe.reset()
@@ -110,10 +113,7 @@ func (t *Trace) Attach() error {
 	}
 	if t.config.Ins {
 		if err := t.hook(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
-			if t.config.Reg {
-				t.OnRegUpdate()
-			}
-			t.OnStep(size)
+			t.OnStep(addr, size)
 		}, 1, 0); err != nil {
 			return err
 		}
@@ -208,6 +208,19 @@ func (t *Trace) Pack(frame *OpFrame) {
 	}
 }
 
+// keyframes will be all messed up now
+func (t *Trace) Rewound() {
+	t.step = nil
+	t.stepAddr = 0
+	// it's a reg update without sending any ops
+	regs, _ := t.u.Arch().RegDumpFast(t.u)
+	for i, val := range regs {
+		if t.regs[i] != val && t.regEnums[i] != t.pcReg {
+			t.regs[i] = val
+		}
+	}
+}
+
 // canAdvance indicates whether this op can start a new keyframe
 // TODO: eventually allow alternating OpFrames with Syscalls, like on windows kernel->userspace callbacks?
 func (t *Trace) Append(op models.Op, canAdvance bool) {
@@ -226,18 +239,36 @@ func (t *Trace) Append(op models.Op, canAdvance bool) {
 }
 
 // trace hooks are below
+func (t *Trace) flushStep() {
+	// we need to lag one instruction behind, because OnStep is *before* the instruction
+	if t.step != nil {
+		t.OnRegUpdate()
+		t.Append(t.step, false)
+		t.step = nil
+	}
+}
 
 func (t *Trace) OnJmp(addr uint64, size uint32) {
+	// TODO: handle real self-jumps?
+	if t.step != nil && addr != t.stepAddr {
+		t.flushStep()
+	}
 	t.Append(&OpJmp{Addr: addr, Size: size}, true)
 }
-func (t *Trace) OnStep(size uint32) {
-	t.Append(&OpStep{Size: uint8(size)}, false)
+
+func (t *Trace) OnStep(addr uint64, size uint32) {
+	if addr == t.stepAddr {
+		return
+	}
+	t.flushStep()
+	t.step = &OpStep{Size: uint8(size)}
+	t.stepAddr = addr
 }
 
 func (t *Trace) OnRegUpdate() {
 	regs, _ := t.u.Arch().RegDumpFast(t.u)
 	for i, val := range regs {
-		if t.regs[i] != val && t.regEnums[i] != t.pc {
+		if t.regs[i] != val && t.regEnums[i] != t.pcReg {
 			t.Append(&OpReg{Num: uint16(t.regEnums[i]), Val: val}, false)
 			t.regs[i] = val
 		}
@@ -250,7 +281,7 @@ func (t *Trace) OnMemReadData(addr uint64, data []byte) {
 
 func (t *Trace) OnMemRead(addr uint64, size int) {
 	// TODO: error tracking?
-	data, err := t.u.MemRead(addr, uint64(size))
+	data, err := t.u.DirectRead(addr, uint64(size))
 	if err == nil {
 		t.OnMemReadData(addr, data)
 	}

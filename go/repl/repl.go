@@ -58,7 +58,7 @@ func (L *LuaRepl) EnvToLua() {
 		}
 	}
 	pc, _ := u.RegRead(u.Arch().PC)
-	mem, _ := u.MemRead(pc, 16)
+	mem, _ := u.DirectRead(pc, 16)
 	dis, err := u.Arch().Dis.Dis(mem, pc)
 	if err == nil && len(dis) > 0 {
 		ins := disToLua(L, dis[:1])[0]
@@ -71,6 +71,9 @@ func (L *LuaRepl) EnvFromLua() {
 	// read register values back out
 	// TODO: what about psuedo-registers?
 	// TODO: gah, what if lua steps so the registers change under us?
+
+	// can't do this if we rewind!
+	return
 	u := L.u
 	vals, _ := u.RegDump()
 	for i, r := range vals {
@@ -253,11 +256,11 @@ func Run(u models.Usercorn) error {
 		rl.Config.Listener = repl
 
 		setPrompt := func() {
-			rl.SetPrompt("> ")
+			pc, _ := u.RegRead(u.Arch().PC)
+			rl.SetPrompt(fmt.Sprintf("%#x> ", pc))
 			return
 			// this is just a demo
-			pc, _ := u.RegRead(u.Arch().PC)
-			mem, _ := u.MemRead(pc, 16)
+			mem, _ := u.DirectRead(pc, 16)
 			dis, err := u.Arch().Dis.Dis(mem, pc)
 			if err == nil && len(dis) > 0 {
 				rl.SetPrompt(fmt.Sprintf("[%s %s] ", dis[0].Mnemonic(), dis[0].OpStr()))

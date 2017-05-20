@@ -57,7 +57,9 @@ type Config struct {
 	Strsize         int
 	Verbose         bool
 
-	Trace TraceConfig
+	Trace  TraceConfig
+	Rewind bool
+	UI     bool
 
 	SymFile bool
 

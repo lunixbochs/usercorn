@@ -25,6 +25,7 @@ type Usercorn interface {
 	Trampoline(func() error) error
 
 	Restart(func(Usercorn, error) error)
+	Rewind(n uint64) error
 
 	Gate() *Gate
 
@@ -39,6 +40,9 @@ type Usercorn interface {
 	Mem() memio.MemIO
 	MapStack(base uint64, size uint64, guard bool) error
 	StrucAt(addr uint64) *StrucStream
+
+	DirectRead(addr, size uint64) ([]byte, error)
+	DirectWrite(addr uint64, p []byte) error
 
 	RunShellcodeMapped(mmap *Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error
 	RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error

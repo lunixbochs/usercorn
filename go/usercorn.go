@@ -76,6 +76,7 @@ type Usercorn struct {
 
 	trace  *trace.Trace
 	replay *trace.Replay
+	rewind []models.Op
 	ui     *ui.StreamUI
 	// obsolete tracing flags
 	inscount uint64
@@ -100,16 +101,21 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 		exit:       0xffffffffffffffff,
 		debugFiles: make(map[string]*models.DebugFile),
 	}
-	if config.Trace.Tracefile == "" {
+	if u.config.Rewind || u.config.UI {
 		u.replay = trace.NewReplay(u.arch, u.os)
-		config.Trace.OpCallback = append(config.Trace.OpCallback,
-			func(op models.Op) {
-				u.replay.Feed(op)
-			})
 		defer u.replay.Flush()
-
-		u.ui = ui.NewStreamUI(u.config, u.replay)
-		u.replay.Listen(u.ui.Feed)
+		config.Trace.OpCallback = append(config.Trace.OpCallback, u.replay.Feed)
+		if config.UI {
+			u.ui = ui.NewStreamUI(u.config, u.replay)
+			u.replay.Listen(u.ui.Feed)
+		}
+		if u.config.Rewind {
+			u.rewind = make([]models.Op, 0, 10000)
+			config.Trace.OpCallback = append(config.Trace.OpCallback,
+				func(frame models.Op) {
+					u.rewind = append(u.rewind, frame)
+				})
+		}
 	}
 
 	u.trace, err = trace.NewTrace(u, &config.Trace)
@@ -219,7 +225,84 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	return u, nil
 }
 
-// intercept memory read/write into MemIO to make tracing always work
+func (u *Usercorn) Rewind(by uint64) error {
+	if !u.config.Rewind {
+		return errors.New("rewind not enabled in config")
+	}
+	if u.replay.Inscount < by {
+		// TODO: just rewind to start when this happens?
+		return errors.New("rewinding too far")
+	}
+	target := u.replay.Inscount - by
+	replay := trace.NewReplay(u.arch, u.os)
+	good := false
+	var pos int
+	var op models.Op
+	// TODO: attach a StreamUI to this, but reverse the lines?
+	for pos, op = range u.rewind {
+		replay.Feed(op)
+		if replay.Inscount == target {
+			good = true
+			break
+		}
+	}
+	if !good {
+		return errors.Errorf("missed rewind target (%d), hit %d", target, replay.Inscount)
+	}
+	//* sync simulated cpu *//
+	// 1. copy reg state FIXME: USE RegReadFast
+	// we use u.replay.Regs for the enums, because replay.Regs might not have all regs set
+	for enum, oldval := range u.replay.Regs {
+		newval, _ := replay.Regs[enum]
+		if oldval != newval {
+			name := u.Arch().RegNames()[enum]
+			u.Printf("  %s (%#x) -> (%#x)\n", name, oldval, newval)
+			u.RegWrite(enum, newval)
+		}
+	}
+	u.Printf("  pc %#x -> %#x\n", u.replay.PC, replay.PC)
+	pc := replay.PC
+	u.RegWrite(u.arch.PC, pc)
+	// TODO: special regs (SpRegs)
+
+	// 2. map all target mappings
+	for _, mm := range replay.Mem.Mem {
+		if err := u.MemMapProt(mm.Addr, mm.Size, mm.Prot); err != nil {
+			return err
+		}
+		// 3. copy target memory
+		if err := u.MemWrite(mm.Addr, mm.Data); err != nil {
+			return err
+		}
+	}
+	// 4. truncate our rewind state
+	// TODO: instead of truncating, undo tree to allow ff/diff?
+	u.rewind = u.rewind[:pos+1]
+
+	// 5. tell trace we rewound so it updates register diffs
+	u.trace.Rewound()
+
+	// 6. dis our new current pc
+	mem, _ := u.DirectRead(pc, 16)
+	dis, err := u.Arch().Dis.Dis(mem, pc)
+	if err == nil && len(dis) > 0 {
+		padto := len(fmt.Sprintf("%#x", dis[0].Addr())) + 1
+		pad := strings.Repeat("<", padto)
+		u.Printf("%s %s %s\n", pad, dis[0].Mnemonic(), dis[0].OpStr())
+	}
+
+	// 7. gross: update old replay with new data (so we don't need to mess with callbacks/defer)
+	u.replay.Mem = replay.Mem
+	u.replay.Regs = replay.Regs
+	u.replay.SpRegs = replay.SpRegs
+	u.replay.PC = replay.PC
+	u.replay.SP = replay.SP
+	u.replay.Inscount = replay.Inscount
+	return nil
+}
+
+// Intercept memory read/write into MemIO to make tracing always work.
+// This means Trace needs to use Task().Read() instead
 func (u *Usercorn) MemWrite(addr uint64, p []byte) error {
 	_, err := u.memio.WriteAt(p, addr)
 	return err
@@ -232,6 +315,14 @@ func (u *Usercorn) MemRead(addr, size uint64) ([]byte, error) {
 	p := make([]byte, size)
 	err := u.MemReadInto(p, addr)
 	return p, err
+}
+
+// read without tracing, used by trace and repl
+func (u *Usercorn) DirectRead(addr, size uint64) ([]byte, error) {
+	return u.Task.MemRead(addr, size)
+}
+func (u *Usercorn) DirectWrite(addr uint64, p []byte) error {
+	return u.Task.MemWrite(addr, p)
 }
 
 func (u *Usercorn) HookAdd(htype int, cb interface{}, begin, end uint64, extra ...int) (cpu.Hook, error) {
@@ -367,7 +458,7 @@ func (u *Usercorn) Run(args, env []string) error {
 	// in case this isn't the first run
 	u.exitStatus = nil
 	// loop to restart Cpu if we need to call a trampoline function
-	pc := u.entry
+	u.RegWrite(u.arch.PC, u.entry)
 	var err error
 	for err == nil && u.exitStatus == nil {
 		// well there's a huge pile of sync here to make sure everyone's ready to go...
@@ -376,6 +467,8 @@ func (u *Usercorn) Run(args, env []string) error {
 		if u.exitStatus != nil {
 			break
 		}
+		// allow repl or rewind to change pc
+		pc, _ := u.RegRead(u.arch.PC)
 		err = u.Start(pc, u.exit)
 		u.gate.Stop()
 

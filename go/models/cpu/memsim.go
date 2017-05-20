@@ -87,11 +87,11 @@ func (m memSort) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func (m memSort) Less(i, j int) bool { return m[i].Addr < m[j].Addr }
 
 type MemSim struct {
-	mem []*MemRegion
+	Mem []*MemRegion
 }
 
 func (m *MemSim) Find(addr uint64) *MemRegion {
-	for _, mm := range m.mem {
+	for _, mm := range m.Mem {
 		if mm.Contains(addr) {
 			return mm
 		}
@@ -108,7 +108,7 @@ func (m *MemSim) RangeValid(addr, size uint64, prot int) (mapGood bool, protGood
 	}
 	protGood = true
 	end := addr + size
-	for _, mm := range m.mem[first:] {
+	for _, mm := range m.Mem[first:] {
 		if mm.Contains(addr) {
 			if prot > 0 && (mm.Prot == 0 || mm.Prot&prot != prot) {
 				protGood = false
@@ -127,10 +127,10 @@ func (m *MemSim) RangeValid(addr, size uint64, prot int) (mapGood bool, protGood
 // binary search to find index of first region containing addr, if any, else -1
 func (m *MemSim) bsearch(addr uint64) int {
 	l := 0
-	r := len(m.mem) - 1
+	r := len(m.Mem) - 1
 	for l <= r {
 		mid := (l + r) / 2
-		e := m.mem[mid]
+		e := m.Mem[mid]
 		if addr >= e.Addr {
 			if addr < e.Addr+e.Size {
 				return mid
@@ -155,8 +155,8 @@ func (m *MemSim) Map(addr, size uint64, prot int, zero bool) {
 	if gmem, _ := m.RangeValid(addr, size, 0); gmem {
 		m.Unmap(addr, size)
 	}
-	m.mem = append(m.mem, &MemRegion{Addr: addr, Size: size, Prot: prot, Data: data})
-	sort.Sort(memSort(m.mem))
+	m.Mem = append(m.Mem, &MemRegion{Addr: addr, Size: size, Prot: prot, Data: data})
+	sort.Sort(memSort(m.Mem))
 }
 
 func (m *MemSim) Prot(addr, size uint64, prot int) {
@@ -165,9 +165,9 @@ func (m *MemSim) Prot(addr, size uint64, prot int) {
 
 func (m *MemSim) Unmap(addr, size uint64) {
 	// truncate entries overlapping addr, size
-	tmp := make([]*MemRegion, 0, len(m.mem))
+	tmp := make([]*MemRegion, 0, len(m.Mem))
 	// TODO: use a binary search to find the leftmost mapping?
-	for _, mm := range m.mem {
+	for _, mm := range m.Mem {
 		if mm.Overlaps(addr, size) {
 			left, right := mm.Split(addr, size)
 			if left != nil {
@@ -180,7 +180,7 @@ func (m *MemSim) Unmap(addr, size uint64) {
 			tmp = append(tmp, mm)
 		}
 	}
-	m.mem = tmp
+	m.Mem = tmp
 }
 
 // TODO: allow partial reads, and return amount read?
@@ -198,7 +198,7 @@ func (m *MemSim) Read(addr uint64, p []byte, prot int) error {
 		return &MemError{Addr: addr, Size: len(p), Enum: MEM_READ_PROT}
 	}
 	// TODO: consecutive read using bsearch
-	for _, mm := range m.mem {
+	for _, mm := range m.Mem {
 		if mm.Contains(addr) {
 			o := addr - mm.Addr
 			n := copy(p, mm.Data[o:])
@@ -217,7 +217,7 @@ func (m *MemSim) Write(addr uint64, p []byte, prot int) error {
 		return &MemError{Addr: addr, Size: len(p), Enum: MEM_WRITE_PROT}
 	}
 	// TODO: consecutive write using bsearch
-	for _, mm := range m.mem {
+	for _, mm := range m.Mem {
 		if mm.Contains(addr) {
 			o := addr - mm.Addr
 			n := copy(mm.Data[o:], p)

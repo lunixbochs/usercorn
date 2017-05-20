@@ -82,25 +82,32 @@ func patch(addr, src)
 	write(addr, x)
 end
 
-func dis(addr, size, indent)
+func dis(addr, size, indent, count)
 	if addr == nil then addr = pc end
 	if size == nil then size = 16 end
 	if indent == nil then indent = 0 end
 	local pad = (' '):rep(indent)
 	local d = u.dis(addr, size)
 	local width = 0
-	for _, ins in ipairs(d) do
+	for i, ins in ipairs(d) do
+		if count != nil and i > count then break end
 		local fmt = pad .. '0x%x: %s %s'
 		print fmt % {ins.addr, ins.name, ins.op_str}
 	end
 end
 
-func c() u.continue() end
 
 func s(steps)
 	if steps == nil then steps = 1 end
 	u.step(steps)
 end
+
+c = u.continue
+func rewind(n)
+	if n == nil then n = 1 end
+	u.rewind(n)
+end
+rw = rewind
 
 func b(baddr)
 	local hh = u.hook_add(cpu.HOOK_CODE, func()
@@ -119,7 +126,7 @@ func runto(name)
     on code do
         if ins.name == name then
             print '[-] stopping at "%s"' % name
-            dis
+            dis pc 16 0 1
             u.stop()
             off
         end

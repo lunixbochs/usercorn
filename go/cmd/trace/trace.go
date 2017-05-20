@@ -40,8 +40,10 @@ func PrintPretty(tf *trace.TraceReader) error {
 	}
 	config := &models.Config{}
 	config.Init()
-	stream := ui.NewStreamUI(config, arch, OS)
-	defer stream.Flush()
+	replay := trace.NewReplay(arch, OS)
+	defer replay.Flush()
+	stream := ui.NewStreamUI(config, replay)
+	replay.Listen(stream.Feed)
 	for {
 		op, err := tf.Next()
 		// TODO: DRY? could make TraceReader behave more like Scanner
@@ -50,7 +52,7 @@ func PrintPretty(tf *trace.TraceReader) error {
 		} else if err != nil {
 			return errors.Wrap(err, "error reading next trace operation")
 		}
-		stream.Feed(op)
+		replay.Feed(op)
 	}
 	return nil
 }

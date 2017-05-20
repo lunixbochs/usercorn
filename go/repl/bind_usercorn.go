@@ -36,6 +36,7 @@ func (b *ubind) Exports() map[string]lua.LGFunction {
 		// bonus features
 		"step":     b.Step,
 		"continue": b.Continue,
+		"rewind":   b.Rewind,
 
 		// cpu.Cpu interface
 		"mem_map":   b.MemMap,
@@ -107,7 +108,7 @@ func (b *ubind) dis(addr, size uint64) []*lua.LTable {
 	if arch.Dis == nil {
 		L.RaiseError("arch<%T>.Dis not initialized", arch)
 	}
-	mem, err := b.u.MemRead(addr, size)
+	mem, err := b.u.DirectRead(addr, size)
 	b.checkErr(err)
 	dis, err := arch.Dis.Dis(mem, addr)
 	b.checkErr(err)
@@ -138,7 +139,7 @@ func (b *ubind) Ins(L *lua.LState) int {
 
 // bonus features
 
-// Steps the CPU without blocking Lua, setting u.running before/after
+// Steps the CPU by <n> instructions
 func (b *ubind) Step(L *lua.LState) int {
 	steps := 1
 	if L.GetTop() > 0 {
@@ -151,7 +152,7 @@ func (b *ubind) Step(L *lua.LState) int {
 		if i > steps {
 			b.u.Stop()
 		}
-	}, true, 1, 0)
+	}, false, 1, 0)
 	b.checkErr(err)
 
 	/* NOTE: How to make an async step:
@@ -167,7 +168,7 @@ func (b *ubind) Step(L *lua.LState) int {
 	return 0
 }
 
-// Continues the CPU without blocking Lua, setting u.running before/after
+// Resumes execution
 func (b *ubind) Continue(L *lua.LState) int {
 	/* NOTE: How to make an async continue:
 	b.mod.RawSetString("running", lua.LTrue)
@@ -177,6 +178,13 @@ func (b *ubind) Continue(L *lua.LState) int {
 	}()
 	*/
 	b.u.Gate().UnlockStopRelock()
+	return 0
+}
+
+// Rewinds the CPU by <n> instructions
+func (b *ubind) Rewind(L *lua.LState) int {
+	n := L.CheckUint64(1)
+	b.checkErr(b.u.Rewind(n))
 	return 0
 }
 
@@ -202,7 +210,7 @@ func (b *ubind) MemUnmap(L *lua.LState) int {
 
 func (b *ubind) MemRead(L *lua.LState) int {
 	addr, size := L.CheckUint64(1), L.CheckUint64(2)
-	mem, err := b.u.MemRead(addr, size)
+	mem, err := b.u.DirectRead(addr, size)
 	b.checkErr(err)
 	L.Push(lua.LString(mem))
 	return 1
@@ -210,7 +218,7 @@ func (b *ubind) MemRead(L *lua.LState) int {
 
 func (b *ubind) MemWrite(L *lua.LState) int {
 	addr, data := L.CheckUint64(1), L.CheckString(2)
-	b.checkErr(b.u.MemWrite(addr, []byte(data)))
+	b.checkErr(b.u.DirectWrite(addr, []byte(data)))
 	return 0
 }
 
