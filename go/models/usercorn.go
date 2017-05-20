@@ -25,7 +25,7 @@ type Usercorn interface {
 	Trampoline(func() error) error
 
 	Restart(func(Usercorn, error) error)
-	Rewind(n uint64) error
+	Rewind(n, addr uint64) error
 
 	Gate() *Gate
 

@@ -225,26 +225,49 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	return u, nil
 }
 
-func (u *Usercorn) Rewind(by uint64) error {
+func (u *Usercorn) Rewind(by, addr uint64) error {
 	if !u.config.Rewind {
 		return errors.New("rewind not enabled in config")
 	}
-	if u.replay.Inscount < by {
-		// TODO: just rewind to start when this happens?
-		return errors.New("rewinding too far")
+	var target uint64
+	if by > 0 {
+		if u.replay.Inscount < by {
+			// TODO: just rewind to start when this happens?
+			return errors.New("rewinding too far")
+		}
+		target = u.replay.Inscount - by
 	}
-	target := u.replay.Inscount - by
 	replay := trace.NewReplay(u.arch, u.os)
 	good := false
 	var pos int
 	var op models.Op
-	// TODO: attach a StreamUI to this, but reverse the lines?
+	// TODO: attach a StreamUI to remainder, but reverse the lines?
+	// do this if you want to see the trace getting replayed (forwards)
+	/*
+		ui := ui.NewStreamUI(u.config, replay)
+		replay.Listen(ui.Feed)
+	*/
+outer:
 	for pos, op = range u.rewind {
-		replay.Feed(op)
-		if replay.Inscount == target {
+		if target > 0 && replay.Inscount == target {
 			good = true
 			break
+		} else if target == 0 && replay.PC == addr {
+			if good {
+				// we need to confirm the addr isn't just the implicit pc after a call
+				// by checking for an OpJmp after
+				switch v := op.(type) {
+				case *trace.OpStep:
+					break outer
+				case *trace.OpJmp:
+					if v.Addr == addr {
+						break outer
+					}
+				}
+			}
+			good = true
 		}
+		replay.Feed(op)
 	}
 	if !good {
 		return errors.Errorf("missed rewind target (%d), hit %d", target, replay.Inscount)
