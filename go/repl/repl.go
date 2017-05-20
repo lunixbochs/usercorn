@@ -59,11 +59,13 @@ func (L *LuaRepl) EnvToLua() {
 	}
 	pc, _ := u.RegRead(u.Arch().PC)
 	mem, _ := u.DirectRead(pc, 16)
-	dis, err := u.Arch().Dis.Dis(mem, pc)
-	if err == nil && len(dis) > 0 {
-		ins := disToLua(L, dis[:1])[0]
-		L.SetGlobal("ins", ins)
-		L.SetGlobal("ops", ins.RawGetString("ops"))
+	if u.Arch().Dis != nil {
+		dis, err := u.Arch().Dis.Dis(mem, pc)
+		if err == nil && len(dis) > 0 {
+			ins := disToLua(L, dis[:1])[0]
+			L.SetGlobal("ins", ins)
+			L.SetGlobal("ops", ins.RawGetString("ops"))
+		}
 	}
 }
 
