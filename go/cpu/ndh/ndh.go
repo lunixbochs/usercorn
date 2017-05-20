@@ -187,9 +187,8 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 			sp -= 2
 			n.err = n.WriteUint(sp, 2, cpu.PROT_WRITE, next_pc)
 		case OP_RET:
-			var dst uint64
-			dst, n.err = n.ReadUint(sp, 2, cpu.PROT_READ)
-			jmpoff = int32(pc - dst)
+			next_pc, n.err = n.ReadUint(sp, 2, cpu.PROT_READ)
+			n.OnBlock(next_pc, 0)
 			sp += 2
 
 		case OP_PUSH:
