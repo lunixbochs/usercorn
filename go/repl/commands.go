@@ -105,9 +105,10 @@ end
 c = u.continue
 func rewind(n)
 	if n == nil then n = 1 end
-	u.rewind(n)
+	u.rewind_n(n)
 end
 rw = rewind
+rwaddr = u.rewind_addr
 
 func b(baddr)
 	local hh = u.hook_add(cpu.HOOK_CODE, func()

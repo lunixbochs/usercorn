@@ -34,9 +34,10 @@ func (b *ubind) Exports() map[string]lua.LGFunction {
 		"ins": b.Ins,
 
 		// bonus features
-		"step":     b.Step,
-		"continue": b.Continue,
-		"rewind":   b.Rewind,
+		"step":        b.Step,
+		"continue":    b.Continue,
+		"rewind_n":    b.RewindN,
+		"rewind_addr": b.RewindAddr,
 
 		// cpu.Cpu interface
 		"mem_map":   b.MemMap,
@@ -182,9 +183,18 @@ func (b *ubind) Continue(L *lua.LState) int {
 }
 
 // Rewinds the CPU by <n> instructions
-func (b *ubind) Rewind(L *lua.LState) int {
+func (b *ubind) RewindN(L *lua.LState) int {
 	n := L.CheckUint64(1)
-	b.checkErr(b.u.Rewind(n))
+	b.checkErr(b.u.Rewind(n, 0))
+	b.L.EnvToLua()
+	return 0
+}
+
+// Rewinds the cpu to the first time pc == addr
+func (b *ubind) RewindAddr(L *lua.LState) int {
+	addr := L.CheckUint64(1)
+	b.checkErr(b.u.Rewind(0, addr))
+	b.L.EnvToLua()
 	return 0
 }
 

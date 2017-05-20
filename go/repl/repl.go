@@ -74,8 +74,6 @@ func (L *LuaRepl) EnvFromLua() {
 	// TODO: what about psuedo-registers?
 	// TODO: gah, what if lua steps so the registers change under us?
 
-	// can't do this if we rewind!
-	return
 	u := L.u
 	vals, _ := u.RegDump()
 	for i, r := range vals {
