@@ -20,7 +20,7 @@ type TraceConfig struct {
 	SpecialReg bool
 	Sys        bool
 
-	OpCallback func(Op)
+	OpCallback []func(Op)
 }
 
 func (t *TraceConfig) Any() bool {

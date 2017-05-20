@@ -74,8 +74,9 @@ type Usercorn struct {
 	hooks    []cpu.Hook
 	sysHooks []*models.SysHook
 
-	trace *trace.Trace
-	ui    *ui.StreamUI
+	trace  *trace.Trace
+	replay *trace.Replay
+	ui     *ui.StreamUI
 	// obsolete tracing flags
 	inscount uint64
 }
@@ -100,11 +101,15 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 		debugFiles: make(map[string]*models.DebugFile),
 	}
 	if config.Trace.Tracefile == "" {
-		u.ui = ui.NewStreamUI(u.config, u.arch, u.os)
-		config.Trace.OpCallback = func(op models.Op) {
-			u.ui.Feed(op)
-		}
-		defer u.ui.Flush()
+		u.replay = trace.NewReplay(u.arch, u.os)
+		config.Trace.OpCallback = append(config.Trace.OpCallback,
+			func(op models.Op) {
+				u.replay.Feed(op)
+			})
+		defer u.replay.Flush()
+
+		u.ui = ui.NewStreamUI(u.config, u.replay)
+		u.replay.Listen(u.ui.Feed)
 	}
 
 	u.trace, err = trace.NewTrace(u, &config.Trace)

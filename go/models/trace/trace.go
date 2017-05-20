@@ -195,8 +195,8 @@ func (t *Trace) Detach() {
 // and on the middle ground, I want register information for an instruction
 // I guess everything between an OpStep/OpJmp goes to the next OpStep/Jmp?
 func (t *Trace) Send(op models.Op) {
-	if t.config.OpCallback != nil {
-		t.config.OpCallback(op)
+	for _, cb := range t.config.OpCallback {
+		cb(op)
 	}
 }
 
