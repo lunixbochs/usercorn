@@ -22,8 +22,12 @@ local _hook_types = {
 func _on_hook(name, fn, start, stop)
 	local type = _hook_types[name]
 	if type != nil then
-		if start == nil then return u.hook_add(type, fn)
-		else return u.hook_add(type, fn, start, stop) end
+		if start == nil then
+			return u.hook_add(type, fn)
+		else
+			if stop == nil then stop = start end
+			return u.hook_add(type, fn, start, stop)
+		end
 	end
 	print 'unimplemented hook type %s' % name
     -- u.on_hook_add(name, fn, start, stop)
@@ -109,6 +113,12 @@ func rewind(n)
 end
 rw = rewind
 rwaddr = u.rewind_addr
+
+func rwto(ins)
+	while true do
+		rw 1
+	end
+end
 
 func b(baddr)
 	local hh = u.hook_add(cpu.HOOK_CODE, func()
