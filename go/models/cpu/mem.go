@@ -70,19 +70,18 @@ func (m *Mem) MemWrite(addr uint64, p []byte) error {
 
 // Read while checking protections. This exists to support a CPU interpreter.
 func (m *Mem) ReadProt(addr, size uint64, prot int) ([]byte, error) {
-	if m.hooks != nil {
-		if prot&PROT_EXEC == PROT_EXEC {
-			m.hooks.OnMem(MEM_FETCH, addr, int(size), 0)
-		} else {
-			m.hooks.OnMem(MEM_READ, addr, int(size), 0)
-		}
-	}
 	p := make([]byte, size)
 	if err := m.sim.Read(addr, p, prot); err != nil {
 		if merr, ok := err.(*MemError); ok && m.hooks != nil {
 			m.hooks.OnFault(merr.Enum, addr, int(size), 0)
 		}
 		return nil, err
+	} else if m.hooks != nil {
+		if prot&PROT_EXEC == PROT_EXEC {
+			m.hooks.OnMem(MEM_FETCH, addr, int(size), 0)
+		} else {
+			m.hooks.OnMem(MEM_READ, addr, int(size), 0)
+		}
 	}
 	return p, nil
 }
@@ -110,9 +109,6 @@ func (m *Mem) WriteUint(addr uint64, size, prot int, val uint64) error {
 	if size > 8 {
 		return errors.Errorf("MemWriteUint size too large: %d > 8", size)
 	}
-	if m.hooks != nil {
-		m.hooks.OnMem(MEM_WRITE, addr, int(size), int64(val))
-	}
 	if _, err := PackUint(m.order, size, buf[:], val); err != nil {
 		return err
 	}
@@ -121,6 +117,8 @@ func (m *Mem) WriteUint(addr uint64, size, prot int, val uint64) error {
 		if merr, ok := err.(*MemError); ok && m.hooks != nil {
 			m.hooks.OnFault(merr.Enum, addr, int(size), int64(val))
 		}
+	} else if m.hooks != nil {
+		m.hooks.OnMem(MEM_WRITE, addr, int(size), int64(val))
 	}
 	return err
 }

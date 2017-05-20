@@ -29,7 +29,7 @@ func TestHooksEmpty(t *testing.T) {
 // checks if two lists of strings are equal
 func strseq(a []string, b []string) error {
 	if len(a) != len(b) {
-		return errors.Errorf("output list length mismatch")
+		return errors.Errorf("output list length mismatch: %#v != %#v", a, b)
 	}
 	for i, v := range a {
 		if v != b[i] {
@@ -187,6 +187,53 @@ func TestHookRange(t *testing.T) {
 		t.Fatal(err)
 	}
 	results = nil
+}
+
+func TestHookMem(t *testing.T) {
+	mem, h := makeHooks()
+	maps := [][]uint64{
+		{0x1000, 0x1000, PROT_NONE},
+		{0x2000, 0x1000, PROT_ALL},
+	}
+	for _, m := range maps {
+		if err := mem.MemMapProt(m[0], m[1], int(m[2])); err != nil {
+			t.Fatal("failed to map memory:", err)
+		}
+	}
+	var results []string
+	h.HookAdd(HOOK_MEM_READ|HOOK_MEM_WRITE,
+		func(_ Cpu, access int, addr uint64, size int, val int64) {
+			results = append(results, fmt.Sprintf("mem(%d, %#x, %d, %#x)", access, addr, size, val))
+		}, 1, 0)
+	h.HookAdd(HOOK_MEM_ERR,
+		func(_ Cpu, access int, addr uint64, size int, val int64) bool {
+			results = append(results, fmt.Sprintf("fault(%d, %#x, %d, %#x)", access, addr, size, val))
+			return false
+		}, 1, 0)
+
+	assert := func(expect []string) {
+		if err := strseq(results, expect); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	mem.WriteUint(0, 4, 0, 0)               // unmapped
+	mem.WriteUint(0x1000, 4, PROT_WRITE, 0) // prot
+	mem.WriteUint(0x2000, 4, PROT_WRITE, 0) // good
+
+	mem.ReadUint(0, 4, PROT_READ)      // unmapped
+	mem.ReadUint(0x1000, 4, PROT_READ) // prot
+	mem.ReadUint(0x2000, 4, PROT_READ) // good
+
+	mem.ReadUint(0, 4, PROT_EXEC)      // unmapped
+	mem.ReadUint(0x1000, 4, PROT_EXEC) // prot
+	mem.ReadUint(0x2000, 4, PROT_EXEC) // good
+
+	assert([]string{
+		"fault(20, 0x0, 4, 0x0)", "fault(22, 0x1000, 4, 0x0)", "mem(17, 0x2000, 4, 0x0)",
+		"fault(19, 0x0, 4, 0x0)", "fault(23, 0x1000, 4, 0x0)", "mem(16, 0x2000, 4, 0x0)",
+		"fault(21, 0x0, 4, 0x0)", "fault(24, 0x1000, 4, 0x0)", "mem(18, 0x2000, 4, 0x0)",
+	})
 }
 
 func BenchmarkHook(b *testing.B) {
