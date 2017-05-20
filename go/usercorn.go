@@ -279,11 +279,15 @@ outer:
 		newval, _ := replay.Regs[enum]
 		if oldval != newval {
 			name := u.Arch().RegNames()[enum]
-			u.Printf("  %s (%#x) -> (%#x)\n", name, oldval, newval)
+			if u.config.UI {
+				u.Printf("  %s (%#x) -> (%#x)\n", name, oldval, newval)
+			}
 			u.RegWrite(enum, newval)
 		}
 	}
-	u.Printf("  pc %#x -> %#x\n", u.replay.PC, replay.PC)
+	if u.config.UI {
+		u.Printf("  pc %#x -> %#x\n", u.replay.PC, replay.PC)
+	}
 	pc := replay.PC
 	u.RegWrite(u.arch.PC, pc)
 	// TODO: special regs (SpRegs)
@@ -311,7 +315,9 @@ outer:
 	if err == nil && len(dis) > 0 {
 		padto := len(fmt.Sprintf("%#x", dis[0].Addr())) + 1
 		pad := strings.Repeat("<", padto)
-		u.Printf("%s %s %s\n", pad, dis[0].Mnemonic(), dis[0].OpStr())
+		if u.config.UI {
+			u.Printf("%s %s %s\n", pad, dis[0].Mnemonic(), dis[0].OpStr())
+		}
 	}
 
 	// 7. gross: update old replay with new data (so we don't need to mess with callbacks/defer)
