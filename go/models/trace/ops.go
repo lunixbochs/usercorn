@@ -308,6 +308,7 @@ type OpSyscall struct {
 	Num  uint32
 	Ret  uint64
 	Args []uint64
+	Desc string
 	Ops  []models.Op
 }
 

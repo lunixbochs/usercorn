@@ -79,8 +79,8 @@ func (s Syscall) TraceRet(args []uint64, ret uint64) string {
 		out = append(out, s.traceArg(ret))
 	}
 	if len(out) > 0 {
-		return fmt.Sprintf(" = %s\n", strings.Join(out, ", "))
+		return fmt.Sprintf(" = %s", strings.Join(out, ", "))
 	} else {
-		return "\n"
+		return ""
 	}
 }

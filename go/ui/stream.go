@@ -151,19 +151,25 @@ func (s *StreamUI) blockPrint(addr uint64) {
 
 // sysPrint() takes a syscall op to pretty-print
 func (s *StreamUI) sysPrint(op *trace.OpSyscall) {
-	// FIXME: this is a regression, how do we strace?
-	// I think I need to embed the strace string during trace
-	// until I get a chance to rework the strace backend
+	// This is a workaround for live tracing.
+	// Desc is not serialized so offline traces won't have access to it.
+	if op.Desc != "" {
+		fmt.Fprintln(s.c.Output, op.Desc)
+	} else {
+		// FIXME: this is a regression, how do we strace?
+		// I think I need to embed the strace string during trace
+		// until I get a chance to rework the strace backend
 
-	// SECOND THOUGHT
-	// I just need to expose a method on models.OS to convert syscall number into name
-	// then I should be able to use the strace from kernel common
-	// except I need to be able to dependency-inject the MemIO (as we might be on MemSim)
-	args := make([]string, len(op.Args))
-	for i, v := range op.Args {
-		args[i] = fmt.Sprintf("%#x", v)
+		// SECOND THOUGHT
+		// I just need to expose a method on models.OS to convert syscall number into name
+		// then I should be able to use the strace from kernel common
+		// except I need to be able to dependency-inject the MemIO (as we might be on MemSim)
+		args := make([]string, len(op.Args))
+		for i, v := range op.Args {
+			args[i] = fmt.Sprintf("%#x", v)
+		}
+		fmt.Fprintf(s.c.Output, "syscall(%d, [%s]) = %d\n", op.Num, strings.Join(args, ", "), op.Ret)
 	}
-	fmt.Fprintf(s.c.Output, "syscall(%d, [%s]) = %d\n", op.Num, strings.Join(args, ", "), op.Ret)
 }
 
 // insPrint() takes an instruction address and side-effects to pretty-print

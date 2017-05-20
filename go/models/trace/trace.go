@@ -145,11 +145,11 @@ func (t *Trace) Attach() error {
 		// idea: could write keyframes backwards while tracking dirty addrs
 		// this will prevent repeated writes from doing anything
 		// TODO: "push/pop" syscall frames?
-		before := func(num int, args []uint64, ret uint64) {
-			t.OnSysPre(num, args, ret)
+		before := func(num int, args []uint64, ret uint64, desc string) {
+			t.OnSysPre(num, args, ret, desc)
 		}
-		after := func(num int, args []uint64, ret uint64) {
-			t.OnSysPost(num, args, ret)
+		after := func(num int, args []uint64, ret uint64, desc string) {
+			t.OnSysPost(num, args, ret, desc)
 		}
 		t.sysHook = t.u.HookSysAdd(before, after)
 	}
@@ -272,16 +272,17 @@ func (t *Trace) OnMemUnmap(addr, size uint64) {
 	t.Append(&OpMemUnmap{addr, size}, false)
 }
 
-func (t *Trace) OnSysPre(num int, args []uint64, ret uint64) {
-	syscall := &OpSyscall{uint32(num), 0, args, nil}
+func (t *Trace) OnSysPre(num int, args []uint64, ret uint64, desc string) {
+	syscall := &OpSyscall{uint32(num), 0, args, desc, nil}
 	// TODO: how to add syscall to keyframe?
-	t.Append(syscall, false)
 	t.syscall = syscall
 }
 
-func (t *Trace) OnSysPost(num int, args []uint64, ret uint64) {
+func (t *Trace) OnSysPost(num int, args []uint64, ret uint64, desc string) {
 	if t.syscall != nil {
+		t.syscall.Desc += desc
 		t.syscall.Ret = ret
+		t.Append(t.syscall, false)
 		t.syscall = nil
 	}
 }

@@ -6,7 +6,7 @@ import (
 )
 
 type SysGetArgs func(n int) ([]uint64, error)
-type SysCb func(num int, args []uint64, ret uint64)
+type SysCb func(num int, args []uint64, ret uint64, desc string)
 type SysHook struct {
 	Before, After SysCb
 }
