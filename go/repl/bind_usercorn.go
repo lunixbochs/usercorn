@@ -152,7 +152,7 @@ func (b *ubind) Step(L *lua.LState) int {
 		if i > steps {
 			b.u.Stop()
 		}
-	}, false, 1, 0)
+	}, 1, 0)
 	b.checkErr(err)
 
 	/* NOTE: How to make an async step:
@@ -255,12 +255,8 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 	htype, fn := L.CheckInt(1), L.CheckFunction(2)
 	start := uint64(1)
 	end := uint64(0)
-	front := true
 	if L.GetTop() >= 4 {
 		start, end = L.CheckUint64(3), L.CheckUint64(4)
-		if L.GetTop() >= 5 {
-			front = L.CheckBool(5)
-		}
 	}
 	luap := lua.P{Fn: fn, NRet: 0, Protect: true}
 
@@ -328,7 +324,7 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 	default:
 		L.RaiseError("Unknown hook type: %d", htype)
 	}
-	hh, err := b.u.HookAdd(htype, cb, front, start, end)
+	hh, err := b.u.HookAdd(htype, cb, start, end)
 	b.checkErr(err)
 
 	hhptr = L.NewUserData()
