@@ -110,36 +110,44 @@ func (n *NdhCpu) Start(begin, until uint64) error {
 		zfr, _ := n.RegRead(ZF)
 		sp, _ := n.RegRead(SP)
 		af, bf, zf := afr == 1, bfr == 1, zfr == 1
+
+		zfcheck := func(val uint64) uint64 {
+			zf = val == 0
+			return val
+		}
+
 		switch ins.op {
-		case OP_ADD:
-			n.set(a, n.get(a)+n.get(b))
-		case OP_AND:
-			n.set(a, n.get(a)&n.get(b))
 		case OP_DEC:
 			n.set(a, n.get(a)-1)
-		case OP_DIV:
-			n.set(a, n.get(a)/n.get(b))
 		case OP_INC:
 			n.set(a, n.get(a)+1)
-		case OP_MOV:
-			n.set(a, n.get(b))
-		case OP_MUL:
-			n.set(a, n.get(a)*n.get(b))
-		case OP_NOT:
-			n.set(a, ^n.get(a))
-		case OP_OR:
-			n.set(a, n.get(a)|n.get(b))
-		case OP_SUB:
-			n.set(a, n.get(a)-n.get(b))
 		case OP_XCHG:
 			xa, xb := n.get(a), n.get(b)
 			n.set(a, xb)
 			n.set(b, xa)
+
+		case OP_ADD:
+			n.set(a, zfcheck(n.get(a)+n.get(b)))
+		case OP_AND:
+			n.set(a, zfcheck(n.get(a)&n.get(b)))
+		case OP_DIV:
+			n.set(a, zfcheck(n.get(a)/n.get(b)))
+		case OP_MOV:
+			n.set(a, zfcheck(n.get(b)))
+		case OP_MUL:
+			n.set(a, zfcheck(n.get(a)*n.get(b)))
+		case OP_NOT:
+			n.set(a, zfcheck(^n.get(a)))
+		case OP_OR:
+			n.set(a, zfcheck(n.get(a)|n.get(b)))
+		case OP_SUB:
+			n.set(a, zfcheck(n.get(a)-n.get(b)))
 		case OP_XOR:
-			n.set(a, n.get(a)^n.get(b))
+			n.set(a, zfcheck(n.get(a)^n.get(b)))
 
 		case OP_CMP:
 			va, vb := n.get(a), n.get(b)
+			af, bf, zf = false, false, false
 			if va == vb {
 				zf = true
 			} else if va < vb {
