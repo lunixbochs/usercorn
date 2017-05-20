@@ -142,6 +142,7 @@ func (b *ubind) Ins(L *lua.LState) int {
 
 // Steps the CPU by <n> instructions
 func (b *ubind) Step(L *lua.LState) int {
+	b.L.EnvFromLua()
 	steps := 1
 	if L.GetTop() > 0 {
 		steps = L.CheckInt(1)
@@ -166,11 +167,13 @@ func (b *ubind) Step(L *lua.LState) int {
 	*/
 	b.u.Gate().UnlockStopRelock()
 	b.u.HookDel(hh)
+	b.L.EnvToLua()
 	return 0
 }
 
 // Resumes execution
 func (b *ubind) Continue(L *lua.LState) int {
+	b.L.EnvFromLua()
 	/* NOTE: How to make an async continue:
 	b.mod.RawSetString("running", lua.LTrue)
 	go func() {
@@ -179,6 +182,7 @@ func (b *ubind) Continue(L *lua.LState) int {
 	}()
 	*/
 	b.u.Gate().UnlockStopRelock()
+	b.L.EnvToLua()
 	return 0
 }
 
