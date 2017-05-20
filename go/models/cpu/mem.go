@@ -52,13 +52,13 @@ func (m *Mem) MemUnmap(addr, size uint64) error {
 	return nil
 }
 
-func (m *Mem) MemReadInto(addr uint64, p []byte) error {
+func (m *Mem) MemReadInto(p []byte, addr uint64) error {
 	return m.sim.Read(addr, p, 0)
 }
 
 func (m *Mem) MemRead(addr, size uint64) ([]byte, error) {
 	p := make([]byte, size)
-	if err := m.MemReadInto(addr, p); err != nil {
+	if err := m.MemReadInto(p, addr); err != nil {
 		return nil, err
 	}
 	return p, nil
