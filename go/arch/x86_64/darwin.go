@@ -334,6 +334,7 @@ func (k *DarwinKernel) Gettimeofday(timeval common.Obuf, timezone common.Obuf) u
 }
 
 func (k *DarwinKernel) ThreadFastSetCthreadSelf(addr uint64) uint64 {
+	// set GS
 	gsmsr := uint64(0xC0000101)
 	x86.Wrmsr(k.U, gsmsr, addr)
 	return 0
