@@ -114,10 +114,10 @@ end
 rw = rewind
 rwaddr = u.rewind_addr
 
-func rwto(ins)
-	while true do
+func rwto(insto)
+	repeat
 		rw 1
-	end
+	until ins.name == insto
 end
 
 func b(baddr)
