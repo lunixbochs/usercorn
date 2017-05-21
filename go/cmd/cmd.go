@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"io"
-	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -166,8 +165,6 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	outfile := fs.String("o", "", "redirect debugging output to file (default stderr)")
 
 	gdb := fs.Int("gdb", -1, "listen for gdb connection on localhost:<port>")
-	listen := fs.Int("listen", -1, "listen for debug connection on localhost:<port>")
-	connect := fs.Int("connect", -1, "connect to remote usercorn debugger on localhost:<port>")
 
 	startrepl := fs.Bool("repl", false, "experimental repl")
 
@@ -203,7 +200,6 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		models.PrintFlags(flags)
 		fmt.Fprintf(os.Stderr, "\nTrace Options:\n")
 		models.PrintFlags(tflags)
-		fmt.Fprintf(os.Stderr, "\nDebug Client:\n  %s -connect <port>\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nExample:\n  %s -trace -symfile bins/x86_64.linux.elf\n", os.Args[0])
 	}
 	if c.SetupFlags != nil {
@@ -212,15 +208,6 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		}
 	}
 	fs.Parse(argv[1:])
-
-	// connect to debug server (skips rest of usercorn)
-	if *connect > 0 {
-		addr := net.JoinHostPort("localhost", strconv.Itoa(*connect))
-		if err := debug.RunClient(addr); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		return 0
-	}
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -371,16 +358,6 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			return 1
 		}
 		go debug.NewGdbstub(corn).Run(conn)
-	}
-
-	// start cli debug server
-	if *listen > 0 {
-		conn, err := debug.Accept("localhost", strconv.Itoa(*listen))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error accepting conn on port %d: %v\n", *listen, err)
-			return 1
-		}
-		go debug.NewDebugger(corn).Run(conn)
 	}
 
 	if *startrepl {
