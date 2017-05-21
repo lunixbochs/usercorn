@@ -5,7 +5,9 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/lunixbochs/luaish"
 	"github.com/lunixbochs/luaish/parse"
+	"github.com/shibukawa/configdir"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -234,10 +236,21 @@ type NullCloser struct {
 func (n *NullCloser) Close() error { return nil }
 
 func Run(u models.Usercorn) error {
+	// block usercorn main loop from running
 	u.Gate().Lock()
+
+	// get history path
+	configDirs := configdir.New("usercorn", "repl")
+	cacheDir := configDirs.QueryCacheFolder()
+	historyPath := ""
+	if err := cacheDir.MkdirAll(); err == nil {
+		historyPath = filepath.Join(cacheDir.Path, "history")
+	}
+
 	rl, err := readline.NewEx(&readline.Config{
 		InterruptPrompt: "\n",
 		UniqueEditLine:  false,
+		HistoryFile:     historyPath,
 	})
 	if err != nil {
 		return err
