@@ -74,7 +74,6 @@ func (L *LuaRepl) EnvToLua() {
 func (L *LuaRepl) EnvFromLua() {
 	// read register values back out
 	// TODO: what about psuedo-registers?
-	// TODO: gah, what if lua steps so the registers change under us?
 
 	u := L.u
 	vals, _ := u.RegDump()

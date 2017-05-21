@@ -350,7 +350,6 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	defer teardown()
 
 	// start gdb server
-	// TODO: code duplication here
 	if *gdb > 0 {
 		conn, err := debug.Accept("localhost", strconv.Itoa(*gdb))
 		if err != nil {
