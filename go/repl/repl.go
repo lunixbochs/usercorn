@@ -7,6 +7,7 @@ import (
 	"github.com/lunixbochs/luaish/parse"
 	"github.com/shibukawa/configdir"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -238,7 +239,7 @@ func Run(u models.Usercorn) error {
 	// block usercorn main loop from running
 	u.Gate().Lock()
 
-	// get history path
+	// get history and lua rc paths
 	configDirs := configdir.New("usercorn", "repl")
 	cacheDir := configDirs.QueryCacheFolder()
 	historyPath := ""
@@ -254,7 +255,9 @@ func Run(u models.Usercorn) error {
 	if err != nil {
 		return err
 	}
-	u.Config().Output = &NullCloser{rl.Stderr()}
+	if u.Config().Output == os.Stderr {
+		u.Config().Output = &NullCloser{rl.Stderr()}
+	}
 
 	cleanup = append(cleanup, func() { rl.Close() })
 	go func() {
@@ -265,6 +268,15 @@ func Run(u models.Usercorn) error {
 		}()
 
 		repl := NewLuaRepl(u, rl)
+		for _, config := range configDirs.QueryFolders(configdir.All) {
+			config.MkdirAll()
+			if data, err := config.ReadFile("init.lish"); err == nil {
+				if err := repl.DoString(string(data)); err != nil {
+					repl.Printf("error while reading init.lish: %v\n", err)
+				}
+			}
+		}
+
 		rl.Config.Listener = repl
 
 		setPrompt := func() {
