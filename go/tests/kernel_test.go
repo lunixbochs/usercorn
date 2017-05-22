@@ -1,15 +1,16 @@
-package common
+package tests
 
 import (
 	"encoding/binary"
 	"testing"
 
 	"github.com/lunixbochs/usercorn/go"
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/loader"
 )
 
 type PosixKernel struct {
-	KernelBase
+	co.KernelBase
 	exitCode int
 }
 
@@ -23,7 +24,7 @@ func TestKernel(t *testing.T) {
 	u, _ := usercorn.NewUsercornRaw(l, nil)
 
 	kernel := &PosixKernel{}
-	ret := Lookup(u, kernel, "exit").Call([]uint64{43})
+	ret := co.Lookup(u, kernel, "exit").Call([]uint64{43})
 	if kernel.exitCode != 43 {
 		t.Fatal("Syscall failed.")
 	}

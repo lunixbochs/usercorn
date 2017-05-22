@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := build
 ALL_TARGETS := usercorn imgtrace shellcode repl fuzz cfg trace com cgc
-.PHONY: get test deps ${ALL_TARGETS}
+.PHONY: get test cov bench deps ${ALL_TARGETS}
 
 all: ${ALL_TARGETS}
 
@@ -115,6 +115,7 @@ else
 	export GOPATH := $(DEST)/gopath:$(shell pwd)/.gopath
 endif
 DEPS=$(shell env PATH=$(PATHX) GOROOT=$(GOROOT) GOPATH=$(GOPATH) go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
+PKGS=$(shell env PATH=$(PATHX) GOROOT=$(GOROOT) GOPATH=$(GOPATH) go list ./go/... | sort -u | rev | sed -e 's,og/.*$$,,' | rev | sed -e 's,^,github.com/lunixbochs/usercorn/go,')
 
 # TODO: more DRY?
 usercorn: .gopath
@@ -166,7 +167,17 @@ get: .gopath
 	sh -c "PATH=$(PATHX) go get -u ${DEPS}"
 
 test: .gopath
-	sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test -v ./go/..."
+	@echo "go test -v ./go/..."
+	@sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test -v ./go/..."
+
+cov: .gopath
+	@echo "go get -u github.com/haya14busa/goverage"
+	@sh -c "PATH=$(PATHX) go get -u github.com/haya14busa/goverage"
+	@echo "goverage -v -coverprofile=coverage.out ${PKGS}"
+	@-sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) goverage -v -coverprofile=coverage.out ${PKGS}"
+	@echo "go tool cover -html=coverage.out"
+	@sh -c "PATH=$(PATHX) go tool cover -html=coverage.out"
 
 bench: .gopath
-	sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test -v -benchmem -bench=. ./go/..."
+	@echo "go test -v -benchmem -bench=. ./go/..."
+	@sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test -v -benchmem -bench=. ./go/..."
