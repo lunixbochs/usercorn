@@ -201,7 +201,7 @@ func TestHookMem(t *testing.T) {
 		}
 	}
 	var results []string
-	h.HookAdd(HOOK_MEM_READ|HOOK_MEM_WRITE,
+	h.HookAdd(HOOK_MEM_READ|HOOK_MEM_WRITE|HOOK_MEM_FETCH,
 		func(_ Cpu, access int, addr uint64, size int, val int64) {
 			results = append(results, fmt.Sprintf("mem(%d, %#x, %d, %#x)", access, addr, size, val))
 		}, 1, 0)

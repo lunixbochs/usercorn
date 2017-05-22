@@ -17,6 +17,7 @@ type hookInfo struct {
 	htype int
 	start uint64
 	end   uint64
+	mask  int
 }
 
 func (h *hookInfo) Type() int {
@@ -75,7 +76,7 @@ func NewHooks(cpu Cpu, mem *Mem) *Hooks {
 
 // copy-pasted from UnicornCpu
 func (h *Hooks) HookAdd(htype int, cb interface{}, start uint64, end uint64, extra ...int) (Hook, error) {
-	info := hookInfo{htype, start, end}
+	info := hookInfo{htype, start, end, 0}
 	// don't forget to set hook!
 	var hook interface{}
 	switch htype {
@@ -91,10 +92,6 @@ func (h *Hooks) HookAdd(htype int, cb interface{}, start uint64, end uint64, ext
 		hh := &intrHook{info, cb.(func(Cpu, uint32))}
 		h.intr, hook = append(h.intr, hh), hh
 
-	case HOOK_MEM_READ, HOOK_MEM_WRITE, HOOK_MEM_READ | HOOK_MEM_WRITE:
-		hh := &memHook{info, cb.(func(Cpu, int, uint64, int, int64))}
-		h.mem, hook = append(h.mem, hh), hh
-
 	case HOOK_INSN:
 		// TODO: allow instruction hooking
 		panic("instruction hooking not implemented")
@@ -104,7 +101,21 @@ func (h *Hooks) HookAdd(htype int, cb interface{}, start uint64, end uint64, ext
 		h.memFault, hook = append(h.memFault, hh), hh
 
 	default:
-		return 0, errors.New("Unknown hook type.")
+		if htype&(HOOK_MEM_READ|HOOK_MEM_WRITE|HOOK_MEM_FETCH) > 0 {
+			if htype&HOOK_MEM_READ > 0 {
+				info.mask |= MEM_READ
+			}
+			if htype&HOOK_MEM_WRITE > 0 {
+				info.mask |= MEM_WRITE
+			}
+			if htype&HOOK_MEM_FETCH > 0 {
+				info.mask |= MEM_FETCH
+			}
+			hh := &memHook{info, cb.(func(Cpu, int, uint64, int, int64))}
+			h.mem, hook = append(h.mem, hh), hh
+		} else {
+			return 0, errors.New("Unknown hook type.")
+		}
 	}
 	return hook, nil
 }
@@ -115,7 +126,8 @@ func (h *Hooks) HookDel(hh Hook) error {
 	// FIXME? this is really verbose
 	// I could switch to a single hook array but it would be slower
 	// del could be done with reflection.
-	switch hh.(hinfo).Type() {
+	htype := hh.(hinfo).Type()
+	switch htype {
 	case HOOK_BLOCK:
 		var tmp []*codeHook
 		for _, v := range h.block {
@@ -140,14 +152,6 @@ func (h *Hooks) HookDel(hh Hook) error {
 			}
 		}
 		h.intr = tmp
-	case HOOK_MEM_READ, HOOK_MEM_WRITE, HOOK_MEM_READ | HOOK_MEM_WRITE:
-		var tmp []*memHook
-		for _, v := range h.mem {
-			if v != hh {
-				tmp = append(tmp, v)
-			}
-		}
-		h.mem = tmp
 	case HOOK_MEM_ERR:
 		var tmp []*memFaultHook
 		for _, v := range h.memFault {
@@ -156,6 +160,16 @@ func (h *Hooks) HookDel(hh Hook) error {
 			}
 		}
 		h.memFault = tmp
+	default:
+		if htype&(HOOK_MEM_READ|HOOK_MEM_WRITE|HOOK_MEM_FETCH) > 0 {
+			var tmp []*memHook
+			for _, v := range h.mem {
+				if v != hh {
+					tmp = append(tmp, v)
+				}
+			}
+			h.mem = tmp
+		}
 	}
 	return nil
 }
@@ -184,7 +198,7 @@ func (h *Hooks) OnIntr(intno uint32) {
 
 func (h *Hooks) OnMem(access int, addr uint64, size int, val int64) {
 	for _, v := range h.mem {
-		if v.Contains(addr) {
+		if access&v.mask > 0 && v.Contains(addr) {
 			v.cb(h.cpu, access, addr, size, val)
 		}
 	}

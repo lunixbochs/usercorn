@@ -19,6 +19,7 @@ const (
 	HOOK_BLOCK = uc.HOOK_BLOCK
 
 	// hook (before) each memory read/write
+	HOOK_MEM_FETCH = uc.HOOK_MEM_FETCH
 	HOOK_MEM_READ  = uc.HOOK_MEM_READ
 	HOOK_MEM_WRITE = uc.HOOK_MEM_WRITE
 	// HOOK_MEM_READ_AFTER = uc.HOOK_MEM_READ_AFTER
