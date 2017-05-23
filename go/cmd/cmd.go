@@ -174,7 +174,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	var envSet strslice
 	var envUnset strslice
 	fs.Var(&envSet, "set", "set environment var in the form name=value")
-	fs.Var(&envUnset, "unset", "unset environment variable")
+	fs.Var(&envUnset, "unset", "unset environment variable, '-' to unset all")
 
 	fs.Usage = func() {
 		usage := "Usage: %s [options]"
@@ -307,7 +307,12 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			fmt.Fprintf(os.Stderr, "warning: skipping invalid env set %#v\n", v)
 		}
 	}
+	// unset specified env vars
 	for _, v := range envUnset {
+		if v == "-" {
+			env = nil
+			break
+		}
 		envSkip[v] = true
 	}
 	for _, v := range env {
