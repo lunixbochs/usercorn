@@ -91,7 +91,7 @@ func main() {
 	c.NoExe = true
 	c.NoArgs = true
 
-	c.RunUsercorn = func(args, env []string) error {
+	c.RunUsercorn = func() error {
 		u := c.Usercorn
 		mem, err := u.Mmap(u.Entry(), 0x10000)
 		if err != nil {
@@ -128,7 +128,7 @@ func main() {
 			end = addr + uint64(len(sc))
 			u.SetEntry(addr)
 			u.SetExit(end)
-			if err := u.Run(os.Args, os.Environ()); err != nil {
+			if err := u.Run(); err != nil {
 				fmt.Printf("exec err: %s\n", err)
 			}
 			addr = end

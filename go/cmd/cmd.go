@@ -45,7 +45,7 @@ type UsercornCmd struct {
 	SetupFlags    func() error
 	SetupUsercorn func() error
 	MakeUsercorn  func(exe string) (models.Usercorn, error)
-	RunUsercorn   func(args, env []string) error
+	RunUsercorn   func() error
 	Teardown      func()
 
 	NoExe, NoArgs bool
@@ -245,6 +245,9 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		SymFile:      *symfile,
 		StubSyscalls: *stubsys,
 
+		Env:  env,
+		Args: args,
+
 		ForceBase:       *base,
 		ForceInterpBase: *ibase,
 		LoadPrefix:      absPrefix,
@@ -374,9 +377,9 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 
 	// start executable
 	if c.RunUsercorn != nil {
-		err = c.RunUsercorn(args, env)
+		err = c.RunUsercorn()
 	} else {
-		err = corn.Run(args, env)
+		err = corn.Run()
 	}
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {

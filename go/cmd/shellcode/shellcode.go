@@ -28,7 +28,7 @@ func main() {
 		}
 		return oldMake(exe)
 	}
-	c.RunUsercorn = func(args, env []string) error {
+	c.RunUsercorn = func() error {
 		u := c.Usercorn
 		mem, err := u.Mmap(u.Entry(), uint64(len(shellcode)))
 		if err != nil {
@@ -40,7 +40,7 @@ func main() {
 		}
 		u.SetEntry(mem.Addr)
 		u.SetExit(mem.Addr + uint64(len(shellcode)))
-		return u.Run(args, env)
+		return u.Run()
 	}
 	c.Run(os.Args, os.Environ())
 }

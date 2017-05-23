@@ -405,7 +405,7 @@ func main() {
 	for _, cb := range cs {
 		wg.Add(1)
 		go func() {
-			cb.Run(nil, nil)
+			cb.Run()
 			// if a CB goes down, take 'em all
 			for _, cb := range cs {
 				cb.Stop()
@@ -422,7 +422,7 @@ func main() {
 	if pov != nil {
 		wg.Add(1)
 		go func() {
-			pov.Run(nil, nil)
+			pov.Run()
 			wg.Done()
 		}()
 	}

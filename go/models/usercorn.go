@@ -21,7 +21,7 @@ type MapHook struct {
 type Usercorn interface {
 	Task
 	Config() *Config
-	Run(args, env []string) error
+	Run() error
 	Trampoline(func() error) error
 
 	Restart(func(Usercorn, error) error)

@@ -118,7 +118,7 @@ func main() {
 		_, err := u.HookAdd(cpu.HOOK_BLOCK, blockTrace, 1, 0)
 		return errors.Wrap(err, "u.HookAdd() failed")
 	}
-	c.RunUsercorn = func(args, env []string) error {
+	c.RunUsercorn = func() error {
 		var err error
 		u := c.Usercorn
 
@@ -127,7 +127,7 @@ func main() {
 		}
 		if nofork {
 			status := 0
-			err = u.Run(args, env)
+			err = u.Run()
 			if _, ok := err.(models.ExitStatus); ok {
 			} else if err != nil {
 				u.Printf("Usercorn err: %s\n", err)
@@ -181,7 +181,7 @@ func main() {
 			}
 
 			status := 0
-			err = u.Run(args, env)
+			err = u.Run()
 			if _, ok := err.(models.ExitStatus); ok {
 			} else if err != nil {
 				u.Printf("Usercorn err: %s\n", err)
