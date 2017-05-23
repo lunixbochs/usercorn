@@ -15,10 +15,10 @@ func main() {
 		json = c.Flags.Bool("json", false, "use json cfg output")
 		return nil
 	}
-	c.RunUsercorn = func(args, env []string) error {
+	c.RunUsercorn = func() error {
 		c.Usercorn.Gate().Lock()
 		go func() {
-			err := c.Usercorn.Run(args, env)
+			err := c.Usercorn.Run()
 			if err != nil {
 				panic(err)
 			}

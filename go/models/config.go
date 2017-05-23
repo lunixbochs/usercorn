@@ -48,6 +48,9 @@ func (t *TraceConfig) Init() {
 type Config struct {
 	Output io.WriteCloser
 
+	Env  []string
+	Args []string
+
 	Color           bool
 	ForceBase       uint64
 	ForceInterpBase uint64

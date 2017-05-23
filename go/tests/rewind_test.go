@@ -12,7 +12,7 @@ func BenchmarkRewind(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	err = u.Run(nil, nil)
+	err = u.Run()
 	if _, ok := err.(models.ExitStatus); err != nil && !ok {
 		b.Fatal(err)
 	}

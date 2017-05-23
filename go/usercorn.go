@@ -389,7 +389,7 @@ func (u *Usercorn) HookSysDel(hook *models.SysHook) {
 	u.sysHooks = tmp
 }
 
-func (u *Usercorn) Run(args, env []string) error {
+func (u *Usercorn) Run() error {
 	// panic/exit handler
 	verboseExit := func() {
 		u.Printf("[memory map]\n")
@@ -419,13 +419,13 @@ func (u *Usercorn) Run(args, env []string) error {
 	}()
 	// PrefixArgs was added for shebang
 	if len(u.config.PrefixArgs) > 0 {
-		args = append(u.config.PrefixArgs, args...)
+		u.config.Args = append(u.config.PrefixArgs, u.config.Args...)
 	}
 	// TODO: hooks are removed below but if Run() is called again the OS stack will be reinitialized
 	// maybe won't be a problem if the stack is zeroed and stack pointer is reset?
 	// or OS stack init can be moved somewhere else (like NewUsercorn)
 	if u.os.Init != nil {
-		if err := u.os.Init(u, args, env); err != nil {
+		if err := u.os.Init(u, u.config.Args, u.config.Env); err != nil {
 			return err
 		}
 	}
