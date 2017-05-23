@@ -15,10 +15,13 @@ func (L *LuaRepl) intFunc(_ *lua.LState) int {
 	case lua.LString:
 		n, err := strconv.ParseInt(string(v), 0, 64)
 		if err == nil {
-			L.Push(lua.LNumber(n))
+			L.Push(lua.LInt(n))
 			return 1
 		}
-	case lua.LNumber:
+	case lua.LFloat:
+		L.Push(lua.LInt(v))
+		return 1
+	case lua.LInt:
 		L.Push(v)
 		return 1
 	}

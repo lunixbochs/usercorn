@@ -51,7 +51,7 @@ func (L *LuaRepl) EnvToLua() {
 		// write reg values
 		// TODO: what about psuedo / partial registers?
 		for _, r := range vals {
-			val := lua.LNumber(r.Val)
+			val := lua.LInt(r.Val)
 			L.SetGlobal(r.Name, val)
 			if r.Enum == u.Arch().PC {
 				L.SetGlobal("pc", val)
@@ -80,7 +80,7 @@ func (L *LuaRepl) EnvFromLua() {
 	vals, _ := u.RegDump()
 	for i, r := range vals {
 		v := L.GetGlobal(r.Name)
-		if val, ok := v.(lua.LNumber); !ok {
+		if val, ok := v.(lua.LInt); !ok {
 			L.Printf("could not restore %s: bad type: %v\n", r.Name, v)
 		} else if uint64(val) != L.preRegs[i].Val {
 			u.RegWrite(r.Enum, uint64(val))

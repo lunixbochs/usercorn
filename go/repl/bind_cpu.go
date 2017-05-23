@@ -6,7 +6,7 @@ import (
 	"github.com/lunixbochs/luaish"
 )
 
-var cpuEnums = map[string]lua.LNumber{
+var cpuEnums = map[string]lua.LInt{
 	"HOOK_INTR":      cpu.HOOK_INTR,
 	"HOOK_INSN":      cpu.HOOK_INSN,
 	"HOOK_CODE":      cpu.HOOK_CODE,

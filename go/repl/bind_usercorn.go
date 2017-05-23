@@ -83,7 +83,7 @@ func disToLua(L *LuaRepl, dis []models.Ins) []*lua.LTable {
 	ret := make([]*lua.LTable, len(dis))
 	for i, v := range dis {
 		ins := L.NewTable()
-		ins.RawSetString("addr", lua.LNumber(v.Addr()))
+		ins.RawSetString("addr", lua.LInt(v.Addr()))
 		ins.RawSetString("name", lua.LString(v.Mnemonic()))
 		ins.RawSetString("op_str", lua.LString(v.OpStr()))
 		ins.RawSetString("bytes", lua.LString(v.Bytes()))
@@ -92,7 +92,7 @@ func disToLua(L *LuaRepl, dis []models.Ins) []*lua.LTable {
 		for j, s := range strings.Split(v.OpStr(), ",") {
 			s = strings.TrimSpace(s)
 			if n, err := strconv.ParseUint(s, 0, 64); err == nil {
-				ops.RawSetInt(j+1, lua.LNumber(n))
+				ops.RawSetInt(j+1, lua.LInt(n))
 			} else {
 				ops.RawSetInt(j+1, lua.LString(s))
 			}
@@ -241,7 +241,7 @@ func (b *ubind) RegRead(L *lua.LState) int {
 	enum := L.CheckInt(1)
 	val, err := b.u.RegRead(enum)
 	b.checkErr(err)
-	L.Push(lua.LNumber(val))
+	L.Push(lua.LInt(val))
 	return 1
 }
 
@@ -279,7 +279,7 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 	switch htype {
 	case cpu.HOOK_CODE, cpu.HOOK_BLOCK:
 		cb = func(_ cpu.Cpu, addr uint64, size uint32) {
-			laddr, lsize := lua.LNumber(addr), lua.LNumber(size)
+			laddr, lsize := lua.LInt(addr), lua.LInt(size)
 			// TODO: replace (regs) with a table with a metatable getter/setter
 			L.EnvToLua()
 			L.SetGlobal("hh", hhptr)
@@ -292,7 +292,7 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 		}
 	case cpu.HOOK_INTR:
 		cb = func(_ cpu.Cpu, intno uint32) {
-			lintno := lua.LNumber(intno)
+			lintno := lua.LInt(intno)
 			L.EnvToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("intno", lintno)
@@ -303,7 +303,7 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 		}
 	case cpu.HOOK_MEM_READ, cpu.HOOK_MEM_WRITE, cpu.HOOK_MEM_READ | cpu.HOOK_MEM_WRITE:
 		cb = func(_ cpu.Cpu, access int, addr uint64, size int, val int64) {
-			laccess, laddr, lsize, lval := lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)
+			laccess, laddr, lsize, lval := lua.LInt(access), lua.LInt(addr), lua.LInt(size), lua.LInt(val)
 			L.EnvToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("access", laccess)
@@ -320,7 +320,7 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 		panic("instruction hooking not implemented")
 	case cpu.HOOK_MEM_ERR:
 		cb = func(_ cpu.Cpu, access int, addr uint64, size int, val int64) bool {
-			laccess, laddr, lsize, lval := lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)
+			laccess, laddr, lsize, lval := lua.LInt(access), lua.LInt(addr), lua.LInt(size), lua.LInt(val)
 			L.EnvToLua()
 			L.SetGlobal("hh", hhptr)
 			L.SetGlobal("access", laccess)
@@ -328,7 +328,7 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 			L.SetGlobal("size", lsize)
 			L.SetGlobal("val", lval)
 			luap.NRet = 1
-			if err := L.CallByParam(luap, lua.LNumber(access), lua.LNumber(addr), lua.LNumber(size), lua.LNumber(val)); err != nil {
+			if err := L.CallByParam(luap, lua.LInt(access), lua.LInt(addr), lua.LInt(size), lua.LInt(val)); err != nil {
 				fmt.Println(err)
 				return false
 			}

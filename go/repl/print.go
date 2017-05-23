@@ -23,7 +23,7 @@ func (L *LuaRepl) PrettyDump(lv []lua.LValue, implicit bool, outer bool) []strin
 			idx := 1
 			s.ForEach(func(k, v lua.LValue) {
 				tmp := L.PrettyDump([]lua.LValue{k, v}, implicit, false)
-				if n, ok := k.(lua.LNumber); ok && int(n) == idx {
+				if n, ok := k.(lua.LInt); ok && int(n) == idx {
 					idx += 1
 					table = append(table, tmp[1])
 				} else {
@@ -35,7 +35,9 @@ func (L *LuaRepl) PrettyDump(lv []lua.LValue, implicit bool, outer bool) []strin
 			} else {
 				pretty[i] = "{" + strings.Join(table, ", ") + "}"
 			}
-		case lua.LNumber:
+		case lua.LFloat:
+			pretty[i] = fmt.Sprintf("%f", float64(s))
+		case lua.LInt:
 			n := uint64(s)
 			if n < 10 {
 				pretty[i] = fmt.Sprintf("%d", n)
