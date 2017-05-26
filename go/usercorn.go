@@ -392,7 +392,12 @@ func (u *Usercorn) HookSysDel(hook *models.SysHook) {
 func (u *Usercorn) Run() error {
 	// panic/exit handler
 	verboseExit := func() {
-		u.Printf("[memory map]\n")
+		dis, err := u.Dis(u.entry, 64, u.config.DisBytes)
+		if err == nil {
+			u.Println("[pc]")
+			u.Println(dis)
+		}
+		u.Println("[memory map]")
 		for _, m := range u.Mappings() {
 			u.Printf("  %s\n", m)
 		}
