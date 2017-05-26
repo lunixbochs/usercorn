@@ -17,6 +17,7 @@ func main() {
 	var outdir *string
 	var binimg *bool
 	var render *string
+	var force *bool
 
 	var memImg *memImage
 	jpegOptions := &jpeg.Options{Quality: 90}
@@ -60,6 +61,7 @@ func main() {
 		binimg = c.Flags.Bool("binimg", false, "include binary+interpreter in trace")
 		frameskip = c.Flags.Int("frameskip", 0, "only record every N image frames")
 		render = c.Flags.String("render", "linear", "render type {linear, block, hilbert, digram}")
+		force = c.Flags.Bool("force", false, "overwrite out directory")
 		return nil
 	}
 	c.SetupUsercorn = func() error {
@@ -77,6 +79,10 @@ func main() {
 			return fmt.Errorf("unknown render type: %s", *render)
 		}
 		memImg = NewMemImage(*width, *width, rtype)
+
+		if *force {
+			os.RemoveAll(*outdir)
+		}
 		if err := os.Mkdir(*outdir, 0755); err != nil {
 			return err
 		}
