@@ -162,10 +162,8 @@ func (t *Trace) Detach() {
 	}
 	t.attached = false
 	// TODO: flush last frame on detach (make sure to detach on the way out)
-	if t.syscall != nil {
-		t.Send(t.syscall)
-		t.syscall = nil
-	}
+	t.flushSys()
+	t.flushStep()
 	if t.frame != nil {
 		t.Pack(t.frame)
 		t.frame = nil
