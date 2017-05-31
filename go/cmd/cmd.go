@@ -15,7 +15,7 @@ import (
 	usercorn "github.com/lunixbochs/usercorn/go"
 	"github.com/lunixbochs/usercorn/go/debug"
 	"github.com/lunixbochs/usercorn/go/models"
-	"github.com/lunixbochs/usercorn/go/repl"
+	"github.com/lunixbochs/usercorn/go/ui"
 )
 
 type strslice []string
@@ -137,7 +137,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	tracefile := fs.String("to", "", "binary trace output file")
 
 	rewind := fs.Bool("rewind", false, "enable CPU rewind")
-	ui := fs.Bool("ui", false, "display traced changes")
+	streamui := fs.Bool("ui", false, "display traced changes")
 
 	match := fs.String("match", "", "trace from specific function(s) (func[,func...][+depth])")
 	looproll := fs.Int("loop", 0, "collapse loop blocks of this depth")
@@ -167,6 +167,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	gdb := fs.Int("gdb", -1, "listen for gdb connection on localhost:<port>")
 
 	startrepl := fs.Bool("repl", false, "experimental repl")
+	tui := fs.Bool("tui", false, "experimental interactive text UI")
 
 	cpuprofile := fs.String("cpuprofile", "", "write cpu profile to <file>")
 	memprofile := fs.String("memprofile", "", "write mem profile to <file>")
@@ -267,7 +268,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			Sys:   *strace,
 		},
 		Rewind: *rewind,
-		UI:     *ui,
+		UI:     *streamui,
 
 		// FIXME: these are UI tracing flags and now broken
 		Demangle:      *demangle,
@@ -367,12 +368,24 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		go debug.NewGdbstub(corn).Run(conn)
 	}
 
-	if *startrepl {
-		defer repl.Exit()
-		if err := repl.Run(corn); err != nil {
+	if *tui {
+		tui, err := ui.NewTui(corn)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error starting tui: %v\n", err)
+			return 1
+		}
+		corn.Gate().Lock()
+		defer tui.Close()
+		tui.Run()
+	} else if *startrepl {
+		repl, err := ui.NewRepl(corn)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "error starting repl: %v\n", err)
 			return 1
 		}
+		corn.Gate().Lock()
+		defer repl.Close()
+		repl.Run()
 	}
 
 	// start executable

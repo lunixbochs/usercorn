@@ -1,4 +1,4 @@
-package repl
+package lua
 
 var cmdRc = `
 func _fallback(name, val)
