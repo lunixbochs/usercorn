@@ -1,4 +1,4 @@
-package repl
+package lua
 
 var sugarRc = `
 getmetatable("").__mod = func(a, b)

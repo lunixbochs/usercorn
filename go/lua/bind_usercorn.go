@@ -1,4 +1,4 @@
-package repl
+package lua
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package repl
+package lua
 
 import (
 	"github.com/lunixbochs/luaish"
