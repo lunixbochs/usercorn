@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"github.com/chzyer/readline"
 	"github.com/jroimartin/gocui"
+	"github.com/lunixbochs/vtclean"
 	"github.com/pkg/errors"
 	"github.com/shibukawa/configdir"
 	"os"
@@ -16,10 +18,71 @@ type Tui struct {
 	u   models.Usercorn
 	lua *lua.LuaRepl
 	g   *gocui.Gui
+	rl  *readline.Instance
 
+	input     *fifoReader
 	histPath  string
 	multiline bool
 	lines     []string
+}
+
+type tailWriter struct {
+	*gocui.View
+	line string
+}
+
+func (t *tailWriter) Write(p []byte) (int, error) {
+	// Literally just write spaces over the current line D:
+	x, y := t.Cursor()
+	t.Overwrite = true
+	t.SetCursor(0, y)
+	for i := 0; i < x; i++ {
+		t.EditWrite(' ')
+	}
+	t.SetCursor(0, y)
+	t.Overwrite = false
+
+	// Clean out terminal codes
+	t.line = t.line + string(p)
+	t.line = vtclean.Clean(t.line, false)
+
+	for _, c := range t.line {
+		if c == '\n' {
+			t.EditNewLine()
+			t.line = ""
+			y += 1
+		} else {
+			t.EditWrite(c)
+		}
+	}
+	t.SetCursor(len(t.line), y)
+	return 0, nil
+}
+
+type fifoReader struct {
+	c   chan []byte
+	buf []byte
+}
+
+func (f *fifoReader) Read(p []byte) (int, error) {
+	f.buf = append(f.buf, <-f.c...)
+outer:
+	for {
+		select {
+		case d := <-f.c:
+			f.buf = append(f.buf, d...)
+			// fill buf as much as we can
+		default:
+			// do nothing
+			break outer
+		}
+	}
+	// Empty buf into p?
+	n := copy(p, f.buf)
+	// Truncate front n
+	copy(f.buf, f.buf[n:])
+	f.buf = f.buf[:len(f.buf)-n]
+	return n, nil
 }
 
 type writerFunc func(p []byte) (int, error)
@@ -33,15 +96,17 @@ func NewTui(u models.Usercorn) (*Tui, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "lua repl failed")
 	}
+
 	g, err := gocui.NewGui(gocui.OutputNormal)
 	if err != nil {
 		luaRepl.Close()
 		return nil, errors.Wrap(err, "gocui failed")
 	}
 	tui := &Tui{
-		u:   u,
-		lua: luaRepl,
-		g:   g,
+		u:     u,
+		lua:   luaRepl,
+		g:     g,
+		input: &fifoReader{c: make(chan []byte)},
 	}
 
 	// get history path
@@ -59,26 +124,39 @@ func NewTui(u models.Usercorn) (*Tui, error) {
 	// hijack usercorn output
 	if u.Config().Output == os.Stderr {
 		if v, err := g.View("usercorn"); err == nil {
-			u.Config().Output = &nullCloser{v}
+			u.Config().Output = &nullCloser{&tailWriter{View: v}}
 		}
 	}
 	if v, err := g.View("repl"); err == nil {
-		luaRepl.SetOutput(writerFunc(func(p []byte) (int, error) {
-			for _, b := range p {
-				if b == '\n' {
-					v.EditNewLine()
-				} else {
-					v.EditWrite(rune(b))
-				}
-			}
-			return 0, nil
-		}))
+		v.Editor = gocui.EditorFunc(tui.replInput)
+		rl, err := readline.NewEx(&readline.Config{
+			InterruptPrompt: "\n",
+			UniqueEditLine:  false,
+			Stdin:           tui.input,
+			Stdout:          &tailWriter{View: v},
+			Stderr:          &tailWriter{View: v},
+		})
+		if err != nil {
+			return nil, err
+		}
+		tui.rl = rl
+		luaRepl.SetOutput(rl.Stdout())
 	}
+
 	return tui, nil
 }
 
 func (t *Tui) quit(g *gocui.Gui, v *gocui.View) error {
 	return gocui.ErrQuit
+}
+
+func (t *Tui) replInput(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
+	switch {
+	case key > 0 && key <= 127:
+		t.input.c <- []byte{byte(key)}
+	case ch > 0 && ch <= 127:
+		t.input.c <- []byte{byte(ch)}
+	}
 }
 
 func (t *Tui) enter(g *gocui.Gui, v *gocui.View) error {
@@ -96,9 +174,6 @@ func (t *Tui) enter(g *gocui.Gui, v *gocui.View) error {
 func (t *Tui) bindKeys() error {
 	g := t.g
 	if err := g.SetKeybinding("", 'q', gocui.ModNone, t.quit); err != nil {
-		return err
-	}
-	if err := g.SetKeybinding("repl", gocui.KeyEnter, gocui.ModNone, t.enter); err != nil {
 		return err
 	}
 	return nil
@@ -139,39 +214,41 @@ func (t *Tui) runSync() {
 		t.u.Gate().Unlock()
 		t.Close()
 	}()
-	t.g.MainLoop()
-	/*
+	go func() {
+		t.rl.SetPrompt("> ")
 		for {
-			ln := r.rl.Line()
+			ln := t.rl.Line()
 			if ln.Error == readline.ErrInterrupt {
-				r.setPrompt()
-				r.multiline = false
-				r.rl.Config.UniqueEditLine = false
-				r.Reset()
-				r.u.Stop()
+				t.rl.SetPrompt("> ")
+				t.multiline = false
+				t.rl.Config.UniqueEditLine = false
+				t.Reset()
+				t.u.Stop()
 				continue
 			} else if ln.CanContinue() {
 				continue
 			} else if ln.CanBreak() {
 				break
 			}
-			if !r.multiline {
+			if !t.multiline {
 				if ln.Line != "" {
-					r.lines = []string{ln.Line}
+					t.lines = []string{ln.Line}
 				}
 			} else {
-				r.lines = append(r.lines, ln.Line)
+				t.lines = append(t.lines, ln.Line)
 			}
-			if r.lua.Exec(r.lines) {
-				r.rl.Config.UniqueEditLine = false
-				r.rl.SetPrompt("... ")
-				r.multiline = true
+			if t.lua.Exec(t.lines) {
+				t.rl.Config.UniqueEditLine = false
+				t.rl.SetPrompt("... ")
+				t.multiline = true
 			} else {
-				r.multiline = false
-				r.setPrompt()
+				t.multiline = false
+				t.rl.SetPrompt("> ")
 			}
 		}
-	*/
+
+	}()
+	t.g.MainLoop()
 }
 
 func (t *Tui) Close() {
