@@ -74,11 +74,10 @@ type Usercorn struct {
 	hooks    []cpu.Hook
 	sysHooks []*models.SysHook
 
-	trace  *trace.Trace
-	replay *trace.Replay
-	rewind []models.Op
-	ui     *ui.StreamUI
-	// obsolete tracing flags
+	trace    *trace.Trace
+	replay   *trace.Replay
+	rewind   []models.Op
+	ui       *ui.StreamUI
 	inscount uint64
 }
 

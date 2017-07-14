@@ -266,18 +266,20 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			Mem:   *mtrace,
 			Reg:   *rtrace,
 			Sys:   *strace,
+
+			// Filters
+			LoopCollapse: *looproll,
+			MemBatch:     *mtrace2 || *trace,
 		},
 		Rewind: *rewind,
 		UI:     *streamui,
 
 		// FIXME: these are UI tracing flags and now broken
-		Demangle:      *demangle,
-		DisBytes:      *disbytes,
-		InsCount:      *inscount,
-		LoopCollapse:  *looproll,
-		SourcePaths:   src,
-		TraceMemBatch: *mtrace2 || *trace,
-		TraceSource:   *ftrace || *trace,
+		Demangle:    *demangle,
+		DisBytes:    *disbytes,
+		InsCount:    *inscount,
+		SourcePaths: src,
+		TraceSource: *ftrace || *trace,
 	}
 	c.Config = config
 	// FIXME: TraceMatch* is broken by trace changes
@@ -285,12 +287,12 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		split := strings.SplitN(*match, "+", 2)
 		if len(split) > 1 {
 			if split[1] == "" {
-				config.TraceMatchDepth = 999999
+				config.Trace.MatchDepth = 999999
 			} else {
-				config.TraceMatchDepth, _ = strconv.Atoi(split[1])
+				config.Trace.MatchDepth, _ = strconv.Atoi(split[1])
 			}
 		}
-		config.TraceMatch = strings.Split(split[0], ",")
+		config.Trace.Match = strings.Split(split[0], ",")
 	}
 
 	if *outfile != "" {

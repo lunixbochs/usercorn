@@ -31,6 +31,8 @@ type Trace struct {
 	tf     *TraceWriter
 	config *models.TraceConfig
 
+	filters []models.Filter
+
 	attached  bool
 	firstStep bool
 }
@@ -222,6 +224,15 @@ func (t *Trace) Rewound() {
 // canAdvance indicates whether this op can start a new keyframe
 // TODO: eventually allow alternating OpFrames with Syscalls, like on windows kernel->userspace callbacks?
 func (t *Trace) Append(op models.Op, canAdvance bool) {
+	ops := []models.Op{op}
+	for _, filter := range t.filters {
+		var filteredOps []models.Op
+		for _, op := range ops {
+			filteredOps = append(filteredOps, filter.Filter(op)...)
+		}
+		ops = filteredOps
+	}
+
 	t.Send(op)
 	// TODO: add stuff to keyframe
 	frame := t.frame

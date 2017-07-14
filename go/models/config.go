@@ -21,6 +21,13 @@ type TraceConfig struct {
 	Sys        bool
 
 	OpCallback []func(Op)
+
+	// Filters
+	LoopCollapse int
+	// TODO: Maybe CollapseSideeffect
+	MemBatch   bool
+	Match      []string
+	MatchDepth int
 }
 
 func (t *TraceConfig) Any() bool {
@@ -68,19 +75,18 @@ type Config struct {
 
 	BlockSyscalls bool
 	StubSyscalls  bool
+	InsCount      bool
 
 	PrefixArgs []string
 
-	// FIXME: these were UI tracing flags and now broken
-	Demangle        bool
-	DisBytes        bool
-	InsCount        bool
-	LoopCollapse    int
-	SourcePaths     []string
-	TraceMatch      []string
-	TraceMatchDepth int
-	TraceMemBatch   bool
-	TraceSource     bool
+	// TODO: UI sub config
+	Demangle bool
+	DisBytes bool
+
+	// TODO: Maybe add option to load whole binary into trace
+	// (For replay and such).
+	SourcePaths []string
+	TraceSource bool
 }
 
 func (c *Config) Init() *Config {
