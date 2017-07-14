@@ -155,4 +155,10 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 			}
 		}
 	}
+	for _, op := range effects {
+		switch o := op.(type) {
+		case *trace.OpMemBatch:
+			fmt.Fprintf(s.config.Output, "%s", o)
+		}
+	}
 }

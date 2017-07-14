@@ -224,7 +224,7 @@ func HexDump(base uint64, mem []byte, bits int) []string {
 		}
 		line := []string{fmt.Sprintf(hexFmt+":", base+uint64(i))}
 		line = append(line, strings.Join(blocks, " "))
-		line = append(line, fmt.Sprintf("[%s]", strings.Join(tail, " ")))
+		line = append(line, fmt.Sprintf("  [%s]", strings.Join(tail, "")))
 		out = append(out, strings.Join(line, " "))
 	}
 	return out

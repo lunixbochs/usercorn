@@ -48,12 +48,14 @@ func NewTrace(u models.Usercorn, config *models.TraceConfig) (*Trace, error) {
 	}
 	t.keyframe.reset()
 
+	if config.MemBatch {
+		t.filters = append(t.filters, &MemBatch{})
+	}
 	var err error
 	t.w = config.TraceWriter
 	if t.w == nil && config.Tracefile != "" {
 		if t.w, err = os.Create(config.Tracefile); err != nil {
 			return nil, errors.Wrapf(err, "failed to create tracefile '%s'", config.Tracefile)
-
 		}
 	}
 	if t.w != nil {
@@ -233,17 +235,20 @@ func (t *Trace) Append(op models.Op, canAdvance bool) {
 		ops = filteredOps
 	}
 
-	t.Send(op)
-	// TODO: add stuff to keyframe
-	frame := t.frame
-	// handle the first frame
-	if frame == nil || t.syscall == nil && canAdvance {
-		t.Pack(frame)
-		t.frame = &OpFrame{Ops: []models.Op{op}}
-	} else if t.syscall != nil {
-		t.syscall.Ops = append(t.syscall.Ops, op)
-	} else {
-		t.frame.Ops = append(t.frame.Ops, op)
+	for _, op := range ops {
+		t.Send(op)
+		// TODO: add stuff to keyframe
+		frame := t.frame
+		// handle the first frame
+		if frame == nil || t.syscall == nil && canAdvance {
+			t.Pack(frame)
+			t.frame = &OpFrame{Ops: []models.Op{op}}
+		} else if t.syscall != nil {
+			t.syscall.Ops = append(t.syscall.Ops, op)
+		} else {
+			t.frame.Ops = append(t.frame.Ops, op)
+		}
+		canAdvance = false
 	}
 }
 

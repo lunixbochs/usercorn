@@ -25,6 +25,7 @@ type TraceConfig struct {
 	// Filters
 	LoopCollapse int
 	// TODO: Maybe CollapseSideeffect
+	// (Collapse a basic block's side effects into a single one)
 	MemBatch   bool
 	Match      []string
 	MatchDepth int
