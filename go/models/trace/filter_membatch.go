@@ -8,6 +8,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+// OpMemBatch is a collection of reads and writes that occured within a basic block
 type OpMemBatch struct {
 	models.NoOp
 	Ops []models.Op
@@ -18,12 +19,12 @@ func (o *OpMemBatch) String() string {
 	for _, op := range o.Ops {
 		var addr uint64
 		var data []byte
-		t := "R"
+		var t string
 		switch v := op.(type) {
 		case *OpMemWrite:
 			addr, data, t = v.Addr, v.Data, "W"
 		case *OpMemRead:
-			addr, data = v.Addr, v.Data
+			addr, data, t = v.Addr, v.Data, "R"
 		}
 
 		for i, line := range models.HexDump(addr, data, 32) {
@@ -53,6 +54,8 @@ func (m *MemBatch) Filter(op models.Op) []models.Op {
 
 func (m *MemBatch) Flush() []models.Op {
 	log := &MemLog{}
+
+	// Build a log of all reads and writes
 	for _, op := range m.memOps {
 		switch v := op.(type) {
 		case *OpMemWrite:
@@ -100,6 +103,7 @@ func (m *MemLog) Adjacent(addr uint64, p []byte, write bool) (delta *memDelta, d
 	return nil, false
 }
 
+// Update inserts a new read or write event into the log
 func (m *MemLog) Update(addr uint64, p []byte, write bool) {
 	var delta *memDelta
 	var dup, before bool
