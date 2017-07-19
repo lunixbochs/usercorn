@@ -100,6 +100,14 @@ func dis(addr, size, indent, count)
 	end
 end
 
+func regs()
+    print 'Registers:'
+    local _regs, err = us:RegDump()
+    for _, reg in _regs() do
+        print reg.Name reg.Val
+    end
+end
+
 
 func s(steps)
 	if steps == nil then steps = 1 end
