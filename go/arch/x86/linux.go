@@ -40,19 +40,31 @@ var socketCallMap = map[int]string{
 
 // TODO: move this to arch.go or something
 func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) error {
-	entry := uint64(limit) & 0xFFFF
+	var entry uint64
+	// set default access bits
+	access |= 1 << 7
+	if limit > 0xfffff {
+		// set page granularity
+		limit >>= 12
+		flags |= 8
+	}
+	// default to 32-bit for now
+	flags |= 4
+
+	entry |= uint64(limit) & 0xFFFF
 	entry |= ((uint64(limit) >> 16) & 0xF) << 48
 	entry |= (uint64(base) & 0xFFFFFF) << 16
-	entry |= ((uint64(base) >> 24) & 0xFF) << 56
+	entry |= (uint64(base>>24) & 0xFF) << 56
 	entry |= (uint64(access) & 0xFF) << 40
 	entry |= (uint64(flags) & 0xFF) << 52
 
 	if k.gdt == nil {
 		k.gdt, _ = k.U.Mmap(0, 0x1000)
-		err := k.U.RegWrite(uc.X86_REG_GDTR, k.gdt.Addr)
-		if err != nil {
-			return err
+		gdt := uc.X86Mmr{
+			Base:  k.gdt.Addr,
+			Limit: 31*8 - 1,
 		}
+		k.U.Backend().(uc.Unicorn).RegWriteMmr(uc.X86_REG_GDTR, &gdt)
 	}
 	// this is fragile but we only call it once below in SetThreadArea
 	s := k.U.StrucAt(k.gdt.Addr + uint64(sel)*8)
@@ -83,18 +95,31 @@ func (k *LinuxKernel) SetThreadArea(addr uint64) int {
 	s.Unpack(&uaddr) // burn one
 	s.Unpack(&uaddr, &limit)
 
-	err := k.gdtWrite(2, uaddr, limit, 0x12, 0)
+	err := k.gdtWrite(4, uaddr, limit, 0x12, 0)
 	if err == nil {
-		err = k.U.RegWrite(uc.X86_REG_GS, 2)
+		err = k.U.RegWrite(uc.X86_REG_GS, 4*8)
 	}
 	if err != nil {
 		return -1 // FIXME
 	}
-	return 2
+	s = k.U.StrucAt(addr)
+	s.Pack(uint64(4))
+	return 0
+}
+
+func (k *LinuxKernel) setupGdt() {
+	k.gdtWrite(1, 0, 0xffffff00, 0x12, 0) // code
+	k.gdtWrite(2, 0, 0xffffff00, 0x12, 0) // data
+	k.gdtWrite(3, 0, 0xffffff00, 0x12, 0) // stack
+	k.U.RegWrite(uc.X86_REG_CS, 1*8)
+	k.U.RegWrite(uc.X86_REG_DS, 2*8)
+	k.U.RegWrite(uc.X86_REG_SS, 3*8)
 }
 
 func LinuxKernels(u models.Usercorn) []interface{} {
 	kernel := &LinuxKernel{LinuxKernel: linux.NewKernel()}
+	kernel.U = u // hasn't been set by now
+	kernel.setupGdt()
 	return []interface{}{kernel}
 }
 
