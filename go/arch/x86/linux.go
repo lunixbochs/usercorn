@@ -10,6 +10,21 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+const A_PRESENT = 0x80
+const A_DATA = 0x10
+const A_EXEC = 0x8
+const A_DATA_WRITABLE = 0x2
+const A_CODE_READABLE = 0x2
+const A_PRIV_3 = 0x60
+const A_PRIV_0 = 0x0
+const A_CODE = 0x10
+const A_DIR_CON_BIT = 0x4
+const F_PROT_32 = 0x4
+const S_GDT = 0x0
+const S_PRIV_0 = 0x0
+const S_PRIV_3 = 0x3
+const GDT_ENTRY_SIZE = 0x8
+
 var LinuxRegs = []int{uc.X86_REG_EBX, uc.X86_REG_ECX, uc.X86_REG_EDX, uc.X86_REG_ESI, uc.X86_REG_EDI, uc.X86_REG_EBP}
 
 type LinuxKernel struct {
@@ -36,6 +51,12 @@ var socketCallMap = map[int]string{
 	16: "sendmsg",
 	17: "recvmsg",
 	18: "accept4",
+}
+
+func createSelector(idx uint32, flags uint32) uint64 {
+	ret := flags
+	ret |= idx << 3
+	return uint64(ret)
 }
 
 // TODO: move this to arch.go or something
@@ -95,25 +116,24 @@ func (k *LinuxKernel) SetThreadArea(addr uint64) int {
 	s.Unpack(&uaddr) // burn one
 	s.Unpack(&uaddr, &limit)
 
-	err := k.gdtWrite(4, uaddr, limit, 0x12, 0)
+	err := k.gdtWrite(4, uaddr, limit, (A_PRESENT | A_DATA | A_DATA_WRITABLE | A_PRIV_3 | A_DIR_CON_BIT), F_PROT_32)
 	if err == nil {
-		err = k.U.RegWrite(uc.X86_REG_GS, 4*8)
+		err = k.U.RegWrite(uc.X86_REG_GS, createSelector(4, (S_GDT|S_PRIV_3)))
 	}
 	if err != nil {
 		return -1 // FIXME
 	}
-	s = k.U.StrucAt(addr)
-	s.Pack(uint64(4))
+	k.U.StrucAt(addr).Pack(uint64(4))
 	return 0
 }
 
 func (k *LinuxKernel) setupGdt() {
-	k.gdtWrite(1, 0, 0xffffff00, 0x12, 0) // code
-	k.gdtWrite(2, 0, 0xffffff00, 0x12, 0) // data
-	k.gdtWrite(3, 0, 0xffffff00, 0x12, 0) // stack
-	k.U.RegWrite(uc.X86_REG_CS, 1*8)
-	k.U.RegWrite(uc.X86_REG_DS, 2*8)
-	k.U.RegWrite(uc.X86_REG_SS, 3*8)
+	k.gdtWrite(1, 0, 0xffffff00, (A_PRESENT | A_DATA | A_DATA_WRITABLE | A_PRIV_0 | A_DIR_CON_BIT), F_PROT_32) // code
+	k.gdtWrite(2, 0, 0xffffff00, (A_PRESENT | A_DATA | A_DATA_WRITABLE | A_PRIV_0 | A_DIR_CON_BIT), F_PROT_32) // data
+	k.gdtWrite(3, 0, 0xffffff00, (A_PRESENT | A_DATA | A_DATA_WRITABLE | A_PRIV_0), F_PROT_32)                 // stack
+	k.U.RegWrite(uc.X86_REG_CS, createSelector(1, (S_GDT|S_PRIV_0)))
+	k.U.RegWrite(uc.X86_REG_DS, createSelector(2, (S_GDT|S_PRIV_0)))
+	k.U.RegWrite(uc.X86_REG_SS, createSelector(3, (S_GDT|S_PRIV_0)))
 }
 
 func LinuxKernels(u models.Usercorn) []interface{} {
