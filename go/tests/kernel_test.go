@@ -20,7 +20,7 @@ func (k *PosixKernel) Exit(code int) uint64 {
 }
 
 func TestKernel(t *testing.T) {
-	l := loader.NewNullLoader("x86", "linux", binary.BigEndian, 0)
+	l := loader.NewNullLoader("x86", "linux", binary.LittleEndian, 0)
 	u, _ := usercorn.NewUsercornRaw(l, nil)
 
 	kernel := &PosixKernel{}
