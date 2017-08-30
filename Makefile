@@ -67,27 +67,28 @@ deps/$(GODIR):
 	cd .. && tar -xf build/go-dist.tar.gz && \
 	mv go $(GODIR)
 
-deps/lib/libunicorn.1.$(LIBEXT):
+deps/lib/libunicorn.a:
 	cd deps/build && \
 	git clone https://github.com/unicorn-engine/unicorn.git && git --git-dir unicorn fetch; \
 	cd unicorn && git clean -fdx && git reset --hard origin/master && \
-	make && make PREFIX=$(DEST) install
+	make UNICORN_SHARED=no UNICORN_STATIC=yes && make UNICORN_SHARED=no UNICORN_STATIC=yes PREFIX=$(DEST) install
 
-deps/lib/libcapstone.3.$(LIBEXT):
+deps/lib/libcapstone.a:
 	cd deps/build && \
 	git clone https://github.com/aquynh/capstone.git && git --git-dir capstone pull; \
 	cd capstone && git clean -fdx && git reset --hard origin/master; \
-	mkdir build && cd build && cmake -DDCAPSTONE_BUILD_STATIC=OFF -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=RELEASE .. && \
+	mkdir build && cd build && cmake -DCAPSTONE_BUILD_STATIC=ON -DCAPSTONE_BUILD_SHARED=OFF -DCAPSTONE_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=RELEASE .. && \
 	make -j2 PREFIX=$(DEST) install
 
 deps/lib/libkeystone.0.$(LIBEXT):
 	cd deps/build && \
 	git clone https://github.com/keystone-engine/keystone.git && git --git-dir keystone pull; \
 	cd keystone; git clean -fdx && git reset --hard origin/master; mkdir build && cd build && \
-	cmake -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLLVM_TARGETS_TO_BUILD="all" -G "Unix Makefiles" .. && \
+	cmake -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_LIBS_ONLY=ON -DLLVM_TARGETS_TO_BUILD="all" -G "Unix Makefiles" .. && \
 	make -j2 install
+# -DBUILD_SHARED_LIBS=OFF # can't statically link C++
 
-deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/libkeystone.0.$(LIBEXT) deps/$(GODIR)
+deps: deps/lib/libunicorn.a deps/lib/libcapstone.a deps/lib/libkeystone.0.$(LIBEXT) deps/$(GODIR)
 
 # Go executable targets
 .gopath:
