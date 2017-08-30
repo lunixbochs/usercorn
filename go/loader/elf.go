@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"debug/dwarf"
 	"debug/elf"
-	"errors"
+	"encoding/binary"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -29,6 +30,12 @@ var machineMap = map[elf.Machine]string{
 type ElfLoader struct {
 	LoaderBase
 	file *elf.File
+
+	phoff, shoff     uint64
+	phentsize, phnum int
+	shentsize, shnum int
+	shstrndx         int
+	phdr             []byte
 }
 
 var elfMagic = []byte{0x7f, 0x45, 0x4c, 0x46}
@@ -42,29 +49,44 @@ func NewElfLoader(r io.ReaderAt, arch string) (models.Loader, error) {
 	if err != nil {
 		return nil, err
 	}
-	var bits int
-	switch file.Class {
-	case elf.ELFCLASS32:
-		bits = 32
-	case elf.ELFCLASS64:
-		bits = 64
-	default:
-		return nil, errors.New("Unknown ELF class.")
-	}
 	machineName, ok := machineMap[file.Machine]
 	if !ok {
 		return nil, fmt.Errorf("Unsupported machine: %s", file.Machine)
 	}
-	return &ElfLoader{
+	l := &ElfLoader{
 		LoaderBase: LoaderBase{
 			arch:      machineName,
-			bits:      bits,
 			os:        "linux",
 			entry:     file.Entry,
 			byteOrder: file.ByteOrder,
 		},
 		file: file,
-	}, nil
+	}
+	sr := io.NewSectionReader(r, 0, 1<<63-1)
+	switch file.Class {
+	case elf.ELFCLASS32:
+		l.bits = 32
+		var hdr elf.Header32
+		if err := binary.Read(sr, file.ByteOrder, &hdr); err != nil {
+			return nil, errors.Wrap(err, "failed to read file header")
+		}
+		l.phoff, l.phentsize, l.phnum = uint64(hdr.Phoff), int(hdr.Phentsize), int(hdr.Phnum)
+		l.shoff, l.shentsize, l.shnum = uint64(hdr.Shoff), int(hdr.Shentsize), int(hdr.Shnum)
+		l.shstrndx = int(hdr.Shstrndx)
+	case elf.ELFCLASS64:
+		l.bits = 64
+		var hdr elf.Header64
+		if err := binary.Read(sr, file.ByteOrder, &hdr); err != nil {
+			return nil, errors.Wrap(err, "failed to read file header")
+		}
+		l.phoff, l.phentsize, l.phnum = uint64(hdr.Phoff), int(hdr.Phentsize), int(hdr.Phnum)
+		l.shoff, l.shentsize, l.shnum = uint64(hdr.Shoff), int(hdr.Shentsize), int(hdr.Shnum)
+	default:
+		return nil, errors.New("Unknown ELF class.")
+	}
+	l.phdr = make([]byte, l.phentsize*l.phnum)
+	r.ReadAt(l.phdr, int64(l.phoff))
+	return l, nil
 }
 
 func (e *ElfLoader) Interp() string {
@@ -78,14 +100,7 @@ func (e *ElfLoader) Interp() string {
 }
 
 func (e *ElfLoader) Header() (uint64, []byte, int) {
-	for _, prog := range e.file.Progs {
-		if prog.Type == elf.PT_PHDR {
-			data := make([]byte, prog.Memsz)
-			prog.Open().Read(data)
-			return prog.Off, data, len(e.file.Progs)
-		}
-	}
-	return 0, nil, 0
+	return e.phoff, e.phdr, e.phnum
 }
 
 func (e *ElfLoader) Type() int {
