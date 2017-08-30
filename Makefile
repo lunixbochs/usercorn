@@ -77,7 +77,7 @@ deps/lib/libcapstone.3.$(LIBEXT):
 	cd deps/build && \
 	git clone https://github.com/aquynh/capstone.git && git --git-dir capstone pull; \
 	cd capstone && git clean -fdx && git reset --hard origin/master; \
-	mkdir build && cd build && cmake -DDCAPSTONE_BUILD_STATIC=OFF -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=RELEASE .. && \
+	mkdir build && cd build && cmake -DCAPSTONE_BUILD_STATIC=OFF -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=RELEASE .. && \
 	make -j2 PREFIX=$(DEST) install
 
 deps/lib/libkeystone.0.$(LIBEXT):
