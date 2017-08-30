@@ -326,7 +326,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			}
 		}
 	}
-	env = envSet
+	config.Env = envSet
 
 	corn, err := c.MakeUsercorn(args[0])
 	if err != nil {
