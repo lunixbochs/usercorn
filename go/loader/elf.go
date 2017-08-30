@@ -14,16 +14,14 @@ import (
 )
 
 var machineMap = map[elf.Machine]string{
-	elf.EM_386:    "x86",
-	elf.EM_X86_64: "x86_64",
-	elf.EM_ARM:    "arm",
-	elf.EM_MIPS:   "mips",
-	elf.EM_PPC:    "ppc",
-	elf.EM_PPC64:  "ppc64",
-	elf.EM_SPARC:  "sparc",
-
-	// TODO: if minimum version is bumped to Go 1.6, use the native enum elf.EM_AARCH64
-	183: "arm64",
+	elf.EM_386:     "x86",
+	elf.EM_AARCH64: "arm64",
+	elf.EM_ARM:     "arm",
+	elf.EM_MIPS:    "mips",
+	elf.EM_PPC64:   "ppc64",
+	elf.EM_PPC:     "ppc",
+	elf.EM_SPARC:   "sparc",
+	elf.EM_X86_64:  "x86_64",
 }
 
 type ElfLoader struct {

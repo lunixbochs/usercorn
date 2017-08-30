@@ -6,7 +6,7 @@ usercorn
 Building
 ---
 
-Usercorn depends on Go 1.5 or newer, as well as the latest unstable versions of Capstone, Unicorn, and Keystone.
+Usercorn depends on Go 1.6 or newer, as well as the latest unstable versions of Capstone, Unicorn, and Keystone.
 
 `make deps` will attempt to install all of the above into the source tree.
 

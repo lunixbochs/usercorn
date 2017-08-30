@@ -53,7 +53,7 @@ ifneq (,$(filter $(ARCH),armv6l armv7l armv8l))
 endif
 
 ifeq ($(GOURL),)
-	GOMSG = "Go 1.5 or later is required. Visit https://golang.org/dl/ to download."
+	GOMSG = "Go 1.6 or later is required. Visit https://golang.org/dl/ to download."
 else
 	GODIR = go-$(ARCH)-$(OS)
 endif
