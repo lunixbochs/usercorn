@@ -69,7 +69,7 @@ func (m *MemRegion) Split(addr, size uint64) (left, right *MemRegion) {
 	}
 	raddr, nraddr := m.Addr+m.Size, addr+size
 	if nraddr > raddr {
-		extra := bytes.Repeat([]byte{0}, int(raddr-nraddr))
+		extra := bytes.Repeat([]byte{0}, int(nraddr-raddr))
 		m.Data = append(m.Data, extra...)
 	}
 	m.Addr, m.Size = addr, size
