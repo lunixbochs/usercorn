@@ -315,12 +315,12 @@ type OpSyscall struct {
 
 func (o *OpSyscall) Pack(w io.Writer) (total int, err error) {
 	// pack header
-	var tmp [1 + 4 + 8 + 2 + 2]byte
+	var tmp [1 + 4 + 8 + 1 + 2]byte
 	tmp[0] = OP_SYSCALL
 	order.PutUint32(tmp[1:], o.Num)
 	order.PutUint64(tmp[5:], o.Ret)
-	order.PutUint16(tmp[13:], uint16(len(o.Args)))
-	order.PutUint16(tmp[15:], uint16(len(o.Ops)))
+	tmp[13] = uint8(len(o.Args))
+	order.PutUint16(tmp[14:], uint16(len(o.Ops)))
 	if total, err = w.Write(tmp[:]); err != nil {
 		return total, err
 	}
@@ -342,14 +342,14 @@ func (o *OpSyscall) Pack(w io.Writer) (total int, err error) {
 }
 
 func (o *OpSyscall) Unpack(r io.Reader) (int, error) {
-	var tmp [4 + 8 + 2 + 2]byte
+	var tmp [4 + 8 + 2 + 1]byte
 	total, err := io.ReadFull(r, tmp[:])
 	if err == nil {
 		// unpack header
 		o.Num = order.Uint32(tmp[:])
 		o.Ret = order.Uint64(tmp[4:])
-		args := int(order.Uint16(tmp[12:]))
-		count := int(order.Uint16(tmp[14:]))
+		args := int(tmp[12])
+		count := int(order.Uint16(tmp[13:]))
 
 		// unpack args
 		tmp2 := make([]byte, 8*args)

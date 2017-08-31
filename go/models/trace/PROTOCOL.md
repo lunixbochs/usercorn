@@ -170,7 +170,7 @@ A syscall happened. Implicit operations performed by the kernel such as memory w
 | op   |uint8 | OP\_SYSCALL
 | num  |uint16| syscall number (os/kernel specific)
 | ret  |uint64| return value
-| arg\_count|uint16| number of register arguments
+| arg\_count|uint8 | number of register arguments
 | op\_count |uint16| number of operations
 | args |[]uint64| dense array of syscall arguments
 | ops  | []op | dense array of op messages
