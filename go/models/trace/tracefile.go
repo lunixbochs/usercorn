@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"encoding/binary"
 	"github.com/golang/snappy"
 	"github.com/lunixbochs/struc"
 	"github.com/pkg/errors"
@@ -24,6 +25,14 @@ type TraceHeader struct {
 
 	// Emulated OS. Possible values include "linux", "darwin", "netbsd", "cgc", "dos". Right-null-padded.
 	OS string `struc:"[32]byte" json:"os"`
+
+	// Byte Order - 0 for little, 1 for big
+	CodeOrderNum  uint8            `json:"-"`
+	DataOrderNum  uint8            `json:"-"`
+	CodeOrderName string           `struc:"skip" json:"code_order"`
+	DataOrderName string           `struc:"skip" json:"data_order"`
+	CodeOrder     binary.ByteOrder `struc:"skip" json:"-"`
+	DataOrder     binary.ByteOrder `struc:"skip" json:"-"`
 }
 
 type TraceWriter struct {
@@ -31,12 +40,28 @@ type TraceWriter struct {
 }
 
 func NewWriter(w io.WriteCloser, u models.Usercorn) (*TraceWriter, error) {
-	// TODO: handle errors here (with github.com/pkg/errors too)
+	order := u.ByteOrder()
+	var num uint8
+	var name string
+	if order == binary.LittleEndian {
+		num = 0
+		name = "little"
+	} else if order == binary.BigEndian {
+		num = 1
+		name = "big"
+	}
 	header := &TraceHeader{
 		Magic:   TRACE_MAGIC,
 		Version: 1,
 		Arch:    u.Loader().Arch(),
 		OS:      u.Loader().OS(),
+
+		CodeOrderNum:  num,
+		DataOrderNum:  num,
+		CodeOrderName: name,
+		DataOrderName: name,
+		CodeOrder:     order,
+		DataOrder:     order,
 	}
 	if err := struc.Pack(w, header); err != nil {
 		return nil, errors.Wrap(err, "failed to pack header")
@@ -75,13 +100,24 @@ func NewReader(r io.ReadCloser) (*TraceReader, error) {
 	}
 	t.Header.Arch = strings.TrimRight(t.Header.Arch, "\x00")
 	t.Header.OS = strings.TrimRight(t.Header.OS, "\x00")
-
+	// look up byte order
+	switch t.Header.CodeOrderNum {
+	case 0:
+		t.Header.CodeOrder = binary.LittleEndian
+	case 1:
+		t.Header.CodeOrder = binary.BigEndian
+	}
+	switch t.Header.DataOrderNum {
+	case 0:
+		t.Header.DataOrder = binary.LittleEndian
+	case 1:
+		t.Header.DataOrder = binary.BigEndian
+	}
 	var err error
 	t.Arch, t.OS, err = arch.GetArch(t.Header.Arch, t.Header.OS)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get arch/OS")
 	}
-
 	t.zr = snappy.NewReader(r)
 	return t, nil
 }

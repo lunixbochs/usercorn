@@ -14,6 +14,8 @@ Header
 | version|uint32| File format version (0 for now)
 | str\_arch | 32 bytes (null-padded) | Arch, such as "x86\_64", "x86", "mips", "sparc", "sparc64", "arm", "arm64"
 | str\_os   | 32 bytes (null-padded) | OS, such as "linux", "darwin", "netbsd", "cgc"
+| corder | uint8 | target code byte order. 0 = little endian, 1 = big endian |
+| dorder | uint8 | target data byte order |
 
 Messages
 ----
