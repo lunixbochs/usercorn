@@ -128,7 +128,7 @@ type PSP struct {
 
 type DosKernel struct {
 	*co.KernelBase
-	fds [NUM_FDS]int
+	fds map[int]int
 }
 
 func initPsp(argc int, argv []string) *PSP {
@@ -166,21 +166,21 @@ func (k *DosKernel) readUntilChar(addr uint64, c byte) []byte {
 }
 
 func (k *DosKernel) getFd(fd int) (uint16, error) {
-	for i := uint16(0); i < NUM_FDS; i++ {
-		if k.fds[i] == -1 {
+	for i := 0; i < NUM_FDS; i++ {
+		if _, ok := k.fds[i]; !ok {
 			k.fds[i] = fd
-			return i, nil
+			return uint16(i), nil
 		}
 	}
 	return 0xFFFF, errors.New("DOS FD table exhausted")
 }
 
 func (k *DosKernel) freeFd(fd int) (int, error) {
-	realfd := k.fds[fd]
-	if realfd == -1 {
+	realfd, ok := k.fds[fd]
+	if !ok {
 		return 0xFFFF, errors.New("FD not found in FD table")
 	}
-	k.fds[fd] = -1
+	delete(k.fds, fd)
 	return realfd, nil
 }
 
@@ -271,7 +271,13 @@ func (k *DosKernel) Read(fd co.Fd, buf co.Obuf, len co.Len) int {
 
 func (k *DosKernel) Write(fd co.Fd, buf co.Buf, n co.Len) int {
 	mem, _ := k.U.MemRead(buf.Addr, uint64(n))
-	written, err := syscall.Write(k.fds[fd], mem)
+	realfd, ok := k.fds[int(fd)]
+	if !ok {
+		k.setFlagC(true)
+		// TODO: Set AX to error code
+		k.wreg16(AX, 0xFFFF)
+	}
+	written, err := syscall.Write(realfd, mem)
 	if err != nil {
 		k.setFlagC(true)
 		// TODO: Set AX to error code
@@ -301,23 +307,18 @@ func (k *DosKernel) TerminateWithCode(code int) {
 func NewKernel() *DosKernel {
 	k := &DosKernel{
 		KernelBase: &co.KernelBase{},
+		fds: map[int]int{
+			0: 0,
+			1: 1,
+			2: 2,
+		},
 	}
-
-	// Init FDs
-	for i := 0; i < NUM_FDS; i++ {
-		k.fds[i] = -1
-	}
-	k.fds[0] = 0
-	k.fds[1] = 1
-	k.fds[2] = 2
-
 	// Invert the syscall map
 	for abi, syscalls := range abiMap {
 		for _, syscall := range syscalls {
 			syscallAbis[syscall] = *abi
 		}
 	}
-
 	k.Argjoy.Register(k.getDosArgCodec())
 	return k
 }
