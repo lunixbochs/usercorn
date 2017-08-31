@@ -38,8 +38,7 @@ func (o *OpSpReg) MarshalJSON() ([]byte, error) {
 }
 
 func (o *OpMemRead) MarshalJSON() ([]byte, error) {
-	data := base64.StdEncoding.EncodeToString(o.Data)
-	return bprintf(`{"op":%d,"addr":%d,"data":"%s"}`, OP_MEM_READ, o.Addr, data), nil
+	return bprintf(`{"op":%d,"addr":%d,"size":"%d"}`, OP_MEM_READ, o.Addr, o.Size), nil
 }
 
 func (o *OpMemWrite) MarshalJSON() ([]byte, error) {

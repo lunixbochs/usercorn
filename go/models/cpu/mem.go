@@ -1,6 +1,7 @@
 package cpu
 
 import (
+	"bytes"
 	"encoding/binary"
 	"github.com/pkg/errors"
 )
@@ -13,7 +14,7 @@ type Mem struct {
 	mask uint64
 	// Mem.hooks is set when passing *Mem to NewHooks()
 	hooks *Hooks
-	// MemSim is private, so any cpu-facing functionality needs to be wrapped by Mem
+	// MemSim isn't exposed in the interface, so any cpu-facing functionality should be wrapped by Mem
 	sim *MemSim
 
 	order binary.ByteOrder
@@ -26,6 +27,11 @@ func NewMem(bits uint, order binary.ByteOrder) *Mem {
 		sim:   &MemSim{},
 		order: order,
 	}
+}
+
+// TODO: MemRegion should be private fields + an interface so callers can't muck directly with memory
+func (m *Mem) Maps() []*MemRegion {
+	return m.sim.Mem
 }
 
 func (m *Mem) MemMapProt(addr, size uint64, prot int) error {
@@ -50,6 +56,11 @@ func (m *Mem) MemUnmap(addr, size uint64) error {
 	}
 	m.sim.Unmap(addr, size)
 	return nil
+}
+
+func (m *Mem) MemZero(addr, size uint64) error {
+	b := bytes.Repeat([]byte{0}, int(size))
+	return m.MemWrite(addr, b)
 }
 
 func (m *Mem) MemReadInto(p []byte, addr uint64) error {

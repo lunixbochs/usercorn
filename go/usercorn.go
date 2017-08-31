@@ -101,7 +101,7 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 		debugFiles: make(map[string]*models.DebugFile),
 	}
 	if u.config.Rewind || u.config.UI {
-		u.replay = trace.NewReplay(u.arch, u.os)
+		u.replay = trace.NewReplay(u.arch, u.os, l.ByteOrder())
 		defer u.replay.Flush()
 		config.Trace.OpCallback = append(config.Trace.OpCallback, u.replay.Feed)
 		if config.UI {
@@ -132,7 +132,7 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 				return 0, err
 			}
 			if u.trace != nil && u.config.Trace.Mem {
-				u.trace.OnMemReadData(addr, p)
+				u.trace.OnMemReadSize(addr, uint32(len(p)))
 			}
 			return len(p), nil
 		},
@@ -236,7 +236,7 @@ func (u *Usercorn) Rewind(by, addr uint64) error {
 		}
 		target = u.replay.Inscount - by
 	}
-	replay := trace.NewReplay(u.arch, u.os)
+	replay := trace.NewReplay(u.arch, u.os, u.ByteOrder())
 	good := false
 	var pos int
 	var op models.Op
@@ -292,7 +292,7 @@ outer:
 	// TODO: special regs (SpRegs)
 
 	// 2. map all target mappings
-	for _, mm := range replay.Mem.Mem {
+	for _, mm := range replay.Mem.Maps() {
 		if err := u.MemMapProt(mm.Addr, mm.Size, mm.Prot); err != nil {
 			return err
 		}

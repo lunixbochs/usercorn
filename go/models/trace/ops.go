@@ -198,24 +198,25 @@ func (o *OpSpReg) Unpack(r io.Reader) (int, error) {
 
 type OpMemRead struct {
 	Addr uint64
-	Data []byte
+	Size uint32
 }
 
 func (o *OpMemRead) Pack(w io.Writer) (int, error) {
 	var tmp [1 + 8 + 4]byte
 	tmp[0] = OP_MEM_READ
 	order.PutUint64(tmp[1:], o.Addr)
-	order.PutUint32(tmp[9:], uint32(len(o.Data)))
-	total, err := w.Write(tmp[:])
-	if err != nil {
-		return total, err
-	}
-	n, err := w.Write(o.Data)
-	return total + n, err
+	order.PutUint32(tmp[9:], o.Size)
+	return w.Write(tmp[:])
 }
 
 func (o *OpMemRead) Unpack(r io.Reader) (int, error) {
-	return (*OpMemWrite)(o).Unpack(r)
+	var tmp [8 + 4]byte
+	total, err := io.ReadFull(r, tmp[:])
+	if err == nil {
+		o.Addr = order.Uint64(tmp[:])
+		o.Size = order.Uint32(tmp[8:])
+	}
+	return total, err
 }
 
 type OpMemWrite struct {

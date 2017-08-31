@@ -1,6 +1,8 @@
 package trace
 
 import (
+	"encoding/binary"
+
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
@@ -8,7 +10,7 @@ import (
 type Replay struct {
 	Arch   *models.Arch
 	OS     *models.OS
-	Mem    *cpu.MemSim
+	Mem    *cpu.Mem
 	Regs   map[int]uint64
 	SpRegs map[int][]byte
 	PC, SP uint64
@@ -20,11 +22,11 @@ type Replay struct {
 	callbacks []func(models.Op, []models.Op)
 }
 
-func NewReplay(arch *models.Arch, os *models.OS) *Replay {
+func NewReplay(arch *models.Arch, os *models.OS, order binary.ByteOrder) *Replay {
 	return &Replay{
 		Arch:   arch,
 		OS:     os,
-		Mem:    &cpu.MemSim{},
+		Mem:    cpu.NewMem(uint(arch.Bits), order),
 		Regs:   make(map[int]uint64),
 		SpRegs: make(map[int][]byte),
 	}
@@ -51,11 +53,14 @@ func (r *Replay) update(op models.Op) {
 		r.SpRegs[int(o.Num)] = o.Val
 
 	case *OpMemMap: // memory
-		r.Mem.Map(o.Addr, uint64(o.Size), int(o.Prot), o.Zero != 0)
+		r.Mem.MemMapProt(o.Addr, uint64(o.Size), int(o.Prot))
+		if o.Zero != 0 {
+			r.Mem.MemZero(o.Addr, o.Size)
+		}
 	case *OpMemUnmap:
-		r.Mem.Unmap(o.Addr, uint64(o.Size))
+		r.Mem.MemUnmap(o.Addr, uint64(o.Size))
 	case *OpMemWrite:
-		r.Mem.Write(o.Addr, o.Data, 0)
+		r.Mem.MemWrite(o.Addr, o.Data)
 
 	case *OpSyscall:
 		for _, v := range o.Ops {

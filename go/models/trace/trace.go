@@ -300,16 +300,12 @@ func (t *Trace) OnRegUpdate() {
 	}
 }
 
-func (t *Trace) OnMemReadData(addr uint64, data []byte) {
-	t.Append(&OpMemRead{addr, data}, false)
+func (t *Trace) OnMemReadSize(addr uint64, size uint32) {
+	t.Append(&OpMemRead{addr, size}, false)
 }
 
 func (t *Trace) OnMemRead(addr uint64, size int) {
-	// TODO: error tracking?
-	data, err := t.u.DirectRead(addr, uint64(size))
-	if err == nil {
-		t.OnMemReadData(addr, data)
-	}
+	t.OnMemReadSize(addr, uint32(size))
 }
 
 func (t *Trace) OnMemWrite(addr uint64, data []byte) {

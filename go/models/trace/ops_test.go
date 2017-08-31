@@ -19,7 +19,7 @@ var allButSyscall = []models.Op{
 	&OpReg{35, 1}, // 35 is rax
 	// no SpReg support higher in the stack yet, so this is bogus
 	&OpSpReg{0xff, []byte{1, 2, 3, 4}},
-	&OpMemRead{0x1000, []byte{0}},
+	&OpMemRead{0x1000, 1},
 	&OpMemUnmap{0x1000, 0x1000},
 	&OpExit{},
 }

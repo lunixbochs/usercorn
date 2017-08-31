@@ -87,8 +87,7 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 	// TODO: make all of this into Sprintf columns, and align the columns
 
 	var ins string
-	insmem := make([]byte, size)
-	s.replay.Mem.Read(pc, insmem, 0)
+	insmem, _ := s.replay.Mem.MemRead(pc, uint64(size))
 	// TODO: disBytes setting?
 	dis, err := models.Disas(insmem, pc, s.replay.Arch, s.config.DisBytes)
 	if err != nil {
@@ -158,7 +157,7 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 	for _, op := range effects {
 		switch o := op.(type) {
 		case *trace.OpMemBatch:
-			fmt.Fprintf(s.config.Output, "%s", o)
+			fmt.Fprintf(s.config.Output, "%s", o.Render(s.replay.Mem))
 		}
 	}
 }

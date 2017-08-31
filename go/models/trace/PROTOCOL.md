@@ -116,15 +116,13 @@ A special-type register value changed.
 OP\_MEM\_READ
 ----
 
-Memory read performed.
+Memory read performed. You must track memory writes to know the value.
 
 | name | type | desc |
 |------|------|------|
 | op   |uint8 | OP\_MEM\_READ
 | addr |uint64| Memory address
 | size |uint32| Size of read
-| value|[]uint8| Byte array of memory read
-
 
 OP\_MEM\_WRITE
 ----

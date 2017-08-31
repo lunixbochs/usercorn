@@ -1,11 +1,11 @@
 package trace
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 // OpMemBatch is a collection of reads and writes that occured within a basic block
@@ -14,7 +14,7 @@ type OpMemBatch struct {
 	Ops []models.Op
 }
 
-func (o *OpMemBatch) String() string {
+func (o *OpMemBatch) Render(mem *cpu.Mem) string {
 	var out []string
 	for _, op := range o.Ops {
 		var addr uint64
@@ -24,7 +24,9 @@ func (o *OpMemBatch) String() string {
 		case *OpMemWrite:
 			addr, data, t = v.Addr, v.Data, "W"
 		case *OpMemRead:
-			addr, data, t = v.Addr, v.Data, "R"
+			addr = v.Addr
+			data, _ = mem.MemRead(v.Addr, uint64(v.Size))
+			t = "R"
 		}
 
 		for i, line := range models.HexDump(addr, data, 32) {
@@ -59,9 +61,9 @@ func (m *MemBatch) Flush() []models.Op {
 	for _, op := range m.memOps {
 		switch v := op.(type) {
 		case *OpMemWrite:
-			log.Update(v.Addr, v.Data, true)
+			log.Update(v.Addr, uint32(len(v.Data)), v.Data, true)
 		case *OpMemRead:
-			log.Update(v.Addr, v.Data, false)
+			log.Update(v.Addr, v.Size, nil, false)
 		}
 	}
 	m.memOps = nil
@@ -70,7 +72,7 @@ func (m *MemBatch) Flush() []models.Op {
 		if d.write {
 			ops = append(ops, &OpMemWrite{d.addr, d.data})
 		} else {
-			ops = append(ops, &OpMemRead{d.addr, d.data})
+			ops = append(ops, &OpMemRead{d.addr, d.size})
 		}
 	}
 	return []models.Op{&OpMemBatch{Ops: ops}}
@@ -80,6 +82,7 @@ type memDelta struct {
 	addr  uint64
 	last  []byte
 	data  []byte
+	size  uint32
 	write bool
 	tag   byte
 }
@@ -88,30 +91,27 @@ type MemLog struct {
 	log []*memDelta
 }
 
-func (m *MemLog) Adjacent(addr uint64, p []byte, write bool) (delta *memDelta, dup bool) {
+// TODO: instead of using byte equivalence for Adjacent
+// writing to an addr should update the addr's version
+// adjacency for both read and write only works if you're on the same version
+// right now, you can have an adjacent op to an older log entry and cause ordering confusion
+func (m *MemLog) Adjacent(addr uint64, size uint32, write bool) *memDelta {
 	for _, delta := range m.log {
 		if delta.write != write {
 			continue
 		}
-		if addr == delta.addr && bytes.Equal(p, delta.last) {
-			return delta, true
-		}
-		if addr == delta.addr+uint64(len(delta.data)) || addr == delta.addr-uint64(len(p)) {
-			return delta, false
+		if addr == delta.addr+uint64(len(delta.data)) || addr == delta.addr-uint64(size) {
+			return delta
 		}
 	}
-	return nil, false
+	return nil
 }
 
 // Update inserts a new read or write event into the log
-func (m *MemLog) Update(addr uint64, p []byte, write bool) {
+func (m *MemLog) Update(addr uint64, size uint32, p []byte, write bool) {
 	var delta *memDelta
-	var dup, before bool
-	if delta, dup = m.Adjacent(addr, p, write); delta != nil {
-		// adjacent to old memory delta
-		if dup {
-			return
-		}
+	before := false
+	if delta = m.Adjacent(addr, size, write); delta != nil {
 		if addr < delta.addr {
 			delta.addr -= uint64(len(p))
 			before = true
@@ -129,19 +129,22 @@ func (m *MemLog) Update(addr uint64, p []byte, write bool) {
 		}
 	} else {
 		// entirely new memory delta
-		delta = &memDelta{addr, nil, nil, write, ' '}
+		delta = &memDelta{addr, nil, nil, 0, write, ' '}
 		m.log = append(m.log, delta)
 	}
-	if before {
-		data := make([]byte, len(p), len(p)+len(delta.data))
-		copy(data, p)
-		copy(data[len(p):], delta.data)
-		delta.data = data
-		delta.last = delta.data[:len(p)]
-	} else {
-		delta.data = append(delta.data, p...)
-		delta.last = delta.data[len(delta.data)-len(p):]
+	if write {
+		if before {
+			data := make([]byte, len(p), len(p)+len(delta.data))
+			copy(data, p)
+			copy(data[len(p):], delta.data)
+			delta.data = data
+			delta.last = delta.data[:len(p)]
+		} else {
+			delta.data = append(delta.data, p...)
+			delta.last = delta.data[len(delta.data)-len(p):]
+		}
 	}
+	delta.size += size
 }
 
 func (m *MemLog) String(bits int) string {
