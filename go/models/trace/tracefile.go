@@ -123,7 +123,7 @@ func NewReader(r io.ReadCloser) (*TraceReader, error) {
 }
 
 func (t *TraceReader) Next() (models.Op, error) {
-	op, _, err := Unpack(t.zr)
+	op, _, err := Unpack(t.zr, false)
 	return op, err
 }
 

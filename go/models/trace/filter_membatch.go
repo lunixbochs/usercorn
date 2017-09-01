@@ -10,7 +10,7 @@ import (
 
 // OpMemBatch is a collection of reads and writes that occured within a basic block
 type OpMemBatch struct {
-	models.NoOp
+	OpNop
 	Ops []models.Op
 }
 

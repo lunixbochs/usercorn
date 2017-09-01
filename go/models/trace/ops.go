@@ -42,7 +42,7 @@ func packOps(w io.Writer, ops []models.Op) (total int, err error) {
 func unpackOps(r io.Reader, count int) (ops []models.Op, total int, err error) {
 	ops = make([]models.Op, count)
 	for i := 0; i < count; i++ {
-		op, n, err := Unpack(r)
+		op, n, err := Unpack(r, true)
 		if err != nil {
 			return ops, total + n, errors.Wrap(err, "unpacking op list")
 		} else {
@@ -53,7 +53,7 @@ func unpackOps(r io.Reader, count int) (ops []models.Op, total int, err error) {
 	return ops, total, nil
 }
 
-func Unpack(r io.Reader) (models.Op, int, error) {
+func Unpack(r io.Reader, nested bool) (models.Op, int, error) {
 	var tmp [1]byte
 	if _, err := r.Read(tmp[:]); err != nil {
 		return nil, 0, err
@@ -88,6 +88,9 @@ func Unpack(r io.Reader) (models.Op, int, error) {
 		op = &OpExit{}
 	default:
 		return nil, 0, errors.Errorf("Unknown op: %d", tmp[0])
+	}
+	if nested && (tmp[0] == OP_FRAME || tmp[0] == OP_KEYFRAME) {
+		return nil, 0, errors.Errorf("fatal: nested frame")
 	}
 	n, err := op.Unpack(r)
 	return op, n + 1, err

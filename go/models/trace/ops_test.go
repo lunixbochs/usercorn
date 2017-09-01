@@ -40,7 +40,7 @@ func TestOpFrame(t *testing.T) {
 	if _, err := testFrame.Pack(&buf); err != nil {
 		t.Fatal(err)
 	}
-	op, _, err := Unpack(&buf)
+	op, _, err := Unpack(&buf, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestOpFrame(t *testing.T) {
 	if _, err := op.Pack(&buf2); err != nil {
 		t.Fatal(err)
 	}
-	_, _, err = Unpack(&buf2)
+	_, _, err = Unpack(&buf2, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func BenchmarkUnpack(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		if _, _, err := Unpack(r); err != nil {
+		if _, _, err := Unpack(r, false); err != nil {
 			b.Fatal(err)
 		}
 	}

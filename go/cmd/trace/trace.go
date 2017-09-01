@@ -90,7 +90,7 @@ func main() {
 		}
 	} else if *prettyFlag {
 		if err := PrintPretty(tf); err != nil {
-			fmt.Fprintf(os.Stderr, "error printing json: %v\n", err)
+			fmt.Fprintf(os.Stderr, "error printing pretty: %v\n", err)
 			os.Exit(1)
 		}
 	}
