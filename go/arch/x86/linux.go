@@ -17,7 +17,7 @@ const A_DATA_WRITABLE = 0x2
 const A_CODE_READABLE = 0x2
 const A_PRIV_3 = 0x60
 const A_PRIV_0 = 0x0
-const A_CODE = 0x10
+const A_CODE = 0x18
 const A_DIR_CON_BIT = 0x4
 const F_PROT_32 = 0x4
 const S_GDT = 0x0
@@ -69,9 +69,6 @@ func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) error {
 		limit >>= 12
 		flags |= 8
 	}
-	// default to 32-bit for now
-	flags |= 4
-
 	entry |= uint64(limit) & 0xFFFF
 	entry |= ((uint64(limit) >> 16) & 0xF) << 48
 	entry |= (uint64(base) & 0xFFFFFF) << 16
