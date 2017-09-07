@@ -37,7 +37,7 @@ var machoMagics = [][]byte{
 }
 
 type MachOLoader struct {
-	LoaderHeader
+	LoaderBase
 	file *macho.File
 }
 
@@ -123,7 +123,7 @@ func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 	}
 	entry, _ := findEntry(file, bits)
 	m := &MachOLoader{
-		LoaderHeader: LoaderHeader{
+		LoaderBase: LoaderBase{
 			arch:  machineName,
 			bits:  bits,
 			os:    "darwin",
