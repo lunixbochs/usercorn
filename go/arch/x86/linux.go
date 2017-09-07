@@ -17,7 +17,7 @@ const A_DATA_WRITABLE = 0x2
 const A_CODE_READABLE = 0x2
 const A_PRIV_3 = 0x60
 const A_PRIV_0 = 0x0
-const A_CODE = 0x10
+const A_CODE = 0x18
 const A_DIR_CON_BIT = 0x4
 const F_PROT_32 = 0x4
 const S_GDT = 0x0
@@ -69,9 +69,6 @@ func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) {
 		limit >>= 12
 		flags |= 8
 	}
-	// default to 32-bit for now
-	flags |= 4
-
 	entry |= uint64(limit) & 0xFFFF
 	entry |= ((uint64(limit) >> 16) & 0xF) << 48
 	entry |= (uint64(base) & 0xFFFFFF) << 16
@@ -116,7 +113,7 @@ func (k *LinuxKernel) SetThreadArea(addr uint64) int {
 	s.Unpack(&uaddr, &limit)
 
 	k.gdtWrite(4, uaddr, limit, (A_PRESENT | A_DATA | A_DATA_WRITABLE | A_PRIV_3 | A_DIR_CON_BIT), F_PROT_32)
-	k.U.RegWrite(uc.X86_REG_GS, createSelector(4, (S_GDT | S_PRIV_3)))
+	k.U.RegWrite(uc.X86_REG_GS, createSelector(4, (S_GDT|S_PRIV_3)))
 	k.U.StrucAt(addr).Pack(uint64(4))
 	return 0
 }
@@ -124,10 +121,10 @@ func (k *LinuxKernel) SetThreadArea(addr uint64) int {
 func (k *LinuxKernel) setupGdt() {
 	k.gdtWrite(1, 0, 0xffffff00, (A_PRESENT | A_DATA | A_DATA_WRITABLE | A_PRIV_0 | A_DIR_CON_BIT), F_PROT_32) // code
 	k.gdtWrite(2, 0, 0xffffff00, (A_PRESENT | A_DATA | A_DATA_WRITABLE | A_PRIV_0 | A_DIR_CON_BIT), F_PROT_32) // data
-	k.gdtWrite(3, 0, 0xffffff00, (A_PRESENT | A_DATA | A_DATA_WRITABLE | A_PRIV_0), F_PROT_32) // stack
-	k.U.RegWrite(uc.X86_REG_CS, createSelector(1, (S_GDT | S_PRIV_0)))
-	k.U.RegWrite(uc.X86_REG_DS, createSelector(2, (S_GDT | S_PRIV_0)))
-	k.U.RegWrite(uc.X86_REG_SS, createSelector(3, (S_GDT | S_PRIV_0)))
+	k.gdtWrite(3, 0, 0xffffff00, (A_PRESENT | A_DATA | A_DATA_WRITABLE | A_PRIV_0), F_PROT_32)                 // stack
+	k.U.RegWrite(uc.X86_REG_CS, createSelector(1, (S_GDT|S_PRIV_0)))
+	k.U.RegWrite(uc.X86_REG_DS, createSelector(2, (S_GDT|S_PRIV_0)))
+	k.U.RegWrite(uc.X86_REG_SS, createSelector(3, (S_GDT|S_PRIV_0)))
 }
 
 func LinuxKernels(u models.Usercorn) []interface{} {
