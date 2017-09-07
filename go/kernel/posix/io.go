@@ -11,18 +11,30 @@ import (
 )
 
 func (k *PosixKernel) Read(fd co.Fd, buf co.Obuf, size co.Len) uint64 {
-	tmp := make([]byte, size)
-	n, err := syscall.Read(int(fd), tmp)
-	if err != nil {
-		return Errno(err)
+	tmp := make([]byte, 0x10000)
+	var n uint64
+	for i := co.Len(0); i < size; i += 0x10000 {
+		if i+0x10000 > size {
+			tmp = tmp[:size-i]
+		}
+		count, err := syscall.Read(int(fd), tmp)
+		if err != nil {
+			return Errno(err)
+		}
+		if err := buf.Pack(tmp[:count]); err != nil {
+			return UINT64_MAX // FIXME
+		}
+		n += uint64(count)
+		if count < 0x10000 {
+			break
+		}
 	}
-	if err := buf.Pack(tmp[:n]); err != nil {
-		return UINT64_MAX // FIXME
-	}
-	return uint64(n)
+	return n
 }
 
 func (k *PosixKernel) Write(fd co.Fd, buf co.Buf, size co.Len) uint64 {
+	// TODO: if you pass a HUGE size, need to stream like above
+	// io.Copy on memio might be better
 	tmp := make([]byte, size)
 	if err := buf.Unpack(tmp); err != nil {
 		return UINT64_MAX // FIXME
