@@ -166,7 +166,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 
 	gdb := fs.Int("gdb", -1, "listen for gdb connection on localhost:<port>")
 
-	startrepl := fs.Bool("repl", false, "experimental repl")
+	startrepl := fs.Bool("repl", false, "experimental luaish repl")
 	tui := fs.Bool("tui", false, "experimental interactive text UI")
 
 	cpuprofile := fs.String("cpuprofile", "", "write cpu profile to <file>")
@@ -239,8 +239,20 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			panic(err)
 		}
 	}
+	// implied flags
 	if *looproll == 0 && *trace {
 		*looproll = 8
+	}
+	if !*tui && (*trace && !*streamui || *streamui && !*trace) {
+		*trace = true
+		*streamui = true
+	}
+	if *startrepl || *tui {
+		*trace = true
+		*rewind = true
+	}
+	if *rewind {
+		*trace = true
 	}
 	config := &models.Config{
 		SymFile:      *symfile,
