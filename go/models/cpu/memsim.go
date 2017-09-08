@@ -38,6 +38,24 @@ type MemRegion struct {
 	Data []byte
 }
 
+func (m *MemRegion) String() string {
+	// duplicated from go/models/mmap.go
+	desc := fmt.Sprintf("0x%x-0x%x", m.Addr, m.Addr+m.Size)
+	// add prot
+	prots := []int{PROT_READ, PROT_WRITE, PROT_EXEC}
+	chars := []string{"r", "w", "x"}
+	prot := " "
+	for i := range prots {
+		if m.Prot&prots[i] != 0 {
+			prot += chars[i]
+		} else {
+			prot += "-"
+		}
+	}
+	desc += prot
+	return desc
+}
+
 func (m *MemRegion) Contains(addr uint64) bool {
 	return addr >= m.Addr && addr < m.Addr+m.Size
 }

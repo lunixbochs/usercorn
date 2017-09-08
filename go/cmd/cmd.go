@@ -244,7 +244,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	if *looproll == 0 && *trace {
 		*looproll = 8
 	}
-	if !*tui && (*trace && !*streamui || *streamui && !*trace) {
+	if !*tui && *trace && !*streamui {
 		*trace = true
 		*streamui = true
 	}
@@ -254,6 +254,9 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	}
 	if *rewind {
 		*trace = true
+	}
+	if *verbose && !*streamui && !*tui {
+		*streamui = true
 	}
 	config := &models.Config{
 		SymFile:      *symfile,

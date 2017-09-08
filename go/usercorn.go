@@ -116,12 +116,10 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 				})
 		}
 	}
-
 	u.trace, err = trace.NewTrace(u, &config.Trace)
 	if err != nil {
 		return nil, errors.Wrap(err, "NewTrace() failed")
 	}
-
 	if config.Output == os.Stderr && readline.IsTerminal(int(os.Stderr.Fd())) {
 		config.Color = true
 	}
@@ -389,35 +387,13 @@ func (u *Usercorn) HookSysDel(hook *models.SysHook) {
 }
 
 func (u *Usercorn) Run() error {
-	// panic/exit handler
-	verboseExit := func() {
-		dis, err := u.Dis(u.entry, 64, u.config.DisBytes)
-		if err == nil {
-			u.Println("[pc]")
-			u.Println(dis)
-		}
-		u.Println("[memory map]")
-		for _, m := range u.Mappings() {
-			u.Printf("  %s\n", m)
-		}
-		u.Println("[registers]")
-		regs, err := u.RegDump()
-		if err == nil {
-			for _, reg := range regs {
-				u.Printf("%s: %#x\n", reg.Name, reg.Val)
-			}
-		}
-		u.Println("[stacktrace]")
-		// TODO: walk stacktrace from binary tracer here?
-		// TODO: verbose exit should be handled by UI module
-	}
 	defer func() {
 		if e := recover(); e != nil {
-			u.Printf("\n+++ caught panic +++\n")
-			u.Printf("%s\n", e)
-			u.Printf("------------------\n")
-			verboseExit()
-			u.Printf("------------------\n\n")
+			msg := fmt.Sprintf("\n+++ caught panic +++\n%s\n\n", e)
+			if u.ui == nil {
+				u.ui = ui.NewStreamUI(u.config, u.replay)
+			}
+			u.ui.OnExit(false, msg)
 			panic(e)
 		}
 	}()
@@ -457,36 +433,8 @@ func (u *Usercorn) Run() error {
 			u.inscount++
 		}, 1, 0)
 	}
-	if u.config.Verbose {
-		u.Printf("[entry @ 0x%x]\n", u.entry)
-		dis, err := u.Dis(u.entry, 64, u.config.DisBytes)
-		if err != nil {
-			u.Println(err)
-		} else {
-			u.Println(dis)
-		}
-		sp, err := u.RegRead(u.arch.SP)
-		if err != nil {
-			return err
-		}
-		buf := make([]byte, u.StackBase+u.StackSize-sp)
-		if err := u.MemReadInto(buf, sp); err != nil {
-			return err
-		}
-		u.Printf("[stack @ 0x%x]\n", sp)
-		for _, line := range models.HexDump(sp, buf[:], u.arch.Bits) {
-			u.Println(line)
-		}
-		u.Printf("[memory map]\n")
-		for _, m := range u.Mappings() {
-			u.Printf("  %s\n", m)
-		}
-	}
-	// TODO: print starting registers here if TraceReg or Verbose
-	if u.config.Verbose {
-		u.Println("=====================================")
-		u.Println("==== Program output begins here. ====")
-		u.Println("=====================================")
+	if u.ui != nil {
+		u.ui.OnStart(u.entry)
 	}
 	// in case this isn't the first run
 	u.exitStatus = nil
@@ -532,10 +480,13 @@ func (u *Usercorn) Run() error {
 		}
 	}
 	if _, ok := err.(models.ExitStatus); !ok && err != nil || u.config.Verbose {
-		verboseExit()
-	} else if u.config.Trace.Reg {
-		// TODO: print all registers here
-		// TODO: that's really a UI choice
+		if u.ui != nil {
+			if err != nil {
+				u.ui.OnExit(false, err.Error())
+			} else {
+				u.ui.OnExit(false, "")
+			}
+		}
 	}
 	if u.config.InsCount {
 		u.Printf("inscount: %d\n", u.inscount)
@@ -989,17 +940,10 @@ func (u *Usercorn) StrucAt(addr uint64) *models.StrucStream {
 	return models.NewStrucStream(u.Mem().StreamAt(addr), options)
 }
 
-func (u *Usercorn) Config() *models.Config {
-	return u.config
-}
+func (u *Usercorn) Config() *models.Config { return u.config }
 
-func (u *Usercorn) Printf(f string, args ...interface{}) {
-	fmt.Fprintf(u.config.Output, f, args...)
-}
-
-func (u *Usercorn) Println(s ...interface{}) {
-	fmt.Fprintln(u.config.Output, s...)
-}
+func (u *Usercorn) Printf(f string, args ...interface{}) { fmt.Fprintf(u.config.Output, f, args...) }
+func (u *Usercorn) Println(s ...interface{})             { fmt.Fprintln(u.config.Output, s...) }
 
 func (u *Usercorn) Restart(fn func(models.Usercorn, error) error) {
 	u.restart = fn
