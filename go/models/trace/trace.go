@@ -166,7 +166,6 @@ func (t *Trace) Detach() {
 	}
 	t.attached = false
 	// TODO: flush last frame on detach (make sure to detach on the way out)
-	t.flushSys()
 	t.flushStep()
 	if t.frame != nil {
 		t.Pack(t.frame)
@@ -227,26 +226,30 @@ func (t *Trace) Rewound() {
 // TODO: eventually allow alternating OpFrames with Syscalls, like on windows kernel->userspace callbacks?
 func (t *Trace) Append(op models.Op, canAdvance bool) {
 	ops := []models.Op{op}
-	for _, filter := range t.filters {
-		var filteredOps []models.Op
-		for _, op := range ops {
-			filteredOps = append(filteredOps, filter.Filter(op)...)
+	// workaround (syscall's ops should be filtered in isolation, which needs a "filter all of these ops at once" function)
+	if t.syscall == nil {
+		for _, filter := range t.filters {
+			var filteredOps []models.Op
+			for _, op := range ops {
+				filteredOps = append(filteredOps, filter.Filter(op)...)
+			}
+			ops = filteredOps
 		}
-		ops = filteredOps
 	}
-
 	for _, op := range ops {
-		t.Send(op)
 		// TODO: add stuff to keyframe
 		frame := t.frame
 		// handle the first frame
+		_, isStep := op.(*OpStep)
 		if frame == nil || t.syscall == nil && canAdvance {
 			t.Pack(frame)
 			t.frame = &OpFrame{Ops: []models.Op{op}}
-		} else if t.syscall != nil {
+			t.Send(op)
+		} else if t.syscall != nil && !isStep {
 			t.syscall.Ops = append(t.syscall.Ops, op)
 		} else {
 			t.frame.Ops = append(t.frame.Ops, op)
+			t.Send(op)
 		}
 		canAdvance = false
 	}
@@ -254,25 +257,25 @@ func (t *Trace) Append(op models.Op, canAdvance bool) {
 
 // trace hooks are below
 func (t *Trace) flushStep() {
+	sys := t.syscall
+	t.syscall = nil
 	// we need to lag one instruction behind, because OnStep is *before* the instruction
 	if t.step != nil {
 		t.OnRegUpdate()
 		t.Append(t.step, false)
 		t.step = nil
 	}
+	t.flushSys(sys)
 }
 
-func (t *Trace) flushSys() {
-	sys := t.syscall
+func (t *Trace) flushSys(sys *OpSyscall) {
 	if sys != nil {
-		t.OnRegUpdate()
 		t.syscall = nil
 		t.Append(sys, false)
 	}
 }
 
 func (t *Trace) OnJmp(addr uint64, size uint32) {
-	t.flushSys()
 	// TODO: handle real self-jumps?
 	if t.step != nil && addr != t.stepAddr {
 		t.flushStep()
@@ -281,7 +284,6 @@ func (t *Trace) OnJmp(addr uint64, size uint32) {
 }
 
 func (t *Trace) OnStep(addr uint64, size uint32) {
-	t.flushSys()
 	if addr == t.stepAddr {
 		return
 	}
@@ -325,10 +327,9 @@ func (t *Trace) OnMemUnmap(addr, size uint64) {
 }
 
 func (t *Trace) OnSysPre(num int, args []uint64, ret uint64, desc string) {
-	t.flushSys()
-	syscall := &OpSyscall{uint32(num), 0, args, desc, nil}
+	t.flushSys(t.syscall)
 	// TODO: how to add syscall to keyframe?
-	t.syscall = syscall
+	t.syscall = &OpSyscall{uint32(num), 0, args, desc, nil}
 }
 
 func (t *Trace) OnSysPost(num int, args []uint64, ret uint64, desc string) {
@@ -336,6 +337,7 @@ func (t *Trace) OnSysPost(num int, args []uint64, ret uint64, desc string) {
 	if sys != nil {
 		sys.Desc += desc
 		sys.Ret = ret
+		t.OnRegUpdate()
 	}
 }
 
