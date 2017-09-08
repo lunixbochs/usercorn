@@ -13,8 +13,8 @@ import (
 )
 
 type Repl struct {
+	Lua *lua.LuaRepl
 	u   models.Usercorn
-	lua *lua.LuaRepl
 	rl  *readline.Instance
 
 	multiline bool
@@ -50,7 +50,7 @@ func NewRepl(u models.Usercorn) (*Repl, error) {
 	if u.Config().Output == os.Stderr {
 		u.Config().Output = &nullCloser{rl.Stderr()}
 	}
-	return &Repl{u: u, lua: luaRepl, rl: rl}, nil
+	return &Repl{u: u, Lua: luaRepl, rl: rl}, nil
 }
 
 func (r *Repl) Run() {
@@ -121,7 +121,7 @@ func (r *Repl) runSync() {
 		} else {
 			r.lines = append(r.lines, ln.Line)
 		}
-		if r.lua.Exec(r.lines) {
+		if r.Lua.Exec(r.lines) {
 			r.rl.Config.UniqueEditLine = false
 			r.rl.SetPrompt("... ")
 			r.multiline = true
@@ -133,6 +133,6 @@ func (r *Repl) runSync() {
 }
 
 func (r *Repl) Close() {
-	r.lua.Close()
+	r.Lua.Close()
 	r.rl.Close()
 }

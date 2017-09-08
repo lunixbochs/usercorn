@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -137,7 +138,6 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	tracefile := fs.String("to", "", "binary trace output file")
 
 	rewind := fs.Bool("rewind", false, "enable CPU rewind")
-	streamui := fs.Bool("ui", false, "display traced changes")
 
 	match := fs.String("match", "", "trace from specific function(s) (func[,func...][+depth])")
 	looproll := fs.Int("loop", 0, "collapse loop blocks of this depth")
@@ -166,8 +166,11 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 
 	gdb := fs.Int("gdb", -1, "listen for gdb connection on localhost:<port>")
 
-	startrepl := fs.Bool("repl", false, "experimental luaish repl")
+	streamui := fs.Bool("ui", false, "streaming text ui")
 	tui := fs.Bool("tui", false, "experimental interactive text UI")
+	startrepl := fs.Bool("repl", false, "experimental luaish repl")
+	var exec strslice
+	fs.Var(&exec, "ex", "execute luaish script(s) before starting")
 
 	cpuprofile := fs.String("cpuprofile", "", "write cpu profile to <file>")
 	memprofile := fs.String("memprofile", "", "write mem profile to <file>")
@@ -217,7 +220,6 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		}
 		pprof.StartCPUProfile(f)
 	}
-
 	var args []string
 	if !c.NoExe {
 		// make sure we were passed an executable
@@ -229,7 +231,6 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	} else {
 		args = []string{""}
 	}
-
 	// build configuration
 	absPrefix := ""
 	var err error
@@ -391,17 +392,30 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		corn.Gate().Lock()
 		defer tui.Close()
 		tui.Run()
-	} else if *startrepl {
+	} else if *startrepl || len(exec) > 0 {
 		repl, err := ui.NewRepl(corn)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error starting repl: %v\n", err)
 			return 1
 		}
-		corn.Gate().Lock()
-		defer repl.Close()
-		repl.Run()
+		for _, script := range exec {
+			text, err := ioutil.ReadFile(script)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error reading script %s: %v\n", script, err)
+				return 1
+			}
+			lines := strings.Split(string(text), "\n")
+			if repl.Lua.Exec(lines) {
+				fmt.Fprintf(os.Stderr, "unexpected EOF in script %s\n", script)
+				return 1
+			}
+		}
+		if *startrepl {
+			corn.Gate().Lock()
+			defer repl.Close()
+			repl.Run()
+		}
 	}
-
 	// start executable
 	if c.RunUsercorn != nil {
 		err = c.RunUsercorn()
