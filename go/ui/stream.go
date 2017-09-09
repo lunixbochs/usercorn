@@ -117,7 +117,25 @@ func (s *StreamUI) OnExit(clean bool, msg string) {
 		}
 		s.Printf("%s: %#x\n", name, val)
 	}
-	// TODO: print stacktrace here
+	s.Println("[callstack]")
+	pc := s.replay.PC
+	sp := s.replay.SP
+	for _, frame := range s.replay.Callstack.Freeze(pc, sp) {
+		// TODO: need replay symbolication
+		/*
+			sym, _ := u.Symbolicate(frame.PC, true)
+			if sym == "" {
+				sym = fmt.Sprintf("%#x", frame.PC)
+				if file := u.addr2file(frame.PC); u.config.SymFile && file != nil {
+					sym = fmt.Sprintf("%#x@%s", frame.PC, file.Name)
+				}
+			} else {
+				sym = fmt.Sprintf("%#x %s", frame.PC, sym)
+			}
+			u.Printf("  %s\n", sym)
+		*/
+		s.Printf("%#x\n", frame.PC)
+	}
 }
 
 func (s *StreamUI) dis(addr, size uint64) (string, error) {

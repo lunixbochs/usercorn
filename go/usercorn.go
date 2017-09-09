@@ -391,6 +391,10 @@ func (u *Usercorn) Run() error {
 		if e := recover(); e != nil {
 			msg := fmt.Sprintf("\n+++ caught panic +++\n%s\n\n", e)
 			if u.ui == nil {
+				// FIXME: replay and task should be api-compatible, so we can pass a cpu in here instead
+				if u.replay == nil {
+					u.replay = trace.NewReplay(u.arch, u.os, u.Loader().ByteOrder())
+				}
 				u.ui = ui.NewStreamUI(u.config, u.replay)
 			}
 			u.ui.OnExit(false, msg)
@@ -552,6 +556,9 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 }
 
 func (u *Usercorn) RegisterFile(f *os.File, addr, size uint64, off int64, fileLoader models.Loader) {
+	// FIXME: needs to be moved to the UI
+	return
+
 	var symbols []models.Symbol
 	var DWARF *dwarf.Data
 

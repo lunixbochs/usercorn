@@ -15,7 +15,8 @@ type Replay struct {
 	SpRegs map[int][]byte
 	PC, SP uint64
 
-	Inscount uint64
+	Callstack models.Callstack
+	Inscount  uint64
 	// pending is an OpStep representing the last unflushed instruction. Cleared by Flush().
 	pending   *OpStep
 	effects   []models.Op
@@ -47,6 +48,7 @@ func (r *Replay) update(op models.Op) {
 	case *OpReg: // register
 		if int(o.Num) == r.Arch.SP {
 			r.SP = o.Val
+			r.Callstack.Update(r.PC, r.SP)
 		}
 		r.Regs[int(o.Num)] = o.Val
 	case *OpSpReg:
