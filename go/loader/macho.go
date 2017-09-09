@@ -21,6 +21,7 @@ var machoCpuMap = map[macho.Cpu]string{
 	macho.Cpu386:   "x86",
 	macho.CpuAmd64: "x86_64",
 	macho.CpuArm:   "arm",
+	16777228:       "arm64",
 	macho.CpuPpc:   "ppc",
 	macho.CpuPpc64: "ppc64",
 }
@@ -123,7 +124,10 @@ func NewMachOLoader(r io.ReaderAt, archHint string) (models.Loader, error) {
 	if !ok {
 		return nil, errors.Errorf("Unsupported CPU: %s", file.Cpu)
 	}
-	entry, _ := findEntry(file, bits)
+	entry, err := findEntry(file, bits)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	m := &MachOLoader{
 		LoaderBase: LoaderBase{
 			arch:  machineName,
