@@ -150,7 +150,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	// used for Usage grouping
 	tnames := []string{
 		"trace", "strace", "mtrace", "mtrace2", "btrace", "etrace", "rtrace", "ftrace",
-		"match", "loop", "demangle", "symfile", "disbytes", "strsize",
+		"match", "loop", "demangle", "symfile", "disbytes", "strsize", "to",
 	}
 
 	inscount := fs.Bool("inscount", false, "print instruction count after execution")
