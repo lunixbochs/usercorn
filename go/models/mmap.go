@@ -9,8 +9,8 @@ import (
 type Mmap struct {
 	Addr, Size uint64
 	Prot       int
-	File       *FileDesc
 	Desc       string
+	File       *FileDesc
 }
 
 func (m *Mmap) Contains(addr uint64) bool {

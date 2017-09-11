@@ -193,6 +193,8 @@ func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *
 	if err != nil {
 		return 0, err
 	}
+	mmap.Desc = desc
+	mmap.File = file
 	err = t.Cpu.MemMap(mmap.Addr, mmap.Size, prot)
 	if err == nil {
 		for _, v := range t.mapHooks {

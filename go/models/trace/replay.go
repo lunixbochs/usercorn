@@ -56,7 +56,7 @@ func (r *Replay) update(op models.Op) {
 
 	case *OpMemMap: // memory
 		r.Mem.MemMap(o.Addr, uint64(o.Size), int(o.Prot))
-		if o.New != 0 {
+		if o.New {
 			r.Mem.MemZero(o.Addr, o.Size)
 			// TODO: update desc and file here
 		}

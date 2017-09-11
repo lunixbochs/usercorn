@@ -12,8 +12,8 @@ import (
 // these OPs are ordered to be semi-valid, so not by number
 var allButSyscall = []models.Op{
 	&OpNop{},
-	&OpMemMap{0x1000, 0x1000, 7, 0, "", "", 0},
-	&OpMemMap{0x1000, 0x1000, 7, 1, "desc", "filename", 1234},
+	&OpMemMap{0x1000, 0x1000, 7, false, "", "", 0},
+	&OpMemMap{0x1000, 0x1000, 7, true, "desc", "filename", 1234},
 	&OpMemWrite{0x1000, []byte{0x48, 0xc7, 0xc0, 0x01, 0x00, 0x00, 0x00}}, // mov rax, 1
 	&OpJmp{0x1000, 0x7},
 	&OpStep{0x7},

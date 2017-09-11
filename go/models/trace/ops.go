@@ -261,7 +261,7 @@ type OpMemMap struct {
 	Size uint64
 	Prot uint8
 
-	New  uint8
+	New  bool
 	Desc string
 	File string
 	Off  uint64
@@ -273,13 +273,17 @@ func (o *OpMemMap) Pack(w io.Writer) (int, error) {
 	order.PutUint64(tmp[1:], o.Addr)
 	order.PutUint64(tmp[9:], o.Size)
 	tmp[17] = o.Prot
-	tmp[18] = o.New
+	if o.New {
+		tmp[18] = 1
+	} else {
+		tmp[18] = 0
+	}
 	n, err := w.Write(tmp[:])
 	if err != nil {
 		return n, err
 	}
 	total := n
-	if o.New > 0 {
+	if o.New {
 		desc, file := []byte(o.Desc), []byte(o.File)
 		tmp := make([]byte, 2+2+8+len(desc)+len(file))
 
@@ -302,8 +306,8 @@ func (o *OpMemMap) Unpack(r io.Reader) (int, error) {
 		o.Addr = order.Uint64(tmp[:])
 		o.Size = order.Uint64(tmp[8:])
 		o.Prot = tmp[16]
-		o.New = tmp[17]
-		if o.New > 0 {
+		o.New = tmp[17] > 0
+		if o.New {
 			tmp := make([]byte, 2+2+8)
 			n, err := io.ReadFull(r, tmp[:])
 			total += n

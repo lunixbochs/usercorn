@@ -87,7 +87,11 @@ func (t *Trace) Attach() error {
 	kf := &OpKeyframe{Ops: t.frame.Ops}
 	t.frame = nil
 	for _, m := range t.u.Mappings() {
-		mo := &OpMemMap{Addr: m.Addr, Size: m.Size, Prot: uint8(m.Prot)}
+		mo := &OpMemMap{Addr: m.Addr, Size: m.Size, Prot: uint8(m.Prot), New: true, Desc: m.Desc}
+		if m.File != nil {
+			mo.File = m.File.Name
+			mo.Off = m.File.Off
+		}
 		kf.Ops = append(kf.Ops, mo)
 		data, err := t.u.MemRead(m.Addr, m.Size)
 		if err != nil {
@@ -309,16 +313,12 @@ func (t *Trace) OnMemWrite(addr uint64, data []byte) {
 }
 
 func (t *Trace) OnMemMap(addr, size uint64, prot int, new bool, desc string, file *models.FileDesc) {
-	nint := 0
-	if new {
-		nint = 1
-	}
 	var name string
 	var off uint64
 	if file != nil {
 		name, off = file.Name, file.Off
 	}
-	t.Append(&OpMemMap{addr, size, uint8(prot), uint8(nint), desc, name, off}, false)
+	t.Append(&OpMemMap{addr, size, uint8(prot), new, desc, name, off}, false)
 }
 
 func (t *Trace) OnMemUnmap(addr, size uint64) {
