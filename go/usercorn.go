@@ -40,8 +40,6 @@ type Usercorn struct {
 	loader       models.Loader
 	interpLoader models.Loader
 	kernels      []co.Kernel
-	mappedFiles  []*models.MappedFile
-	debugFiles   map[string]*models.DebugFile
 	memio        memio.MemIO
 
 	base       uint64
@@ -92,11 +90,10 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	}
 	task := NewTask(cpu, a, OS, l.ByteOrder())
 	u := &Usercorn{
-		Task:       task,
-		config:     config,
-		loader:     l,
-		exit:       0xffffffffffffffff,
-		debugFiles: make(map[string]*models.DebugFile),
+		Task:   task,
+		config: config,
+		loader: l,
+		exit:   0xffffffffffffffff,
 	}
 	if u.config.Rewind || u.config.UI {
 		u.replay = trace.NewReplay(u.arch, u.os, l.ByteOrder())

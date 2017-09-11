@@ -9,7 +9,7 @@ import (
 type Mmap struct {
 	Addr, Size uint64
 	Prot       int
-	File       *MappedFile
+	File       *FileDesc
 	Desc       string
 }
 

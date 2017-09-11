@@ -2,15 +2,14 @@ package models
 
 import (
 	"encoding/binary"
-	"io"
 
 	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 type FileDesc struct {
-	io.ReaderAt
 	Name string
 	Off  uint64
+	Size uint64
 }
 
 type Task interface {

@@ -13,7 +13,7 @@ type ContextMem struct {
 	Prot       int
 	Data       []byte
 	Desc       string
-	File       *MappedFile
+	File       *FileDesc
 }
 
 type Context struct {
