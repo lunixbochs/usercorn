@@ -185,7 +185,11 @@ func (t *Task) MemReserve(addr, size uint64, fixed bool) (*models.Mmap, error) {
 }
 
 func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *models.FileDesc) (uint64, error) {
-	mmap, err := t.MemReserve(addr, size, fixed)
+	aligned, size := align(addr, size, true)
+	if file != nil {
+		file.Off += aligned - addr
+	}
+	mmap, err := t.MemReserve(aligned, size, fixed)
 	if err != nil {
 		return 0, err
 	}

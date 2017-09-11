@@ -771,21 +771,34 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool) (interpBase, entry, base
 		} else if mapLow == 0 {
 			mapLow = 0x1000000
 		}
-		var addr uint64
-		var desc string
-		if isInterp {
-			desc = "interp"
-		} else {
-			desc = "exe"
-		}
 		// TODO: is allocating the whole lib width remotely sane?
-		addr, err = u.Mmap(mapLow, high-low, cpu.PROT_ALL, false, desc, nil)
+		var mmap *models.Mmap
+		mmap, err = u.MemReserve(mapLow, high-low, false)
 		if err != nil {
 			return
 		}
-		loadBias = addr - low
+		loadBias = mmap.Addr - low
 	}
-	// merge overlapping segments
+	var desc string
+	if isInterp {
+		desc = "interp"
+	} else {
+		desc = "exe"
+	}
+	// initial forced segment mappings
+	for _, seg := range segments {
+		prot := seg.Prot
+		if prot == 0 {
+			// TODO: confirm why darwin needs this
+			prot = cpu.PROT_ALL
+		}
+		fileDesc := &models.FileDesc{Name: f.Name(), Off: seg.Off}
+		_, err = u.Mmap(loadBias+seg.Addr, seg.Size, prot, true, desc, fileDesc)
+		if err != nil {
+			return
+		}
+	}
+	// merge overlapping segments when writing contents to memory
 	merged := make([]*models.Segment, 0, len(segments))
 outer:
 	for _, seg := range segments {
@@ -801,20 +814,6 @@ outer:
 			}
 		}
 		merged = append(merged, s)
-	}
-	// map merged segments
-	for _, seg := range merged {
-		prot := seg.Prot
-		if prot == 0 {
-			prot = cpu.PROT_ALL
-		}
-		if !dynamic {
-			// TODO: pass *FileDesc here
-			_, err = u.Mmap(loadBias+seg.Start, seg.End-seg.Start, prot, true, "exe", nil)
-		}
-		if err != nil {
-			return
-		}
 	}
 	// write segment memory
 	var data []byte

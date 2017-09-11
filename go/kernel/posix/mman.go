@@ -20,6 +20,8 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 		path string
 		err  error
 		file *os.File
+
+		fileDesc *models.FileDesc
 	)
 	// if there's a file descriptor, map (copy for now) the file here before messing with guest memory
 	if fd > 0 {
@@ -28,6 +30,7 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 			path = file.Path
 		}
 		if path != "" {
+			fileDesc = &models.FileDesc{Name: path, Off: uint64(off)}
 			file = os.NewFile(uintptr(fd2), path)
 			defer file.Close()
 			data = make([]byte, size)
@@ -52,8 +55,7 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 			addrHint = brk + 0x800000
 		}
 	}
-	// TODO: construct FileDesc
-	addr, err := k.U.Mmap(addrHint, size, int(prot), fixed, "", &models.FileDesc{})
+	addr, err := k.U.Mmap(addrHint, size, int(prot), fixed, "mmap", fileDesc)
 	if err != nil {
 		return UINT64_MAX // FIXME
 	}

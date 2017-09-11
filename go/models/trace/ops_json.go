@@ -53,7 +53,7 @@ func (o *OpMemMap) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		file, err := json.Marshal(o.Desc)
+		file, err := json.Marshal(o.File)
 		if err != nil {
 			return nil, err
 		}
