@@ -2,7 +2,6 @@ package models
 
 import (
 	"github.com/lunixbochs/ghostrace/ghost/memio"
-	"os"
 )
 
 type SysGetArgs func(n int) ([]uint64, error)
@@ -31,10 +30,6 @@ type Usercorn interface {
 
 	Printf(fmt string, args ...interface{})
 	Println(s ...interface{})
-
-	RegisterFile(f *os.File, addr, size uint64, off int64, fileLoader Loader)
-	MappedFiles() []*MappedFile
-	Symbolicate(addr uint64, includeFile bool) (string, error)
 
 	Brk(addr uint64) (uint64, error)
 	Mem() memio.MemIO

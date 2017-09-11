@@ -2,14 +2,12 @@ package usercorn
 
 import (
 	"bufio"
-	"debug/dwarf"
 	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/memio"
 	"github.com/lunixbochs/readline"
 	"github.com/lunixbochs/struc"
 	"github.com/pkg/errors"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -553,115 +551,6 @@ func (u *Usercorn) BinEntry() uint64 {
 
 func (u *Usercorn) PrefixPath(path string, force bool) string {
 	return u.config.PrefixPath(path, force)
-}
-
-func (u *Usercorn) RegisterFile(f *os.File, addr, size uint64, off int64, fileLoader models.Loader) {
-	// FIXME: needs to be moved to the UI
-	return
-
-	var symbols []models.Symbol
-	var DWARF *dwarf.Data
-
-	// GNU/Linux: try loading /usr/lib/debug version of libraries for debug symbols
-	// TODO: only do this on absolute paths?
-	name := f.Name()
-	tmp, err := filepath.EvalSymlinks(name)
-	if err == nil {
-		name = tmp
-	}
-	debugPath := filepath.Join("/usr/lib/debug", u.config.PrefixRel(name))
-	debugPath = u.PrefixPath(debugPath, false)
-	if _, err := os.Stat(debugPath); err == nil {
-		l, err := loader.LoadFileArch(debugPath, u.Loader().Arch())
-		if err == nil {
-			symbols, _ = l.Symbols()
-			DWARF, _ = l.DWARF()
-		}
-		// TODO: hash the segments and ensure debug lib is the same?
-	}
-	// if no debug library was found, fall back to loading symbols from original library
-	if symbols == nil {
-		if fileLoader == nil {
-			fileLoader, err = loader.LoadArch(f, u.Loader().Arch())
-		}
-		if err == nil {
-			symbols, _ = fileLoader.Symbols()
-			DWARF, _ = fileLoader.DWARF()
-		}
-	}
-	mappedFile := &models.MappedFile{
-		Name: path.Base(f.Name()),
-		Off:  off,
-		Addr: addr,
-		Size: size,
-	}
-	if df, ok := u.debugFiles[f.Name()]; ok {
-		mappedFile.DebugFile = df
-	} else {
-		df := &models.DebugFile{
-			Symbols: symbols,
-			DWARF:   DWARF,
-		}
-		mappedFile.DebugFile = df
-		u.debugFiles[f.Name()] = df
-		df.CacheSym()
-		if u.config.TraceSource {
-			df.CacheSource(u.config.SourcePaths)
-		}
-	}
-	u.mappedFiles = append(u.mappedFiles, mappedFile)
-	if mmap := u.mapping(addr, size); mmap != nil {
-		mmap.File = mappedFile
-	}
-	for _, b := range u.futureBreaks {
-		b.Apply()
-	}
-}
-
-func (u *Usercorn) MappedFiles() []*models.MappedFile {
-	return u.mappedFiles
-}
-
-func (u *Usercorn) addr2file(addr uint64) *models.MappedFile {
-	for _, f := range u.mappedFiles {
-		if f.Contains(addr) {
-			return f
-		}
-	}
-	return nil
-}
-
-func (u *Usercorn) Symbolicate(addr uint64, includeSource bool) (string, error) {
-	file := u.addr2file(addr)
-	var (
-		fileLine string
-		sym      models.Symbol
-		dist     uint64
-	)
-	if file != nil {
-		sym, dist = file.Symbolicate(addr)
-		if sym.Name != "" && includeSource {
-			if fl := file.FileLine(addr); fl != nil {
-				fileLine = fmt.Sprintf("%s:%d", path.Base(fl.File.Name), fl.Line)
-			}
-		}
-	}
-	name := sym.Name
-	if name != "" {
-		if u.config.Demangle {
-			name = models.Demangle(name)
-		}
-		if u.config.SymFile && file != nil {
-			name = fmt.Sprintf("%s@%s", name, file.Name)
-		}
-		if dist > 0 {
-			name = fmt.Sprintf("%s+0x%x", name, dist)
-		}
-		if fileLine != "" {
-			name = fmt.Sprintf("%s (%s)", name, fileLine)
-		}
-	}
-	return name, nil
 }
 
 func (u *Usercorn) Brk(addr uint64) (uint64, error) {

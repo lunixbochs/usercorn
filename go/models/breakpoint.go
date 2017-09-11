@@ -88,19 +88,22 @@ func (b *Breakpoint) Apply() error {
 		// TODO: this ignores @file, do we care?
 		addrs = append(addrs, b.Addr)
 	} else {
-		for _, f := range b.u.MappedFiles() {
-			if b.Filename == "" || f.Name == b.Filename {
-				if b.Sym != "" {
-					sym := f.SymbolLookup(b.Sym)
-					if sym.Name == b.Sym {
-						addrs = append(addrs, sym.Start+b.Off)
+		// FIXME: broken by symbolication overhaul
+		/*
+			for _, f := range b.u.MappedFiles() {
+				if b.Filename == "" || f.Name == b.Filename {
+					if b.Sym != "" {
+						sym := f.SymbolLookup(b.Sym)
+						if sym.Name == b.Sym {
+							addrs = append(addrs, sym.Start+b.Off)
+						}
+					} else if b.Source != "" {
+						// TODO: we need an inverse of MappedFile.FileLine() for this
+						panic("not implemented")
 					}
-				} else if b.Source != "" {
-					// TODO: we need an inverse of MappedFile.FileLine() for this
-					panic("not implemented")
 				}
 			}
-		}
+		*/
 	}
 	if len(addrs) == 0 {
 		return errors.Errorf("no breakpoints set")

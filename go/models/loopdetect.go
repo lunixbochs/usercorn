@@ -1,7 +1,8 @@
 package models
 
 import (
-	"fmt"
+	"strconv"
+	"strings"
 )
 
 type Loop struct {
@@ -118,22 +119,12 @@ func (l *LoopDetect) Detect() *Loop {
 	return nil
 }
 
-func (l *LoopDetect) String(u Usercorn, loop []uint64) string {
-	out := "["
-	for i, addr := range loop {
-		sym := ""
-		if u != nil {
-			sym, _ = u.Symbolicate(addr, false)
-			if sym != "" {
-				sym = " (" + sym + ")"
-			}
-		}
-		out += fmt.Sprintf("0x%x%s", addr, sym)
-		if i < len(loop)-1 {
-			out += fmt.Sprintf(", ")
-		}
+func (l *LoopDetect) String(loop []uint64) string {
+	tmp := make([]string, len(loop))
+	for i, v := range loop {
+		tmp[i] = strconv.FormatUint(v, 16)
 	}
-	return out + "]"
+	return "[" + strings.Join(tmp, ", ") + "]"
 }
 
 func (l *LoopDetect) Reset() {
