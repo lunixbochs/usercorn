@@ -25,7 +25,7 @@ func (k *ArmLinuxKernel) SetTls(addr uint64) {
 func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
 	// handle arm kernel traps
 	// https://www.kernel.org/doc/Documentation/arm/kernel_user_helpers.txt
-	if err := u.MemMap(0xffff0000, 0x10000); err != nil {
+	if err := u.MemMap(0xffff0000, 0x10000, cpu.PROT_READ|cpu.PROT_EXEC); err != nil {
 		return err
 	}
 	for addr := 0; addr < 0x10000; addr += 4 {

@@ -43,7 +43,7 @@ func EmuCfg(u models.Usercorn, backtrack bool) map[uint64]*Block {
 	u.HookAdd(cpu.HOOK_MEM_ERR, func(_ cpu.Cpu, errno int, addr uint64, size int, value int64) bool {
 		if errno == cpu.MEM_UNMAPPED && addr > 0x1000 {
 			align := addr & ^uint64(0xfff)
-			u.MemMap(align, align+0x1000)
+			u.MemMap(align, align+0x1000, cpu.PROT_ALL)
 			return true
 		}
 		return false

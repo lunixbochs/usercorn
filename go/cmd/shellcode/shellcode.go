@@ -8,6 +8,7 @@ import (
 
 	"github.com/lunixbochs/usercorn/go/cmd"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 func main() {
@@ -30,16 +31,16 @@ func main() {
 	}
 	c.RunUsercorn = func() error {
 		u := c.Usercorn
-		mem, err := u.Mmap(u.Entry(), uint64(len(shellcode)))
+		size := uint64(len(shellcode))
+		addr, err := u.Mmap(u.Entry(), size, cpu.PROT_ALL, false, "shellcode", nil)
 		if err != nil {
 			return err
 		}
-		mem.Desc = "shellcode"
-		if err := u.MemWrite(mem.Addr, shellcode); err != nil {
+		if err := u.MemWrite(addr, shellcode); err != nil {
 			return err
 		}
-		u.SetEntry(mem.Addr)
-		u.SetExit(mem.Addr + uint64(len(shellcode)))
+		u.SetEntry(addr)
+		u.SetExit(addr + size)
 		return u.Run()
 	}
 	c.Run(os.Args, os.Environ())

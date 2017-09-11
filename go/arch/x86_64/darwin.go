@@ -366,7 +366,7 @@ func DarwinInit(u models.Usercorn, args, env []string) error {
 
 	var commpageAddrBegin uint64 = 0x00007fffffe00000
 	var commpageAddrEnd uint64 = 0x00007fffffe01fff
-	if err := u.MemMap(commpageAddrBegin, commpageAddrEnd-commpageAddrBegin); err != nil {
+	if err := u.MemMap(commpageAddrBegin, commpageAddrEnd-commpageAddrBegin, cpu.PROT_READ|cpu.PROT_EXEC); err != nil {
 		return err
 	}
 	u.HookAdd(uc.HOOK_MEM_READ|uc.HOOK_MEM_WRITE, func(_ cpu.Cpu, access int, addr uint64, size int, value int64) {

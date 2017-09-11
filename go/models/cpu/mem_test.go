@@ -10,13 +10,13 @@ var asdf = []byte("asdf")
 
 func TestMem8(t *testing.T) {
 	mem := NewMem(8, binary.LittleEndian)
-	if err := mem.MemMapProt(0x10, 0x10, 0); err != nil {
+	if err := mem.MemMap(0x10, 0x10, 0); err != nil {
 		t.Fatal("failed to map memory:", err)
 	}
-	if err := mem.MemMapProt(0x0, 0x1000, 0); err == nil {
+	if err := mem.MemMap(0x0, 0x1000, 0); err == nil {
 		t.Fatal("mapped memory outside range")
 	}
-	if err := mem.MemMapProt(0x1000, 0x1000, 0); err == nil {
+	if err := mem.MemMap(0x1000, 0x1000, 0); err == nil {
 		t.Fatal("mapped memory outside range")
 	}
 	if err := mem.MemWrite(0x1000, asdf); err == nil {
@@ -35,7 +35,7 @@ func TestMem(t *testing.T) {
 
 	mem := NewMem(16, binary.LittleEndian)
 	for _, v := range mappings {
-		if err := mem.MemMapProt(v[0], v[1], int(v[2])); err != nil {
+		if err := mem.MemMap(v[0], v[1], int(v[2])); err != nil {
 			t.Fatalf("failed to map memory (%#x, %#x, %d): %v", v[0], v[1], v[2], err)
 		}
 	}
@@ -102,10 +102,10 @@ func TestMemUint(t *testing.T) {
 	meml := NewMem(32, binary.LittleEndian)
 	memb := NewMem(32, binary.BigEndian)
 
-	if err := meml.MemMapProt(0x1000, 0x1000, PROT_READ|PROT_WRITE); err != nil {
+	if err := meml.MemMap(0x1000, 0x1000, PROT_READ|PROT_WRITE); err != nil {
 		t.Fatal("failed to map memory:", err)
 	}
-	if err := memb.MemMapProt(0x1000, 0x1000, PROT_READ|PROT_WRITE); err != nil {
+	if err := memb.MemMap(0x1000, 0x1000, PROT_READ|PROT_WRITE); err != nil {
 		t.Fatal("failed to map memory:", err)
 	}
 	if err := meml.MemWrite(0x1000, rawtest); err != nil {

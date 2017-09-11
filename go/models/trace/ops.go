@@ -260,7 +260,11 @@ type OpMemMap struct {
 	Addr uint64
 	Size uint64
 	Prot uint8
-	Zero uint8
+
+	New  uint8
+	Desc string
+	File string
+	Off  uint64
 }
 
 func (o *OpMemMap) Pack(w io.Writer) (int, error) {
@@ -269,20 +273,64 @@ func (o *OpMemMap) Pack(w io.Writer) (int, error) {
 	order.PutUint64(tmp[1:], o.Addr)
 	order.PutUint64(tmp[9:], o.Size)
 	tmp[17] = o.Prot
-	tmp[18] = o.Zero
-	return w.Write(tmp[:])
+	tmp[18] = o.New
+	n, err := w.Write(tmp[:])
+	if err != nil {
+		return n, err
+	}
+	total := n
+	if o.New > 0 {
+		desc, file := []byte(o.Desc), []byte(o.File)
+		tmp := make([]byte, 2+2+8+len(desc)+len(file))
+
+		order.PutUint16(tmp[0:], uint16(len(desc)))
+		order.PutUint16(tmp[2:], uint16(len(file)))
+		order.PutUint64(tmp[4:], o.Off)
+		copy(tmp[2+2+8:], desc)
+		copy(tmp[2+2+8+len(desc):], file)
+
+		n, err = w.Write(tmp[:])
+		total += n
+	}
+	return total, err
 }
 
 func (o *OpMemMap) Unpack(r io.Reader) (int, error) {
 	var tmp [8 + 8 + 1 + 1]byte
-	n, err := io.ReadFull(r, tmp[:])
+	total, err := io.ReadFull(r, tmp[:])
 	if err == nil {
 		o.Addr = order.Uint64(tmp[:])
 		o.Size = order.Uint64(tmp[8:])
 		o.Prot = tmp[16]
-		o.Zero = tmp[17]
+		o.New = tmp[17]
+		if o.New > 0 {
+			tmp := make([]byte, 2+2+8)
+			n, err := io.ReadFull(r, tmp[:])
+			total += n
+			if err != nil {
+				return total, err
+			}
+
+			desc := make([]byte, order.Uint16(tmp[0:]))
+			file := make([]byte, order.Uint16(tmp[2:]))
+			o.Off = order.Uint64(tmp[4:])
+
+			n, err = io.ReadFull(r, desc[:])
+			total += n
+			if err != nil {
+				return total, err
+			}
+
+			n, err = io.ReadFull(r, file[:])
+			total += n
+			if err != nil {
+				return total, err
+			}
+			o.Desc = string(desc)
+			o.File = string(file)
+		}
 	}
-	return n, err
+	return total, err
 }
 
 type OpMemUnmap struct {

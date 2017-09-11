@@ -71,23 +71,9 @@ func (t *Task) Dis(addr, size uint64, showBytes bool) (string, error) {
 	return models.Disas(mem, addr, t.arch, showBytes, t.Bsz)
 }
 
-func (t *Task) MemMapProt(addr, size uint64, prot int) error {
-	mmap, err := t.MemReserve(addr, size, true)
-	if err != nil {
-		return err
-	}
-	mmap.Prot = prot
-	err = t.Cpu.MemMapProt(mmap.Addr, mmap.Size, prot)
-	if err == nil {
-		for _, v := range t.mapHooks {
-			v.Map(mmap.Addr, mmap.Size, prot, true)
-		}
-	}
-	return errors.Wrap(err, "t.MemMapProt() failed")
-}
-
-func (t *Task) MemMap(addr, size uint64) error {
-	return t.MemMapProt(addr, size, cpu.PROT_ALL)
+func (t *Task) MemMap(addr, size uint64, prot int) error {
+	_, err := t.Mmap(addr, size, prot, true, "", nil)
+	return err
 }
 
 func (t *Task) MemProtect(addr, size uint64, prot int) error {
@@ -99,7 +85,7 @@ func (t *Task) MemProtect(addr, size uint64, prot int) error {
 	err := t.Cpu.MemProt(addr, size, prot)
 	if err == nil {
 		for _, v := range t.mapHooks {
-			v.Map(addr, size, prot, false)
+			v.Map(addr, size, prot, false, "", nil)
 		}
 	}
 	return errors.Wrap(err, "t.MemProtect() failed")
@@ -176,12 +162,12 @@ func (t *Task) Mappings() []*models.Mmap {
 	return t.memory
 }
 
-func (t *Task) MemReserve(addr, size uint64, force bool) (*models.Mmap, error) {
-	if addr == 0 && !force {
+func (t *Task) MemReserve(addr, size uint64, fixed bool) (*models.Mmap, error) {
+	if addr == 0 && !fixed {
 		addr = BASE
 	}
 	addr, size = align(addr, size, true)
-	if force {
+	if fixed {
 		t.MemUnmap(addr, size)
 		mmap := &models.Mmap{Addr: addr, Size: size, Prot: cpu.PROT_ALL}
 		t.memory = append(t.memory, mmap)
@@ -198,12 +184,22 @@ func (t *Task) MemReserve(addr, size uint64, force bool) (*models.Mmap, error) {
 	return nil, errors.New("failed to reserve memory")
 }
 
-func (t *Task) Mmap(addr, size uint64) (*models.Mmap, error) {
-	mmap, err := t.MemReserve(addr, size, false)
+func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *models.FileDesc) (uint64, error) {
+	mmap, err := t.MemReserve(addr, size, fixed)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return mmap, t.Cpu.MemMapProt(mmap.Addr, mmap.Size, cpu.PROT_ALL)
+	err = t.Cpu.MemMap(mmap.Addr, mmap.Size, prot)
+	if err == nil {
+		for _, v := range t.mapHooks {
+			v.Map(addr, size, prot, true, desc, file)
+		}
+	}
+	return mmap.Addr, err
+}
+
+func (t *Task) Malloc(size uint64) (uint64, error) {
+	return t.Mmap(0, size, cpu.PROT_READ|cpu.PROT_WRITE, false, "", nil)
 }
 
 func (t *Task) PackAddr(buf []byte, n uint64) ([]byte, error) {

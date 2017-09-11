@@ -9,6 +9,7 @@ import (
 
 	"github.com/lunixbochs/usercorn/go/cmd"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 var helpTxt = `
@@ -35,11 +36,11 @@ func handleCmd(c *cmd.UsercornCmd, line string) bool {
 		if len(args) != 2 {
 			fmt.Println(helpTxt)
 		} else {
-			mem, err := u.Mmap(0, parseAddr(u, args[1]))
+			addr, err := u.Malloc(parseAddr(u, args[1]))
 			if err != nil {
 				fmt.Println(err)
 			} else {
-				fmt.Printf(" = 0x%x\n", mem.Addr)
+				fmt.Printf(" = 0x%x\n", addr)
 			}
 		}
 	case "read":
@@ -93,15 +94,13 @@ func main() {
 
 	c.RunUsercorn = func() error {
 		u := c.Usercorn
-		mem, err := u.Mmap(u.Entry(), 0x10000)
+		addr, err := u.Mmap(u.Entry(), 0x10000, cpu.PROT_ALL, false, "repl", nil)
 		if err != nil {
 			return err
 		}
-		mem.Desc = "repl"
 
 		status := models.StatusDiff{U: u}
 		fmt.Printf("%s", status.Changes(false).String(c.Config.Color))
-		addr := mem.Addr
 		end := addr
 		input := bufio.NewScanner(os.Stdin)
 		for {

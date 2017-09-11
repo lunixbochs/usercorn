@@ -24,7 +24,7 @@ func setupVsyscall(u models.Usercorn, kernel *LinuxKernel) error {
 	vgetcpu := base + 0x800
 
 	// handle x86_64 vsyscall traps
-	if err := u.MemMap(base, 0x1000); err != nil {
+	if err := u.MemMap(base, 0x1000, cpu.PROT_READ|cpu.PROT_EXEC); err != nil {
 		return err
 	}
 	// write 'ret' to trap addrs so they return

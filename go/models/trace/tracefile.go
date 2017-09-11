@@ -104,14 +104,18 @@ func NewReader(r io.ReadCloser) (*TraceReader, error) {
 	switch t.Header.CodeOrderNum {
 	case 0:
 		t.Header.CodeOrder = binary.LittleEndian
+		t.Header.CodeOrderName = "little"
 	case 1:
 		t.Header.CodeOrder = binary.BigEndian
+		t.Header.CodeOrderName = "big"
 	}
 	switch t.Header.DataOrderNum {
 	case 0:
 		t.Header.DataOrder = binary.LittleEndian
+		t.Header.DataOrderName = "little"
 	case 1:
 		t.Header.DataOrder = binary.BigEndian
+		t.Header.DataOrderName = "big"
 	}
 	var err error
 	t.Arch, t.OS, err = arch.GetArch(t.Header.Arch, t.Header.OS)

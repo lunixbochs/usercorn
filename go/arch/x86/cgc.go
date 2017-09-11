@@ -8,6 +8,7 @@ import (
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 	"github.com/lunixbochs/usercorn/go/native"
 )
 
@@ -88,12 +89,11 @@ func (k *CgcKernel) Fdwait(nfds int, reads, writes, timeoutBuf co.Buf, readyFds 
 func (k *CgcKernel) Allocate(size uint32, executable int32, ret co.Obuf) int {
 	// round up to nearest page
 	size = (size + 0x1000) & ^uint32(0x1000-1)
-	mmap, _ := k.U.Mmap(0, uint64(size))
-	mmap.Desc = "heap"
+	addr, _ := k.U.Malloc(uint64(size))
 	if executable != 0 {
-		k.U.MemProt(mmap.Addr, mmap.Size, uc.PROT_ALL)
+		k.U.MemProt(addr, uint64(size), uc.PROT_ALL)
 	}
-	ret.Pack(uint32(mmap.Addr))
+	ret.Pack(uint32(addr))
 	return 0
 }
 
@@ -129,7 +129,7 @@ func CgcInit(u models.Usercorn, args, env []string) error {
 	// TODO: does CGC even specify argv?
 	// TODO: also, I seem to remember something about mapping in 16kb of random data
 	secretPage := uint64(0x4347c000)
-	if err := u.MemMap(secretPage, 0x1000); err != nil {
+	if err := u.MemMap(secretPage, 0x1000, cpu.PROT_READ); err != nil {
 		return err
 	}
 	tmp := make([]byte, 0x1000)

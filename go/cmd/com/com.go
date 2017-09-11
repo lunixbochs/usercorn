@@ -22,7 +22,7 @@ func main() {
 		u, err := usercorn.NewUsercornRaw(l, c.Config)
 
 		// Map in entire 16 bit address space
-		err = u.MemMapProt(0, 0x10000, 7)
+		err = u.MemMap(0, 0x10000, 7)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to map in address space")
 		}

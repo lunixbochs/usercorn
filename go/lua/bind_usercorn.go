@@ -206,7 +206,7 @@ func (b *ubind) RewindAddr(L *lua.LState) int {
 
 func (b *ubind) MemMap(L *lua.LState) int {
 	addr, size, prot := L.CheckUint64(1), L.CheckUint64(2), L.CheckInt(3)
-	b.checkErr(b.u.MemMapProt(addr, size, prot))
+	b.checkErr(b.u.MemMap(addr, size, prot))
 	return 0
 }
 

@@ -47,7 +47,19 @@ func (o *OpMemWrite) MarshalJSON() ([]byte, error) {
 }
 
 func (o *OpMemMap) MarshalJSON() ([]byte, error) {
-	return bprintf(`{"op":%d,"addr":%d,"size":%d,"prot":%d,"zero":%d}`, OP_MEM_MAP, o.Addr, o.Size, o.Prot, o.Zero), nil
+	extra := ""
+	if o.New > 0 {
+		desc, err := json.Marshal(o.Desc)
+		if err != nil {
+			return nil, err
+		}
+		file, err := json.Marshal(o.Desc)
+		if err != nil {
+			return nil, err
+		}
+		extra = fmt.Sprintf(`,"desc":%s,"name":%s,"off":%d`, desc, file, o.Off)
+	}
+	return bprintf(`{"op":%d,"addr":%d,"size":%d,"prot":%d,"new":%d%s}`, OP_MEM_MAP, o.Addr, o.Size, o.Prot, o.New, extra), nil
 }
 
 func (o *OpMemUnmap) MarshalJSON() ([]byte, error) {

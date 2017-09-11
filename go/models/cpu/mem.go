@@ -34,7 +34,7 @@ func (m *Mem) Maps() []*MemRegion {
 	return m.sim.Mem
 }
 
-func (m *Mem) MemMapProt(addr, size uint64, prot int) error {
+func (m *Mem) MemMap(addr, size uint64, prot int) error {
 	if addr+size&m.mask != addr+size {
 		return errors.New("region outside memory range")
 	}

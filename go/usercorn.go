@@ -291,7 +291,7 @@ outer:
 
 	// 2. map all target mappings
 	for _, mm := range replay.Mem.Maps() {
-		if err := u.MemMapProt(mm.Addr, mm.Size, mm.Prot); err != nil {
+		if err := u.MemMap(mm.Addr, mm.Size, mm.Prot); err != nil {
 			return err
 		}
 		// 3. copy target memory
@@ -676,7 +676,7 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 		}
 		size := addr - u.brk
 		if size > 0 {
-			err := u.MemMapProt(u.brk, size, prot)
+			err := u.MemMap(u.brk, size, prot)
 			if err != nil {
 				return u.brk, err
 			}
@@ -758,6 +758,11 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool) (interpBase, entry, base
 	loadBias := u.config.ForceBase
 	if isInterp {
 		loadBias = u.config.ForceInterpBase
+		// reserve space at end of bin for brk
+		barrier := u.brk + 8*1024*1024
+		if loadBias <= barrier {
+			loadBias = barrier
+		}
 	}
 	if dynamic {
 		mapLow := low
@@ -766,17 +771,19 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool) (interpBase, entry, base
 		} else if mapLow == 0 {
 			mapLow = 0x1000000
 		}
-		var mmap *models.Mmap
-		mmap, err = u.Mmap(mapLow, high-low)
+		var addr uint64
+		var desc string
+		if isInterp {
+			desc = "interp"
+		} else {
+			desc = "exe"
+		}
+		// TODO: is allocating the whole lib width remotely sane?
+		addr, err = u.Mmap(mapLow, high-low, cpu.PROT_ALL, false, desc, nil)
 		if err != nil {
 			return
 		}
-		loadBias = mmap.Addr - low
-		if isInterp {
-			mmap.Desc = "interp"
-		} else {
-			mmap.Desc = "exe"
-		}
+		loadBias = addr - low
 	}
 	// merge overlapping segments
 	merged := make([]*models.Segment, 0, len(segments))
@@ -802,13 +809,9 @@ outer:
 			prot = cpu.PROT_ALL
 		}
 		if !dynamic {
-			err = u.MemMapProt(loadBias+seg.Start, seg.End-seg.Start, prot)
-			if mmap := u.mapping(loadBias+seg.Start, loadBias+seg.End); mmap != nil {
-				mmap.Desc = "exe"
-			}
+			// TODO: pass *FileDesc here
+			_, err = u.Mmap(loadBias+seg.Start, seg.End-seg.Start, prot, true, "exe", nil)
 		}
-		// register binary for symbolication
-		u.RegisterFile(f, loadBias+seg.Start, seg.End-seg.Start, int64(seg.Start), l)
 		if err != nil {
 			return
 		}
@@ -832,18 +835,12 @@ outer:
 			return
 		}
 		defer f.Close()
-		// reserve space at end of bin for brk
-		mmap, _ := u.MemReserve(0, 24*1024*1024, false)
-
+		u.brk = high
 		var interpBias, interpEntry uint64
 		_, _, interpBias, interpEntry, err = u.mapBinary(f, true)
 		if u.interpLoader.Arch() != l.Arch() {
 			err = errors.Errorf("Interpreter arch mismatch: %s != %s", l.Arch(), u.interpLoader.Arch())
 			return
-		}
-		// delete reserved space
-		if mmap != nil {
-			u.MemUnmap(mmap.Addr, mmap.Size)
 		}
 		return interpBias, interpEntry, loadBias, entry, err
 	} else {
@@ -851,24 +848,21 @@ outer:
 	}
 }
 
-func (u *Usercorn) MapStack(base uint64, size uint64, guard bool) error {
+func (u *Usercorn) MapStack(base, size uint64, guard bool) error {
 	u.StackBase = base
 	u.StackSize = size
-	stack, err := u.MemReserve(base, size, true)
+	// TODO: check for NX stack?
+	addr, err := u.Mmap(base, size, cpu.PROT_ALL, true, "stack", nil)
 	if err != nil {
 		return err
 	}
-	if err := u.Cpu.MemMapProt(stack.Addr, stack.Size, cpu.PROT_ALL); err != nil {
-		return errors.WithStack(err)
-	}
-	stack.Desc = "stack"
-	u.StackBase = stack.Addr
-	stackEnd := stack.Addr + size
+	stackEnd := addr + size
 	if err := u.RegWrite(u.arch.SP, stackEnd); err != nil {
 		return err
 	}
 	if guard {
-		return u.MemMapProt(stackEnd, UC_MEM_ALIGN, cpu.PROT_NONE)
+		_, err := u.Mmap(stackEnd, UC_MEM_ALIGN, cpu.PROT_NONE, true, "stack guard", nil)
+		return err
 	}
 	return nil
 }
@@ -974,7 +968,7 @@ func (u *Usercorn) Trampoline(fun func() error) error {
 }
 
 // like RunShellcode but you're expected to map memory yourself
-func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
+func (u *Usercorn) RunShellcodeMapped(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
 	return u.Trampoline(func() error {
 		if regsClobbered == nil {
 			regsClobbered = make([]int, len(setRegs))
@@ -999,10 +993,10 @@ func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs ma
 		for reg, val := range setRegs {
 			u.RegWrite(reg, val)
 		}
-		if err := u.MemWrite(mmap.Addr, code); err != nil {
+		if err := u.MemWrite(addr, code); err != nil {
 			return err
 		}
-		return u.Start(mmap.Addr, mmap.Addr+uint64(len(code)))
+		return u.Start(addr, addr+uint64(len(code)))
 	})
 }
 
@@ -1013,18 +1007,19 @@ func (u *Usercorn) RunShellcodeMapped(mmap *models.Mmap, code []byte, setRegs ma
 // so non-PIE is your problem
 // will trampoline if unicorn is already running
 func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
-	exists := u.mapping(addr, uint64(len(code)))
+	size := uint64(len(code))
+	exists := u.mapping(addr, size)
 	if addr != 0 && exists != nil {
 		return errors.Errorf("RunShellcode: 0x%x - 0x%x overlaps mapped memory", addr, addr+uint64(len(code)))
 	}
-	mmap, err := u.Mmap(addr, uint64(len(code)))
+	mapped, err := u.Mmap(addr, size, cpu.PROT_ALL, true, "shellcode", nil)
 	if err != nil {
 		return err
 	}
 	defer u.Trampoline(func() error {
-		return u.MemUnmap(mmap.Addr, mmap.Size)
+		return u.MemUnmap(mapped, size)
 	})
-	return u.RunShellcodeMapped(mmap, code, setRegs, regsClobbered)
+	return u.RunShellcodeMapped(mapped, code, setRegs, regsClobbered)
 }
 
 // like RunShellcode, but we assemble it for you
@@ -1060,13 +1055,13 @@ func (u *Usercorn) RunAsm(addr uint64, asm string, setRegs map[int]uint64, regsC
 		u.MemUnmap(mmap.Addr, mmap.Size)
 		addr = mmap.Addr
 	}
-	if err := u.MemMap(mmap.Addr, mmap.Size); err != nil {
+	if err := u.MemMap(mmap.Addr, mmap.Size, cpu.PROT_READ|cpu.PROT_EXEC); err != nil {
 		return err
 	}
 	defer u.Trampoline(func() error {
 		return u.MemUnmap(mmap.Addr, mmap.Size)
 	})
-	return u.RunShellcodeMapped(mmap, code, setRegs, regsClobbered)
+	return u.RunShellcodeMapped(mmap.Addr, code, setRegs, regsClobbered)
 }
 
 var breakRe = regexp.MustCompile(`^((?P<addr>0x[0-9a-fA-F]+|\d+)|(?P<sym>[\w:]+(?P<off>\+0x[0-9a-fA-F]+|\d+)?)|(?P<source>.+):(?P<line>\d+))(@(?P<file>.+))?$`)

@@ -55,9 +55,10 @@ func (r *Replay) update(op models.Op) {
 		r.SpRegs[int(o.Num)] = o.Val
 
 	case *OpMemMap: // memory
-		r.Mem.MemMapProt(o.Addr, uint64(o.Size), int(o.Prot))
-		if o.Zero != 0 {
+		r.Mem.MemMap(o.Addr, uint64(o.Size), int(o.Prot))
+		if o.New != 0 {
 			r.Mem.MemZero(o.Addr, o.Size)
+			// TODO: update desc and file here
 		}
 	case *OpMemUnmap:
 		r.Mem.MemUnmap(o.Addr, uint64(o.Size))

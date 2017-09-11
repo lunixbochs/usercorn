@@ -11,7 +11,7 @@ type SysHook struct {
 	Before, After SysCb
 }
 
-type MapCb func(addr, size uint64, prot int, zero bool)
+type MapCb func(addr, size uint64, prot int, new bool, desc string, file *FileDesc)
 type UnmapCb func(addr, size uint64)
 type MapHook struct {
 	Map   MapCb
@@ -44,7 +44,7 @@ type Usercorn interface {
 	DirectRead(addr, size uint64) ([]byte, error)
 	DirectWrite(addr uint64, p []byte) error
 
-	RunShellcodeMapped(mmap *Mmap, code []byte, setRegs map[int]uint64, regsClobbered []int) error
+	RunShellcodeMapped(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error
 	RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error
 	RunAsm(addr uint64, asm string, setRegs map[int]uint64, regsClobbered []int) error
 

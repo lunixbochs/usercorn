@@ -3,7 +3,7 @@ package cpu
 // This interface abstracts the minimum functionality Usercorn requires in a CPU emulator.
 type Cpu interface {
 	// memory mapping
-	MemMapProt(addr, size uint64, prot int) error
+	MemMap(addr, size uint64, prot int) error
 	MemProt(addr, size uint64, prot int) error
 	MemUnmap(addr, size uint64) error
 

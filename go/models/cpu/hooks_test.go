@@ -196,7 +196,7 @@ func TestHookMem(t *testing.T) {
 		{0x2000, 0x1000, PROT_ALL},
 	}
 	for _, m := range maps {
-		if err := mem.MemMapProt(m[0], m[1], int(m[2])); err != nil {
+		if err := mem.MemMap(m[0], m[1], int(m[2])); err != nil {
 			t.Fatal("failed to map memory:", err)
 		}
 	}

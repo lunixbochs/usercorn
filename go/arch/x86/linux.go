@@ -29,7 +29,7 @@ var LinuxRegs = []int{uc.X86_REG_EBX, uc.X86_REG_ECX, uc.X86_REG_EDX, uc.X86_REG
 
 type LinuxKernel struct {
 	*linux.LinuxKernel
-	gdt *models.Mmap
+	gdt uint64
 }
 
 var socketCallMap = map[int]string{
@@ -76,16 +76,16 @@ func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) error {
 	entry |= (uint64(access) & 0xFF) << 40
 	entry |= (uint64(flags) & 0xFF) << 52
 
-	if k.gdt == nil {
-		k.gdt, _ = k.U.Mmap(0, 0x1000)
+	if k.gdt == 0 {
+		k.gdt, _ = k.U.Malloc(0x1000)
 		gdt := uc.X86Mmr{
-			Base:  k.gdt.Addr,
+			Base:  k.gdt,
 			Limit: 31*8 - 1,
 		}
 		k.U.Backend().(uc.Unicorn).RegWriteMmr(uc.X86_REG_GDTR, &gdt)
 	}
 	// this is fragile but we only call it once below in SetThreadArea
-	s := k.U.StrucAt(k.gdt.Addr + uint64(sel)*8)
+	s := k.U.StrucAt(k.gdt + uint64(sel)*8)
 	s.Pack(entry)
 	return s.Error
 }

@@ -5,6 +5,9 @@ The disk file format starts the with magic bytes `UCIR`, a header, then a stream
 
 All numbers are little endian. Structures are densely-packed (no alignment).
 
+As long as the trace format version is 0, the trace format should be considered completely unstable.
+Only the same revision of usercorn which generated it is guaranteed to read a saved trace.
+
 Header
 ----
 
@@ -141,7 +144,7 @@ Memory write performed.
 OP\_MEM\_MAP
 ----
 
-A new memory region was mapped, or the protection of an existing region was changed. This opcode does not zero memory unless the zero flag is set to 1.
+A new memory region was mapped, or the protection of an existing region was changed. This opcode does not zero memory or include file mapping information unless the `new` flag is set to 1.
 
 | name | type | desc |
 |------|------|------|
@@ -149,7 +152,13 @@ A new memory region was mapped, or the protection of an existing region was chan
 | addr |uint64| Memory address
 | size |uint32| Size of region
 | prot |uint8 | Protection flags (RWX)
-| zero |uint8 | (1) if region should be zeroed
+| new  |uint8 | (1) if region is a new mapping. If not, the following fields will be omitted.
+|------|------|------|
+| dlen |uint16| length of desc field
+| flen |uint16| length of file field
+| off  |uint64| mmap offset into backing file
+| desc |utf8  | description of region (such as "heap", "brk", "ld-linux.so")
+| file |utf8  | filename backing region
 
 OP\_MEM\_UNMAP
 ----

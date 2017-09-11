@@ -19,8 +19,6 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 		data []byte
 		path string
 		err  error
-		mmap *models.Mmap
-
 		file *os.File
 	)
 	// if there's a file descriptor, map (copy for now) the file here before messing with guest memory
@@ -32,47 +30,40 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 		if path != "" {
 			file = os.NewFile(uintptr(fd2), path)
 			defer file.Close()
-		}
-
-		data = make([]byte, size)
-		var pos uint64
-		for pos < size {
-			n, err := file.ReadAt(data[pos:], int64(off)+int64(pos))
-			pos += uint64(n)
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				return UINT64_MAX // FIXME
+			data = make([]byte, size)
+			var pos uint64
+			for pos < size {
+				n, err := file.ReadAt(data[pos:], int64(off)+int64(pos))
+				pos += uint64(n)
+				if err == io.EOF {
+					break
+				} else if err != nil {
+					return UINT64_MAX // FIXME
+				}
 			}
+			data = data[:pos]
 		}
-		data = data[:pos]
 	}
-	// reserve guest memory (doesn't allocate it yet)
-	if flags&MAP_FIXED != 0 {
-		mmap, err = k.U.MemReserve(addrHint, size, true)
-	} else {
+	fixed := flags&MAP_FIXED != 0
+	if addrHint == 0 && !fixed {
 		// don't automap memory within 8MB of the current program break
 		if addrHint == 0 {
 			brk, _ := k.U.Brk(0)
 			addrHint = brk + 0x800000
 		}
-		mmap, err = k.U.MemReserve(addrHint, size, false)
 	}
-	// map and protect if allocation succeeded
-	if err == nil {
-		err = k.U.MemMapProt(mmap.Addr, mmap.Size, int(prot))
-	}
+	// TODO: construct FileDesc
+	addr, err := k.U.Mmap(addrHint, size, int(prot), fixed, "", &models.FileDesc{})
 	if err != nil {
 		return UINT64_MAX // FIXME
 	}
 	if fd > 0 && data != nil {
-		k.U.MemWrite(mmap.Addr, data)
-		if path != "" {
-			// register mapped files for symbolication of mapped shared libraries
-			k.U.RegisterFile(file, mmap.Addr, size, int64(mmap.Addr)+int64(off), nil)
+		err := k.U.MemWrite(addr, data)
+		if err != nil {
+			return UINT64_MAX // FIXME
 		}
 	}
-	return mmap.Addr
+	return addr
 }
 
 func (k *PosixKernel) Munmap(addr, size uint64) uint64 {

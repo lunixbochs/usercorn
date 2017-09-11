@@ -61,7 +61,7 @@ func ContextRestore(u Usercorn, ctx *Context) error {
 	}
 	// restore saved memory
 	for _, m := range ctx.mem {
-		u.MemMapProt(m.Addr, m.Size, m.Prot)
+		u.MemMap(m.Addr, m.Size, m.Prot)
 		u.MemWrite(m.Addr, m.Data)
 		// TODO: this could have a bug if the saved mapping overlapped with an existing mapping somehow
 		x := u.Mappings()

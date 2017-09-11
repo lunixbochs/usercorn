@@ -136,13 +136,7 @@ func (t *Trace) Attach() error {
 			}, 1, 0); err != nil {
 			return err
 		}
-		mmapHook := func(addr, size uint64, prot int, zero bool) {
-			t.OnMemMap(addr, size, prot, zero)
-		}
-		munmapHook := func(addr, size uint64) {
-			t.OnMemUnmap(addr, size)
-		}
-		t.mapHook = t.u.HookMapAdd(mmapHook, munmapHook)
+		t.mapHook = t.u.HookMapAdd(t.OnMemMap, t.OnMemUnmap)
 	}
 	if t.config.Sys {
 		// TODO: where are keyframes?
@@ -314,12 +308,17 @@ func (t *Trace) OnMemWrite(addr uint64, data []byte) {
 	t.Append(&OpMemWrite{addr, data}, false)
 }
 
-func (t *Trace) OnMemMap(addr, size uint64, prot int, zero bool) {
-	zint := 0
-	if zero {
-		zint = 1
+func (t *Trace) OnMemMap(addr, size uint64, prot int, new bool, desc string, file *models.FileDesc) {
+	nint := 0
+	if new {
+		nint = 1
 	}
-	t.Append(&OpMemMap{addr, size, uint8(prot), uint8(zint)}, false)
+	var name string
+	var off uint64
+	if file != nil {
+		name, off = file.Name, file.Off
+	}
+	t.Append(&OpMemMap{addr, size, uint8(prot), uint8(nint), desc, name, off}, false)
 }
 
 func (t *Trace) OnMemUnmap(addr, size uint64) {

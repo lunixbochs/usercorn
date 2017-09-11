@@ -76,6 +76,10 @@ func (u *UnicornCpu) HookDel(hh cpu.Hook) error {
 	return u.Unicorn.HookDel(hh.(uc.Hook))
 }
 
+func (u *UnicornCpu) MemMap(addr, size uint64, prot int) error {
+	return u.Unicorn.MemMapProt(addr, size, prot)
+}
+
 func (u *UnicornCpu) MemProt(addr, size uint64, prot int) error {
 	return u.Unicorn.MemProtect(addr, size, prot)
 }
