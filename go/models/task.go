@@ -6,20 +6,14 @@ import (
 	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
-type FileDesc struct {
-	Name string
-	Off  uint64
-	Size uint64
-}
-
 type Task interface {
 	cpu.Cpu
 
 	// Cpu wrappers
-	Mappings() []*Mmap
+	Mappings() []*cpu.Page
 	// deprecated: only used by RunAsm
-	MemReserve(addr, size uint64, force bool) (*Mmap, error)
-	Mmap(addr, size uint64, prot int, fixed bool, desc string, file *FileDesc) (uint64, error)
+	MemReserve(addr, size uint64, force bool) (*cpu.Page, error)
+	Mmap(addr, size uint64, prot int, fixed bool, desc string, file *cpu.FileDesc) (uint64, error)
 	Malloc(size uint64) (uint64, error)
 
 	PackAddr(buf []byte, n uint64) ([]byte, error)

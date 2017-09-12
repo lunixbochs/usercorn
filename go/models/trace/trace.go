@@ -312,7 +312,7 @@ func (t *Trace) OnMemWrite(addr uint64, data []byte) {
 	t.Append(&OpMemWrite{addr, data}, false)
 }
 
-func (t *Trace) OnMemMap(addr, size uint64, prot int, new bool, desc string, file *models.FileDesc) {
+func (t *Trace) OnMemMap(addr, size uint64, prot int, new bool, desc string, file *cpu.FileDesc) {
 	var name string
 	var off uint64
 	if file != nil {

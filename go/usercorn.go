@@ -566,8 +566,9 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 			if err != nil {
 				return u.brk, err
 			}
-			if mmap := u.mapping(cur, size); mmap != nil {
-				mmap.Desc = "brk"
+			// FIXME: don't update Desc after mapping
+			if page := u.mapping(cur, size); page != nil {
+				page.Desc = "brk"
 			}
 		}
 		u.brk = addr
@@ -658,12 +659,12 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool) (interpBase, entry, base
 			mapLow = 0x1000000
 		}
 		// TODO: is allocating the whole lib width remotely sane?
-		var mmap *models.Mmap
-		mmap, err = u.MemReserve(mapLow, high-low, false)
+		var page *cpu.Page
+		page, err = u.MemReserve(mapLow, high-low, false)
 		if err != nil {
 			return
 		}
-		loadBias = mmap.Addr - low
+		loadBias = page.Addr - low
 	}
 	var desc string
 	if isInterp {
@@ -678,7 +679,7 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool) (interpBase, entry, base
 			// TODO: confirm why darwin needs this
 			prot = cpu.PROT_ALL
 		}
-		fileDesc := &models.FileDesc{Name: f.Name(), Off: seg.Off}
+		fileDesc := &cpu.FileDesc{Name: f.Name(), Off: seg.Off}
 		_, err = u.Mmap(loadBias+seg.Addr, seg.Size, prot, true, desc, fileDesc)
 		if err != nil {
 			return
@@ -915,7 +916,7 @@ func (u *Usercorn) RunAsm(addr uint64, asm string, setRegs map[int]uint64, regsC
 	// in practice, this will never take more than one iteration, as we round up to page size
 	// but maybe in the future there will be an allocator
 	var code []byte
-	var mmap *models.Mmap
+	var page *cpu.Page
 	var err error
 	for i := 0; ; i++ {
 		if i > 100 {
@@ -928,25 +929,25 @@ func (u *Usercorn) RunAsm(addr uint64, asm string, setRegs map[int]uint64, regsC
 		if len(code) == 0 {
 			return errors.Errorf("RunAsm() assembled code was empty: %s\n", asm)
 		}
-		mmap, err = u.MemReserve(addr, uint64(len(code)), false)
+		page, err = u.MemReserve(addr, uint64(len(code)), false)
 		if err != nil {
 			return err
 		}
 		// exit loop if there was space at our requested addr
-		if mmap.Addr == addr {
+		if page.Addr == addr {
 			break
 		}
 		// FIXME: there's no "unreserve" function, and unmap is more expensive
-		u.MemUnmap(mmap.Addr, mmap.Size)
-		addr = mmap.Addr
+		u.MemUnmap(page.Addr, page.Size)
+		addr = page.Addr
 	}
-	if err := u.MemMap(mmap.Addr, mmap.Size, cpu.PROT_READ|cpu.PROT_EXEC); err != nil {
+	if err := u.MemMap(page.Addr, page.Size, cpu.PROT_READ|cpu.PROT_EXEC); err != nil {
 		return err
 	}
 	defer u.Trampoline(func() error {
-		return u.MemUnmap(mmap.Addr, mmap.Size)
+		return u.MemUnmap(page.Addr, page.Size)
 	})
-	return u.RunShellcodeMapped(mmap.Addr, code, setRegs, regsClobbered)
+	return u.RunShellcodeMapped(page.Addr, code, setRegs, regsClobbered)
 }
 
 var breakRe = regexp.MustCompile(`^((?P<addr>0x[0-9a-fA-F]+|\d+)|(?P<sym>[\w:]+(?P<off>\+0x[0-9a-fA-F]+|\d+)?)|(?P<source>.+):(?P<line>\d+))(@(?P<file>.+))?$`)

@@ -103,15 +103,15 @@ func (k *CgcKernel) Deallocate(addr, size uint32) int {
 		return -1 // FIXME
 	}
 	// all pages containing a part of the range are unmapped
-	var pages []*models.Mmap
-	for _, mmap := range k.U.Mappings() {
+	var unmap []*cpu.Page
+	for _, page := range k.U.Mappings() {
 		// does addr overlap mapping?
-		if (uint64(addr) >= mmap.Addr && uint64(addr) < mmap.Addr+mmap.Size) ||
-			(uint64(addr) < mmap.Addr && uint64(addr+size) > mmap.Addr) {
-			pages = append(pages, mmap)
+		if (uint64(addr) >= page.Addr && uint64(addr) < page.Addr+page.Size) ||
+			(uint64(addr) < page.Addr && uint64(addr+size) > page.Addr) {
+			unmap = append(unmap, page)
 		}
 	}
-	for _, page := range pages {
+	for _, page := range unmap {
 		k.U.MemUnmap(page.Addr, page.Size)
 	}
 	return 0

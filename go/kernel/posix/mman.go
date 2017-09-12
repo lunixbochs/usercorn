@@ -6,7 +6,6 @@ import (
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
-	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
 	"github.com/lunixbochs/usercorn/go/native/enum"
 )
@@ -21,7 +20,7 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 		err  error
 		file *os.File
 
-		fileDesc *models.FileDesc
+		fileDesc *cpu.FileDesc
 	)
 	// if there's a file descriptor, map (copy for now) the file here before messing with guest memory
 	if fd > 0 {
@@ -30,7 +29,7 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 			path = file.Path
 		}
 		if path != "" {
-			fileDesc = &models.FileDesc{Name: path, Off: uint64(off)}
+			fileDesc = &cpu.FileDesc{Name: path, Off: uint64(off)}
 			file = os.NewFile(uintptr(fd2), path)
 			defer file.Close()
 			data = make([]byte, size)

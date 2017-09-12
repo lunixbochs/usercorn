@@ -16,7 +16,7 @@ type Task struct {
 	bits     int
 	Bsz      int
 	order    binary.ByteOrder
-	memory   []*models.Mmap
+	memory   []*cpu.Page
 	mapHooks []*models.MapHook
 }
 
@@ -47,7 +47,7 @@ func (t *Task) ByteOrder() binary.ByteOrder {
 	return t.order
 }
 
-func (t *Task) mapping(addr, size uint64) *models.Mmap {
+func (t *Task) mapping(addr, size uint64) *cpu.Page {
 	for _, m := range t.memory {
 		if addr < m.Addr && addr+size > m.Addr {
 			return m
@@ -127,7 +127,7 @@ func (t *Task) MemUnmap(addr, size uint64) error {
 		// also delete if the unmap was fully in the middle (as we'll split the mapping into each side)
 		if left >= right || inMiddle {
 			// delete by copying to a new array
-			tmp := make([]*models.Mmap, 0, len(t.memory))
+			tmp := make([]*cpu.Page, 0, len(t.memory))
 			for _, v := range t.memory {
 				if v != mmap {
 					tmp = append(tmp, v)
@@ -142,11 +142,11 @@ func (t *Task) MemUnmap(addr, size uint64) error {
 		// if unmap range is fully in the middle, split and create a new mapping for each side
 		if inMiddle {
 			t.Cpu.MemUnmap(addr, size)
-			left := &models.Mmap{
+			left := &cpu.Page{
 				Addr: mmap.Addr, Size: addr - mmap.Addr,
 				Prot: mmap.Prot, File: mmap.File, Desc: mmap.Desc,
 			}
-			right := &models.Mmap{
+			right := &cpu.Page{
 				Addr: addr + size, Size: (mmap.Addr + mmap.Size) - (addr + size),
 				Prot: mmap.Prot, File: mmap.File, Desc: mmap.Desc,
 			}
@@ -158,25 +158,25 @@ func (t *Task) MemUnmap(addr, size uint64) error {
 	return nil
 }
 
-func (t *Task) Mappings() []*models.Mmap {
+func (t *Task) Mappings() []*cpu.Page {
 	return t.memory
 }
 
-func (t *Task) MemReserve(addr, size uint64, fixed bool) (*models.Mmap, error) {
+func (t *Task) MemReserve(addr, size uint64, fixed bool) (*cpu.Page, error) {
 	if addr == 0 && !fixed {
 		addr = BASE
 	}
 	addr, size = align(addr, size, true)
 	if fixed {
 		t.MemUnmap(addr, size)
-		mmap := &models.Mmap{Addr: addr, Size: size, Prot: cpu.PROT_ALL}
+		mmap := &cpu.Page{Addr: addr, Size: size, Prot: cpu.PROT_ALL}
 		t.memory = append(t.memory, mmap)
 		return mmap, nil
 	}
 	lastPage := ^uint64(0)>>uint8(64-t.bits) - UC_MEM_ALIGN + 2
 	for i := addr; i < lastPage; i += UC_MEM_ALIGN {
 		if t.mapping(i, size) == nil {
-			mmap := &models.Mmap{Addr: i, Size: size, Prot: cpu.PROT_ALL}
+			mmap := &cpu.Page{Addr: i, Size: size, Prot: cpu.PROT_ALL}
 			t.memory = append(t.memory, mmap)
 			return mmap, nil
 		}
@@ -184,7 +184,7 @@ func (t *Task) MemReserve(addr, size uint64, fixed bool) (*models.Mmap, error) {
 	return nil, errors.New("failed to reserve memory")
 }
 
-func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *models.FileDesc) (uint64, error) {
+func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *cpu.FileDesc) (uint64, error) {
 	aligned, size := align(addr, size, true)
 	if file != nil {
 		file.Off += aligned - addr

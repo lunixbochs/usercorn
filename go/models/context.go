@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"strings"
+
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 // like unicorn.ContextSave/Restore, but with memory mappings too
@@ -13,7 +15,7 @@ type ContextMem struct {
 	Prot       int
 	Data       []byte
 	Desc       string
-	File       *FileDesc
+	File       *cpu.FileDesc
 }
 
 type Context struct {

@@ -2,6 +2,8 @@ package models
 
 import (
 	"github.com/lunixbochs/ghostrace/ghost/memio"
+
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 type SysGetArgs func(n int) ([]uint64, error)
@@ -10,7 +12,7 @@ type SysHook struct {
 	Before, After SysCb
 }
 
-type MapCb func(addr, size uint64, prot int, new bool, desc string, file *FileDesc)
+type MapCb func(addr, size uint64, prot int, new bool, desc string, file *cpu.FileDesc)
 type UnmapCb func(addr, size uint64)
 type MapHook struct {
 	Map   MapCb

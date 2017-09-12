@@ -29,8 +29,7 @@ func NewMem(bits uint, order binary.ByteOrder) *Mem {
 	}
 }
 
-// TODO: MemRegion should be private fields + an interface so callers can't muck directly with memory
-func (m *Mem) Maps() []*MemRegion {
+func (m *Mem) Maps() []*Page {
 	return m.sim.Mem
 }
 

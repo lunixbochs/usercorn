@@ -1,10 +1,15 @@
 package cpu
 
 import (
-	"bytes"
 	"fmt"
 	"sort"
 )
+
+type FileDesc struct {
+	Name string
+	Off  uint64
+	Size uint64
+}
 
 type MemError struct {
 	Addr uint64
@@ -31,84 +36,11 @@ func (m *MemError) Error() string {
 	return fmt.Sprintf("%s at %#x(%d)", reason, m.Addr, m.Size)
 }
 
-type MemRegion struct {
-	Addr uint64
-	Size uint64
-	Prot int
-	Data []byte
-}
-
-func (m *MemRegion) String() string {
-	// duplicated from go/models/mmap.go
-	desc := fmt.Sprintf("0x%x-0x%x", m.Addr, m.Addr+m.Size)
-	// add prot
-	prots := []int{PROT_READ, PROT_WRITE, PROT_EXEC}
-	chars := []string{"r", "w", "x"}
-	prot := " "
-	for i := range prots {
-		if m.Prot&prots[i] != 0 {
-			prot += chars[i]
-		} else {
-			prot += "-"
-		}
-	}
-	desc += prot
-	return desc
-}
-
-func (m *MemRegion) Contains(addr uint64) bool {
-	return addr >= m.Addr && addr < m.Addr+m.Size
-}
-
-func (m *MemRegion) Overlaps(addr, size uint64) bool {
-	e1, e2 := m.Addr+m.Size, addr+size
-	return (m.Addr >= addr && m.Addr < e2) || (addr >= m.Addr && addr < e1)
-}
-
-func (m *MemRegion) Split(addr, size uint64) (left, right *MemRegion) {
-	// space on the right
-	if addr+size < m.Addr+m.Size {
-		ra := addr + size
-		rs := m.Addr + m.Size - ra
-		o := ra - m.Addr
-		right = &MemRegion{Addr: ra, Size: rs, Data: m.Data[o : o+rs]}
-		m.Data = m.Data[:o]
-	}
-	// space on the left
-	if addr > m.Addr {
-		ls := addr - m.Addr
-		left = &MemRegion{Addr: m.Addr, Size: ls, Data: m.Data[:ls]}
-		m.Data = m.Data[ls:]
-	}
-	// pad the middle
-	if addr < m.Addr {
-		extra := bytes.Repeat([]byte{0}, int(m.Addr-addr))
-		m.Data = append(extra, m.Data...)
-	}
-	raddr, nraddr := m.Addr+m.Size, addr+size
-	if nraddr > raddr {
-		extra := bytes.Repeat([]byte{0}, int(nraddr-raddr))
-		m.Data = append(m.Data, extra...)
-	}
-	m.Addr, m.Size = addr, size
-	return left, right
-}
-
-func (m *MemRegion) Write(addr uint64, p []byte) {
-	copy(m.Data[addr-m.Addr:], p)
-}
-
-type memSort []*MemRegion
-
-func (m memSort) Len() int           { return len(m) }
-func (m memSort) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
-func (m memSort) Less(i, j int) bool { return m[i].Addr < m[j].Addr }
-
 type MemSim struct {
-	Mem []*MemRegion
+	Mem []*Page
 }
 
-func (m *MemSim) Find(addr uint64) *MemRegion {
+func (m *MemSim) Find(addr uint64) *Page {
 	for _, mm := range m.Mem {
 		if mm.Contains(addr) {
 			return mm
@@ -173,8 +105,8 @@ func (m *MemSim) Map(addr, size uint64, prot int, zero bool) {
 	if gmem, _ := m.RangeValid(addr, size, 0); gmem {
 		m.Unmap(addr, size)
 	}
-	m.Mem = append(m.Mem, &MemRegion{Addr: addr, Size: size, Prot: prot, Data: data})
-	sort.Sort(memSort(m.Mem))
+	m.Mem = append(m.Mem, &Page{Addr: addr, Size: size, Prot: prot, Data: data})
+	sort.Sort(PageSort(m.Mem))
 }
 
 func (m *MemSim) Prot(addr, size uint64, prot int) {
@@ -183,7 +115,7 @@ func (m *MemSim) Prot(addr, size uint64, prot int) {
 
 func (m *MemSim) Unmap(addr, size uint64) {
 	// truncate entries overlapping addr, size
-	tmp := make([]*MemRegion, 0, len(m.Mem))
+	tmp := make([]*Page, 0, len(m.Mem))
 	// TODO: use a binary search to find the leftmost mapping?
 	for _, mm := range m.Mem {
 		if mm.Overlaps(addr, size) {
