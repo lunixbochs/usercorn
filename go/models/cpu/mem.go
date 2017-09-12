@@ -37,7 +37,7 @@ func (m *Mem) MemMap(addr, size uint64, prot int) error {
 	if addr+size&m.mask != addr+size {
 		return errors.New("region outside memory range")
 	}
-	m.sim.Map(addr, size, prot, false)
+	m.sim.Map(addr, size, prot, true)
 	return nil
 }
 

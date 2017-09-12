@@ -40,7 +40,7 @@ func PrintPretty(tf *trace.TraceReader) error {
 	}
 	config := &models.Config{}
 	config.Init()
-	replay := trace.NewReplay(arch, OS, tf.Header.CodeOrder)
+	replay := trace.NewReplay(arch, OS, tf.Header.CodeOrder, nil)
 	defer replay.Flush()
 	stream := ui.NewStreamUI(config, replay)
 	replay.Listen(stream.Feed)

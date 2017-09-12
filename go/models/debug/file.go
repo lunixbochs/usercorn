@@ -1,4 +1,4 @@
-package models
+package debug
 
 import (
 	"debug/dwarf"
@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type SourceLine struct {
@@ -22,13 +24,13 @@ func (s *SourceLine) Contains(addr uint64) bool {
 }
 
 type DebugFile struct {
-	Symbols   []Symbol
+	Symbols   []models.Symbol
 	DWARF     *dwarf.Data
 	SourceMap []*SourceLine
-	SymbolMap map[string]Symbol
+	SymbolMap map[string]models.Symbol
 }
 
-type symByStart []Symbol
+type symByStart []models.Symbol
 type srcByStart []*SourceLine
 
 func (a symByStart) Len() int      { return len(a) }
@@ -45,7 +47,7 @@ func (a srcByStart) Less(i, j int) bool {
 // sorts symbols by starting addr for binary search during symbolication
 // builds source and symbol maps
 func (m *DebugFile) CacheSym() {
-	m.SymbolMap = make(map[string]Symbol)
+	m.SymbolMap = make(map[string]models.Symbol)
 	for _, sym := range m.Symbols {
 		m.SymbolMap[sym.Name] = sym
 	}
@@ -163,7 +165,7 @@ func (m *DebugFile) buildSourceMap(srcPaths []string) []*SourceLine {
 }
 
 // binary search on m.Symbols
-func (m *DebugFile) Symbolicate(addr uint64) (result Symbol, distance uint64) {
+func (m *DebugFile) Symbolicate(addr uint64) (result models.Symbol, distance uint64) {
 	l := 0
 	r := len(m.Symbols) - 1
 	for l <= r {
@@ -180,11 +182,11 @@ func (m *DebugFile) Symbolicate(addr uint64) (result Symbol, distance uint64) {
 	return
 }
 
-func (m *DebugFile) SymbolLookup(name string) Symbol {
+func (m *DebugFile) SymbolLookup(name string) models.Symbol {
 	if s, ok := m.SymbolMap[name]; ok {
 		return s
 	}
-	return Symbol{}
+	return models.Symbol{}
 }
 
 // performs a binary search on m.SourceMap for addr

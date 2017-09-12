@@ -19,6 +19,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/loader"
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
+	"github.com/lunixbochs/usercorn/go/models/debug"
 	"github.com/lunixbochs/usercorn/go/models/trace"
 	"github.com/lunixbochs/usercorn/go/ui"
 )
@@ -70,6 +71,7 @@ type Usercorn struct {
 	hooks    []cpu.Hook
 	sysHooks []*models.SysHook
 
+	debug    *debug.Debug
 	trace    *trace.Trace
 	replay   *trace.Replay
 	rewind   []models.Op
@@ -94,9 +96,10 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 		config: config,
 		loader: l,
 		exit:   0xffffffffffffffff,
+		debug:  debug.NewDebug(l.Arch(), config),
 	}
 	if u.config.Rewind || u.config.UI {
-		u.replay = trace.NewReplay(u.arch, u.os, l.ByteOrder())
+		u.replay = trace.NewReplay(u.arch, u.os, l.ByteOrder(), u.debug)
 		defer u.replay.Flush()
 		config.Trace.OpCallback = append(config.Trace.OpCallback, u.replay.Feed)
 		if config.UI {
@@ -229,7 +232,7 @@ func (u *Usercorn) Rewind(by, addr uint64) error {
 		}
 		target = u.replay.Inscount - by
 	}
-	replay := trace.NewReplay(u.arch, u.os, u.ByteOrder())
+	replay := trace.NewReplay(u.arch, u.os, u.ByteOrder(), u.debug)
 	good := false
 	var pos int
 	var op models.Op
@@ -388,7 +391,7 @@ func (u *Usercorn) Run() error {
 			if u.ui == nil {
 				// FIXME: replay and task should be api-compatible, so we can pass a cpu in here instead
 				if u.replay == nil {
-					u.replay = trace.NewReplay(u.arch, u.os, u.Loader().ByteOrder())
+					u.replay = trace.NewReplay(u.arch, u.os, u.Loader().ByteOrder(), u.debug)
 				}
 				u.ui = ui.NewStreamUI(u.config, u.replay)
 			}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
+	"github.com/lunixbochs/usercorn/go/models/debug"
 )
 
 type Replay struct {
@@ -16,6 +17,7 @@ type Replay struct {
 	PC, SP uint64
 
 	Callstack models.Callstack
+	Debug     *debug.Debug
 	Inscount  uint64
 	// pending is an OpStep representing the last unflushed instruction. Cleared by Flush().
 	pending   *OpStep
@@ -23,13 +25,17 @@ type Replay struct {
 	callbacks []func(models.Op, []models.Op)
 }
 
-func NewReplay(arch *models.Arch, os *models.OS, order binary.ByteOrder) *Replay {
+func NewReplay(arch *models.Arch, os *models.OS, order binary.ByteOrder, dbg *debug.Debug) *Replay {
+	if dbg == nil {
+		dbg = debug.NewDebug(arch.Name, nil)
+	}
 	return &Replay{
 		Arch:   arch,
 		OS:     os,
 		Mem:    cpu.NewMem(uint(arch.Bits), order),
 		Regs:   make(map[int]uint64),
 		SpRegs: make(map[int][]byte),
+		Debug:  dbg,
 	}
 }
 
