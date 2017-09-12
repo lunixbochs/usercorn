@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
+	"github.com/lunixbochs/usercorn/go/kernel/posix"
 )
 
 const UINT64_MAX = 0xFFFFFFFFFFFFFFFF
@@ -125,9 +126,25 @@ func (k *LinuxKernel) Sendfile(out, in co.Fd, off co.Buf, count uint64) uint64 {
 }
 
 func (k *LinuxKernel) Fstat64(fd co.Fd, buf co.Obuf) uint64 {
-	return k.Fstat(fd, buf)
+	var stat syscall.Stat_t
+	if err := syscall.Fstat(int(fd), &stat); err != nil {
+		return posix.Errno(err)
+	}
+	return posix.HandleStat(buf, &stat, k.U, true)
 }
 
 func (k *LinuxKernel) Lstat64(path string, buf co.Obuf) uint64 {
-	return k.Lstat(path, buf)
+	var stat syscall.Stat_t
+	if err := syscall.Lstat(path, &stat); err != nil {
+		return posix.Errno(err)
+	}
+	return posix.HandleStat(buf, &stat, k.U, true)
+}
+
+func (k *LinuxKernel) Stat64(path string, buf co.Obuf) uint64 {
+	var stat syscall.Stat_t
+	if err := syscall.Stat(path, &stat); err != nil {
+		return posix.Errno(err)
+	}
+	return posix.HandleStat(buf, &stat, k.U, true)
 }

@@ -5,7 +5,7 @@ import (
 	"syscall"
 )
 
-func NewLinuxStat(stat *syscall.Stat_t, bits uint) interface{} {
+func NewLinuxStat(stat *syscall.Stat_t, bits uint, large bool) interface{} {
 	if bits == 64 {
 		return &LinuxStat64{
 			Dev:     uint64(stat.Dev),
@@ -25,7 +25,28 @@ func NewLinuxStat(stat *syscall.Stat_t, bits uint) interface{} {
 			CtimeNsec: uint64(stat.Ctim.Nsec),
 		}
 	} else {
-		return &LinuxStat{
+		if large {
+			return &Linux32Stat64{
+				Dev:     uint64(stat.Dev),
+				Ino:     uint32(stat.Ino),
+				Mode:    uint32(stat.Mode),
+				Uid:     stat.Uid,
+				Gid:     stat.Gid,
+				Rdev:    uint64(stat.Rdev),
+				Size:    int64(stat.Size),
+				Blksize: uint32(stat.Blksize),
+				// TODO: is 512 wrong here? should it be blksize?
+				Blkcnt:    uint64(int64(stat.Size) / 512),
+				Atime:     uint32(stat.Atim.Sec),
+				AtimeNsec: uint32(stat.Atim.Nsec),
+				Mtime:     uint32(stat.Mtim.Sec),
+				MtimeNsec: uint32(stat.Mtim.Nsec),
+				Ctime:     uint32(stat.Ctim.Sec),
+				CtimeNsec: uint32(stat.Ctim.Nsec),
+				LongIno:   uint64(stat.Ino),
+			}
+		}
+		return &Linux32Stat{
 			Dev:     uint32(stat.Dev),
 			Ino:     uint32(stat.Ino),
 			Mode:    uint16(stat.Mode),
@@ -45,7 +66,7 @@ func NewLinuxStat(stat *syscall.Stat_t, bits uint) interface{} {
 	}
 }
 
-func NewDarwinStat(stat *syscall.Stat_t, bits uint) interface{} {
+func NewDarwinStat(stat *syscall.Stat_t, bits uint, large bool) interface{} {
 	if bits == 64 {
 		return &DarwinStat64{
 			Dev:     int32(stat.Dev),

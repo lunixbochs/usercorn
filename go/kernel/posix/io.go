@@ -110,11 +110,7 @@ func (k *PosixKernel) Fstat(fd co.Fd, buf co.Obuf) uint64 {
 	if err := syscall.Fstat(int(fd), &stat); err != nil {
 		return Errno(err)
 	}
-	targetStat := NewTargetStat(&stat, k.U.OS(), k.U.Bits())
-	if err := buf.Pack(targetStat); err != nil {
-		panic(err)
-	}
-	return 0
+	return HandleStat(buf, &stat, k.U, false)
 }
 
 func (k *PosixKernel) Lstat(path string, buf co.Obuf) uint64 {
@@ -122,11 +118,7 @@ func (k *PosixKernel) Lstat(path string, buf co.Obuf) uint64 {
 	if err := syscall.Lstat(path, &stat); err != nil {
 		return Errno(err)
 	}
-	targetStat := NewTargetStat(&stat, k.U.OS(), k.U.Bits())
-	if err := buf.Pack(targetStat); err != nil {
-		panic(err)
-	}
-	return 0
+	return HandleStat(buf, &stat, k.U, false)
 }
 
 func (k *PosixKernel) Stat(path string, buf co.Obuf) uint64 {
@@ -138,11 +130,7 @@ func (k *PosixKernel) Stat(path string, buf co.Obuf) uint64 {
 	if err := syscall.Stat(path, &stat); err != nil {
 		return Errno(err)
 	}
-	targetStat := NewTargetStat(&stat, k.U.OS(), k.U.Bits())
-	if err := buf.Pack(targetStat); err != nil {
-		panic(err)
-	}
-	return 0
+	return HandleStat(buf, &stat, k.U, false)
 }
 
 func (k *PosixKernel) Getcwd(buf co.Obuf, size co.Len) uint64 {

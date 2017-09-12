@@ -1,20 +1,31 @@
 package posix
 
-import "syscall"
+import (
+	"syscall"
 
-func NewTargetStat(stat *syscall.Stat_t, os string, bits uint) interface{} {
+	co "github.com/lunixbochs/usercorn/go/kernel/common"
+	"github.com/lunixbochs/usercorn/go/models"
+)
+
+func HandleStat(buf co.Obuf, stat *syscall.Stat_t, u models.Usercorn, large bool) uint64 {
+	var pack interface{}
+	os, bits := u.OS(), u.Bits()
 	switch os {
 	case "linux":
-		return NewLinuxStat(stat, bits)
+		pack = NewLinuxStat(stat, bits, large)
 	case "darwin":
-		return NewDarwinStat(stat, bits)
+		pack = NewDarwinStat(stat, bits, large)
 	default:
 		panic("(currently) unsupported target OS for fstat: " + os)
 	}
+	if err := buf.Pack(pack); err != nil {
+		panic(err)
+	}
+	return 0
 }
 
 // TODO: these might only work on x86
-type LinuxStat struct {
+type Linux32Stat struct {
 	Dev      uint32
 	Ino      uint32
 	Mode     uint16
@@ -34,6 +45,31 @@ type LinuxStat struct {
 
 	Reserved4 uint32
 	Reserved5 uint32
+}
+
+type Linux32Stat64 struct {
+	Dev  uint64
+	Pad0 [4]byte
+	Ino  uint32
+
+	Mode     uint32
+	Nlink    uint32
+	Uid, Gid uint32
+	Rdev     uint64
+	Pad3     [4]byte
+
+	Size    int64
+	Blksize uint32
+	Blkcnt  uint64
+
+	Atime     uint32
+	AtimeNsec uint32
+	Mtime     uint32
+	MtimeNsec uint32
+	Ctime     uint32
+	CtimeNsec uint32
+
+	LongIno uint64
 }
 
 type LinuxStat64 struct {
