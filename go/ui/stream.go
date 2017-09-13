@@ -80,7 +80,6 @@ func (s *StreamUI) OnStart(entry uint64) {
 	for _, line := range models.HexDump(sp, buf[32:], s.replay.Arch.Bits) {
 		s.Println(line)
 	}
-	// TODO: annotate replay's maps with filename / mapping type (required for symbolication too)
 	s.Println("[memory map]")
 	for _, mm := range s.replay.Mem.Maps() {
 		s.Printf("  %s\n", mm)
@@ -102,7 +101,6 @@ func (s *StreamUI) OnExit(clean bool, msg string) {
 		s.Println("[pc]")
 		s.Println(dis)
 	}
-	// TODO: annotate replay's maps with filename / mapping type (required for symbolication too)
 	s.Println("[memory map]")
 	for _, mm := range s.replay.Mem.Maps() {
 		s.Printf("  %s\n", mm)
@@ -121,20 +119,16 @@ func (s *StreamUI) OnExit(clean bool, msg string) {
 	pc := s.replay.PC
 	sp := s.replay.SP
 	for _, frame := range s.replay.Callstack.Freeze(pc, sp) {
-		// TODO: need replay symbolication
-		/*
-			sym, _ := u.Symbolicate(frame.PC, true)
-			if sym == "" {
-				sym = fmt.Sprintf("%#x", frame.PC)
-				if file := u.addr2file(frame.PC); u.config.SymFile && file != nil {
-					sym = fmt.Sprintf("%#x@%s", frame.PC, file.Name)
-				}
-			} else {
-				sym = fmt.Sprintf("%#x %s", frame.PC, sym)
+		_, sym := s.replay.Symbolicate(frame.PC, true)
+		if sym == "" {
+			sym = fmt.Sprintf("%#x", frame.PC)
+			if page := s.replay.Mem.Maps().Find(frame.PC); s.config.SymFile && page != nil && page.File != nil {
+				sym = fmt.Sprintf("%#x@%s", frame.PC, page.File.Name)
 			}
-			u.Printf("  %s\n", sym)
-		*/
-		s.Printf("%#x\n", frame.PC)
+		} else {
+			sym = fmt.Sprintf("%#x %s", frame.PC, sym)
+		}
+		s.Printf("  %s\n", sym)
 	}
 }
 

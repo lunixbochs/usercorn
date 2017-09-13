@@ -77,7 +77,7 @@ func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) error {
 	entry |= (uint64(flags) & 0xFF) << 52
 
 	if k.gdt == 0 {
-		k.gdt, _ = k.U.Malloc(0x1000)
+		k.gdt, _ = k.U.Malloc(0x1000, "gdt")
 		gdt := uc.X86Mmr{
 			Base:  k.gdt,
 			Limit: 31*8 - 1,

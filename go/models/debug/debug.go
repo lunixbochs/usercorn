@@ -1,12 +1,15 @@
 package debug
 
 import (
+	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sync"
 
 	"github.com/lunixbochs/usercorn/go/loader"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
 type Debug struct {
@@ -72,4 +75,42 @@ func (d *Debug) File(name string) (*DebugFile, error) {
 	}
 	// if no debug library was found, fall back to the original library
 	return d.getFile(name)
+}
+
+func (d *Debug) Symbolicate(addr uint64, mem cpu.Pages, includeSource bool) (*models.Symbol, string) {
+	var (
+		filename string
+		fileLine string
+		sym      models.Symbol
+		dist     uint64
+	)
+	page := mem.Find(addr)
+	if page != nil && page.File != nil {
+		filename = path.Base(page.File.Name)
+		df, _ := d.File(page.File.Name)
+		if df != nil {
+			sym, dist = df.Symbolicate(addr - page.Addr + page.File.Off)
+			if sym.Name != "" && includeSource {
+				if fl := df.FileLine(addr); fl != nil {
+					fileLine = fmt.Sprintf("%s:%d", path.Base(fl.File.Name), fl.Line)
+				}
+			}
+		}
+	}
+	name := sym.Name
+	if name != "" {
+		if d.config.Demangle {
+			name = models.Demangle(name)
+		}
+		if d.config.SymFile && filename != "" {
+			name = fmt.Sprintf("%s@%s", name, filename)
+		}
+		if dist > 0 {
+			name = fmt.Sprintf("%s+0x%x", name, dist)
+		}
+		if fileLine != "" {
+			name = fmt.Sprintf("%s (%s)", name, fileLine)
+		}
+	}
+	return &sym, name
 }

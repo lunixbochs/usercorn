@@ -5,12 +5,6 @@ import (
 	"sort"
 )
 
-type FileDesc struct {
-	Name string
-	Off  uint64
-	Size uint64
-}
-
 type MemError struct {
 	Addr uint64
 	Size int
@@ -37,22 +31,13 @@ func (m *MemError) Error() string {
 }
 
 type MemSim struct {
-	Mem []*Page
-}
-
-func (m *MemSim) Find(addr uint64) *Page {
-	for _, mm := range m.Mem {
-		if mm.Contains(addr) {
-			return mm
-		}
-	}
-	return nil
+	Mem Pages
 }
 
 // Checks whether the address range exists in the currently-mapped memory.
 // If prot > 0, ensures that each region has the entire protection mask provided.
 func (m *MemSim) RangeValid(addr, size uint64, prot int) (mapGood bool, protGood bool) {
-	first := m.bsearch(addr)
+	first := m.Mem.bsearch(addr)
 	if first == -1 {
 		return false, false
 	}
@@ -74,30 +59,11 @@ func (m *MemSim) RangeValid(addr, size uint64, prot int) (mapGood bool, protGood
 	return addr >= end, protGood
 }
 
-// binary search to find index of first region containing addr, if any, else -1
-func (m *MemSim) bsearch(addr uint64) int {
-	l := 0
-	r := len(m.Mem) - 1
-	for l <= r {
-		mid := (l + r) / 2
-		e := m.Mem[mid]
-		if addr >= e.Addr {
-			if addr < e.Addr+e.Size {
-				return mid
-			}
-			l = mid + 1
-		} else if addr < e.Addr {
-			r = mid - 1
-		}
-	}
-	return -1
-}
-
 // Maps <addr> - <addr>+<size> and protects with prot.
 // If zero is false, it first copies any existing data in this range to the new mapping.
 // Any overlapping regions will be unmapped, then then the mapping list will be sorted by address
 // to allow binary search and simpler reads / bound checks.
-func (m *MemSim) Map(addr, size uint64, prot int, zero bool) {
+func (m *MemSim) Map(addr, size uint64, prot int, zero bool) *Page {
 	data := make([]byte, size)
 	if !zero {
 		m.Read(addr, data, 0)
@@ -105,12 +71,33 @@ func (m *MemSim) Map(addr, size uint64, prot int, zero bool) {
 	if gmem, _ := m.RangeValid(addr, size, 0); gmem {
 		m.Unmap(addr, size)
 	}
-	m.Mem = append(m.Mem, &Page{Addr: addr, Size: size, Prot: prot, Data: data})
-	sort.Sort(PageSort(m.Mem))
+	page := &Page{Addr: addr, Size: size, Prot: prot, Data: data}
+	m.Mem = append(m.Mem, page)
+	sort.Sort(m.Mem)
+	return page
 }
 
+// this is *exactly* unmap, but the "middle" pages of each split are re-protected
 func (m *MemSim) Prot(addr, size uint64, prot int) {
-	m.Map(addr, size, prot, false)
+	// truncate entries overlapping addr, size
+	tmp := make([]*Page, 0, len(m.Mem))
+	// TODO: use a binary search to find the leftmost mapping?
+	for _, mm := range m.Mem {
+		if oaddr, osize, ok := mm.Intersect(addr, size); ok {
+			left, right := mm.Split(oaddr, osize)
+			if left != nil {
+				tmp = append(tmp, left)
+			}
+			tmp = append(tmp, mm)
+			mm.Prot = prot
+			if right != nil {
+				tmp = append(tmp, right)
+			}
+		} else {
+			tmp = append(tmp, mm)
+		}
+	}
+	m.Mem = tmp
 }
 
 func (m *MemSim) Unmap(addr, size uint64) {
@@ -118,8 +105,8 @@ func (m *MemSim) Unmap(addr, size uint64) {
 	tmp := make([]*Page, 0, len(m.Mem))
 	// TODO: use a binary search to find the leftmost mapping?
 	for _, mm := range m.Mem {
-		if mm.Overlaps(addr, size) {
-			left, right := mm.Split(addr, size)
+		if oaddr, osize, ok := mm.Intersect(addr, size); ok {
+			left, right := mm.Split(oaddr, osize)
 			if left != nil {
 				tmp = append(tmp, left)
 			}
@@ -147,9 +134,12 @@ func (m *MemSim) Read(addr uint64, p []byte, prot int) error {
 		}
 		return &MemError{Addr: addr, Size: len(p), Enum: MEM_READ_PROT}
 	}
-	// TODO: consecutive read using bsearch
-	for _, mm := range m.Mem {
-		if mm.Contains(addr) {
+	i := m.Mem.bsearch(addr)
+	if i >= 0 {
+		for _, mm := range m.Mem[i:] {
+			if !mm.Contains(addr) {
+				break
+			}
 			o := addr - mm.Addr
 			n := copy(p, mm.Data[o:])
 			addr, p = addr+uint64(n), p[n:]
@@ -166,9 +156,12 @@ func (m *MemSim) Write(addr uint64, p []byte, prot int) error {
 	} else if !gprot {
 		return &MemError{Addr: addr, Size: len(p), Enum: MEM_WRITE_PROT}
 	}
-	// TODO: consecutive write using bsearch
-	for _, mm := range m.Mem {
-		if mm.Contains(addr) {
+	i := m.Mem.bsearch(addr)
+	if i >= 0 {
+		for _, mm := range m.Mem[i:] {
+			if !mm.Contains(addr) {
+				break
+			}
 			o := addr - mm.Addr
 			n := copy(mm.Data[o:], p)
 			addr, p = addr+uint64(n), p[n:]

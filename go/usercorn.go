@@ -565,13 +565,9 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 		}
 		size := addr - u.brk
 		if size > 0 {
-			err := u.MemMap(u.brk, size, prot)
+			_, err := u.Mmap(u.brk, size, prot, true, "brk", nil)
 			if err != nil {
 				return u.brk, err
-			}
-			// FIXME: don't update Desc after mapping
-			if page := u.mapping(cur, size); page != nil {
-				page.Desc = "brk"
 			}
 		}
 		u.brk = addr
@@ -682,7 +678,7 @@ func (u *Usercorn) mapBinary(f *os.File, isInterp bool) (interpBase, entry, base
 			// TODO: confirm why darwin needs this
 			prot = cpu.PROT_ALL
 		}
-		fileDesc := &cpu.FileDesc{Name: f.Name(), Off: seg.Off}
+		fileDesc := &cpu.FileDesc{Name: f.Name(), Off: seg.Off, Len: seg.Size}
 		_, err = u.Mmap(loadBias+seg.Addr, seg.Size, prot, true, desc, fileDesc)
 		if err != nil {
 			return
@@ -993,4 +989,8 @@ func (u *Usercorn) BreakDel(b *models.Breakpoint) error {
 
 func (u *Usercorn) Breakpoints() []*models.Breakpoint {
 	return u.breaks
+}
+
+func (u *Usercorn) Symbolicate(addr uint64, includeSource bool) (*models.Symbol, string) {
+	return u.debug.Symbolicate(addr, u.Task.Mappings(), includeSource)
 }

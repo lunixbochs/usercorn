@@ -61,10 +61,15 @@ func (r *Replay) update(op models.Op) {
 		r.SpRegs[int(o.Num)] = o.Val
 
 	case *OpMemMap: // memory
-		r.Mem.MemMap(o.Addr, uint64(o.Size), int(o.Prot))
 		if o.New {
-			r.Mem.MemZero(o.Addr, o.Size)
-			// TODO: update desc and file here
+			// TODO: can this be changed to not need direct access to Sim?
+			page := r.Mem.Sim.Map(o.Addr, uint64(o.Size), int(o.Prot), true)
+			page.Desc = o.Desc
+			if o.File != "" {
+				page.File = &cpu.FileDesc{Name: o.File, Off: o.Off, Len: o.Len}
+			}
+		} else {
+			r.Mem.MemProt(o.Addr, uint64(o.Size), int(o.Prot))
 		}
 	case *OpMemUnmap:
 		r.Mem.MemUnmap(o.Addr, uint64(o.Size))
@@ -115,6 +120,7 @@ func (r *Replay) Feed(op models.Op) {
 			r.pending = o
 		case *OpSyscall:
 			r.Flush()
+			r.update(o)
 			r.Emit(o, o.Ops)
 		default:
 			// queue everything else as side-effects
@@ -142,4 +148,8 @@ func (r *Replay) Flush() {
 		r.effects = r.effects[:0]
 		r.pending = nil
 	}
+}
+
+func (r *Replay) Symbolicate(addr uint64, includeSource bool) (*models.Symbol, string) {
+	return r.Debug.Symbolicate(addr, r.Mem.Maps(), includeSource)
 }

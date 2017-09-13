@@ -157,6 +157,7 @@ A new memory region was mapped, or the protection of an existing region was chan
 | dlen |uint16| length of desc field
 | flen |uint16| length of file field
 | off  |uint64| mmap offset into backing file
+| size |uint64| size mapped from backing file
 | desc |utf8  | description of region (such as "heap", "brk", "ld-linux.so")
 | file |utf8  | filename backing region
 

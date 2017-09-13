@@ -62,6 +62,7 @@ func ContextRestore(u Usercorn, ctx *Context) error {
 		u.MemUnmap(m.Addr, m.Size)
 	}
 	// restore saved memory
+	// TODO: use mmap(fixed) for this
 	for _, m := range ctx.mem {
 		u.MemMap(m.Addr, m.Size, m.Prot)
 		u.MemWrite(m.Addr, m.Data)

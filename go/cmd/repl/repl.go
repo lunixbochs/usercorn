@@ -36,7 +36,7 @@ func handleCmd(c *cmd.UsercornCmd, line string) bool {
 		if len(args) != 2 {
 			fmt.Println(helpTxt)
 		} else {
-			addr, err := u.Malloc(parseAddr(u, args[1]))
+			addr, err := u.Malloc(parseAddr(u, args[1]), "alloc")
 			if err != nil {
 				fmt.Println(err)
 			} else {

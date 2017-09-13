@@ -60,10 +60,11 @@ func EnterUsermode(u models.Usercorn) error {
 	// this is manually mapped instead of using RunShellcode() so
 	// the link register will be set to exit the emulator correctly
 	size := uint64(len(modeSwitch))
-	addr, err := u.Malloc(size)
+	addr, err := u.Malloc(size, "shellcode")
 	if err != nil {
 		return err
 	}
+	u.MemProt(addr, size, uc.PROT_ALL)
 	defer u.MemUnmap(addr, size)
 	end := addr + size
 	return u.RunShellcodeMapped(addr, modeSwitch,

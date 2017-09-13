@@ -15,7 +15,7 @@ type Mem struct {
 	// Mem.hooks is set when passing *Mem to NewHooks()
 	hooks *Hooks
 	// MemSim isn't exposed in the interface, so any cpu-facing functionality should be wrapped by Mem
-	sim *MemSim
+	Sim *MemSim
 
 	order binary.ByteOrder
 }
@@ -24,36 +24,36 @@ func NewMem(bits uint, order binary.ByteOrder) *Mem {
 	return &Mem{
 		bits:  bits,
 		mask:  ^uint64(0) >> (64 - bits),
-		sim:   &MemSim{},
+		Sim:   &MemSim{},
 		order: order,
 	}
 }
 
-func (m *Mem) Maps() []*Page {
-	return m.sim.Mem
+func (m *Mem) Maps() Pages {
+	return m.Sim.Mem
 }
 
 func (m *Mem) MemMap(addr, size uint64, prot int) error {
 	if addr+size&m.mask != addr+size {
 		return errors.New("region outside memory range")
 	}
-	m.sim.Map(addr, size, prot, true)
+	m.Sim.Map(addr, size, prot, true)
 	return nil
 }
 
 func (m *Mem) MemProt(addr, size uint64, prot int) error {
-	if mapped, _ := m.sim.RangeValid(addr, size, 0); !mapped {
+	if mapped, _ := m.Sim.RangeValid(addr, size, 0); !mapped {
 		return errors.New("range not mapped")
 	}
-	m.sim.Prot(addr, size, prot)
+	m.Sim.Prot(addr, size, prot)
 	return nil
 }
 
 func (m *Mem) MemUnmap(addr, size uint64) error {
-	if mapped, _ := m.sim.RangeValid(addr, size, 0); !mapped {
+	if mapped, _ := m.Sim.RangeValid(addr, size, 0); !mapped {
 		return errors.New("range not mapped")
 	}
-	m.sim.Unmap(addr, size)
+	m.Sim.Unmap(addr, size)
 	return nil
 }
 
@@ -63,7 +63,7 @@ func (m *Mem) MemZero(addr, size uint64) error {
 }
 
 func (m *Mem) MemReadInto(p []byte, addr uint64) error {
-	return m.sim.Read(addr, p, 0)
+	return m.Sim.Read(addr, p, 0)
 }
 
 func (m *Mem) MemRead(addr, size uint64) ([]byte, error) {
@@ -75,13 +75,13 @@ func (m *Mem) MemRead(addr, size uint64) ([]byte, error) {
 }
 
 func (m *Mem) MemWrite(addr uint64, p []byte) error {
-	return m.sim.Write(addr, p, 0)
+	return m.Sim.Write(addr, p, 0)
 }
 
 // Read while checking protections. This exists to support a CPU interpreter.
 func (m *Mem) ReadProt(addr, size uint64, prot int) ([]byte, error) {
 	p := make([]byte, size)
-	if err := m.sim.Read(addr, p, prot); err != nil {
+	if err := m.Sim.Read(addr, p, prot); err != nil {
 		if merr, ok := err.(*MemError); ok && m.hooks != nil {
 			m.hooks.OnFault(merr.Enum, addr, int(size), 0)
 		}
@@ -99,7 +99,7 @@ func (m *Mem) ReadProt(addr, size uint64, prot int) ([]byte, error) {
 // Write while checking protections. This exists to support a CPU interpreter.
 // Write hooks trigger in WriteUint for now.
 func (m *Mem) WriteProt(addr uint64, p []byte, prot int) error {
-	return m.sim.Write(addr, p, prot)
+	return m.Sim.Write(addr, p, prot)
 }
 
 func (m *Mem) ReadUint(addr uint64, size, prot int) (uint64, error) {

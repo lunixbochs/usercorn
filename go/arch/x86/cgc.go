@@ -89,7 +89,7 @@ func (k *CgcKernel) Fdwait(nfds int, reads, writes, timeoutBuf co.Buf, readyFds 
 func (k *CgcKernel) Allocate(size uint32, executable int32, ret co.Obuf) int {
 	// round up to nearest page
 	size = (size + 0x1000) & ^uint32(0x1000-1)
-	addr, _ := k.U.Malloc(uint64(size))
+	addr, _ := k.U.Malloc(uint64(size), "allocate")
 	if executable != 0 {
 		k.U.MemProt(addr, uint64(size), uc.PROT_ALL)
 	}

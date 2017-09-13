@@ -48,6 +48,7 @@ type Usercorn interface {
 	BreakAdd(desc string, future bool, cb func(u Usercorn, addr uint64)) (*Breakpoint, error)
 	BreakDel(b *Breakpoint) error
 	Breakpoints() []*Breakpoint
+	Symbolicate(addr uint64, includeSource bool) (*Symbol, string)
 
 	Exe() string
 	Loader() Loader

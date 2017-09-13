@@ -91,6 +91,7 @@ func (t *Trace) Attach() error {
 		if m.File != nil {
 			mo.File = m.File.Name
 			mo.Off = m.File.Off
+			mo.Len = m.File.Len
 		}
 		kf.Ops = append(kf.Ops, mo)
 		data, err := t.u.MemRead(m.Addr, m.Size)
@@ -314,11 +315,15 @@ func (t *Trace) OnMemWrite(addr uint64, data []byte) {
 
 func (t *Trace) OnMemMap(addr, size uint64, prot int, new bool, desc string, file *cpu.FileDesc) {
 	var name string
-	var off uint64
+	var off, len uint64
 	if file != nil {
-		name, off = file.Name, file.Off
+		name, off, len = file.Name, file.Off, file.Len
 	}
-	t.Append(&OpMemMap{addr, size, uint8(prot), new, desc, name, off}, false)
+	t.Append(&OpMemMap{
+		Addr: addr, Size: size, Prot: uint8(prot),
+		New: new, Desc: desc,
+		File: name, Off: off, Len: len,
+	}, false)
 }
 
 func (t *Trace) OnMemUnmap(addr, size uint64) {

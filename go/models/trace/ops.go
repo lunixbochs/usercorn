@@ -265,6 +265,7 @@ type OpMemMap struct {
 	Desc string
 	File string
 	Off  uint64
+	Len  uint64
 }
 
 func (o *OpMemMap) Pack(w io.Writer) (int, error) {
@@ -285,13 +286,14 @@ func (o *OpMemMap) Pack(w io.Writer) (int, error) {
 	total := n
 	if o.New {
 		desc, file := []byte(o.Desc), []byte(o.File)
-		tmp := make([]byte, 2+2+8+len(desc)+len(file))
+		tmp := make([]byte, 2+2+8+8+len(desc)+len(file))
 
 		order.PutUint16(tmp[0:], uint16(len(desc)))
 		order.PutUint16(tmp[2:], uint16(len(file)))
 		order.PutUint64(tmp[4:], o.Off)
-		copy(tmp[2+2+8:], desc)
-		copy(tmp[2+2+8+len(desc):], file)
+		order.PutUint64(tmp[12:], o.Len)
+		copy(tmp[2+2+8+8:], desc)
+		copy(tmp[2+2+8+8+len(desc):], file)
 
 		n, err = w.Write(tmp[:])
 		total += n
@@ -308,7 +310,7 @@ func (o *OpMemMap) Unpack(r io.Reader) (int, error) {
 		o.Prot = tmp[16]
 		o.New = tmp[17] > 0
 		if o.New {
-			tmp := make([]byte, 2+2+8)
+			tmp := make([]byte, 2+2+8+8)
 			n, err := io.ReadFull(r, tmp[:])
 			total += n
 			if err != nil {
@@ -318,6 +320,7 @@ func (o *OpMemMap) Unpack(r io.Reader) (int, error) {
 			desc := make([]byte, order.Uint16(tmp[0:]))
 			file := make([]byte, order.Uint16(tmp[2:]))
 			o.Off = order.Uint64(tmp[4:])
+			o.Len = order.Uint64(tmp[12:])
 
 			n, err = io.ReadFull(r, desc[:])
 			total += n

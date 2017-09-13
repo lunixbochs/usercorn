@@ -29,7 +29,7 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 			path = file.Path
 		}
 		if path != "" {
-			fileDesc = &cpu.FileDesc{Name: path, Off: uint64(off)}
+			fileDesc = &cpu.FileDesc{Name: path, Off: uint64(off), Len: size}
 			file = os.NewFile(uintptr(fd2), path)
 			defer file.Close()
 			data = make([]byte, size)
@@ -49,10 +49,8 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 	fixed := flags&MAP_FIXED != 0
 	if addrHint == 0 && !fixed {
 		// don't automap memory within 8MB of the current program break
-		if addrHint == 0 {
-			brk, _ := k.U.Brk(0)
-			addrHint = brk + 0x800000
-		}
+		brk, _ := k.U.Brk(0)
+		addrHint = brk + 0x800000
 	}
 	addr, err := k.U.Mmap(addrHint, size, int(prot), fixed, "mmap", fileDesc)
 	if err != nil {
@@ -68,6 +66,11 @@ func (k *PosixKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, flags enum
 }
 
 func (k *PosixKernel) Munmap(addr, size uint64) uint64 {
+	// TODO: page size
+	if addr&0xfff != 0 {
+		return UINT64_MAX // FIXME: EINVAL
+	}
+	k.U.MemUnmap(addr, size)
 	return 0
 }
 
