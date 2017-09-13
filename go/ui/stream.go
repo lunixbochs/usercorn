@@ -26,6 +26,7 @@ type StreamUI struct {
 	// pending is an OpStep representing the last unflushed instruction. Cleared by Flush().
 	pending *trace.OpStep
 	effects []models.Op
+	lastPC  uint64
 }
 
 func NewStreamUI(c *models.Config, r *trace.Replay) *StreamUI {
@@ -48,8 +49,11 @@ func NewStreamUI(c *models.Config, r *trace.Replay) *StreamUI {
 func (s *StreamUI) Feed(op models.Op, effects []models.Op) {
 	switch o := op.(type) {
 	case *trace.OpJmp:
+		s.blockPrint(s.replay.PC)
+		s.lastPC = s.replay.PC
 	case *trace.OpStep:
 		s.insPrint(s.replay.PC, o.Size, effects)
+		s.lastPC = s.replay.PC
 	case *trace.OpSyscall:
 		s.sysPrint(o)
 	}
@@ -119,16 +123,20 @@ func (s *StreamUI) OnExit(clean bool, msg string) {
 	pc := s.replay.PC
 	sp := s.replay.SP
 	for _, frame := range s.replay.Callstack.Freeze(pc, sp) {
-		_, sym := s.replay.Symbolicate(frame.PC, true)
-		if sym == "" {
-			if page := s.replay.Mem.Maps().Find(frame.PC); s.config.SymFile && page != nil && page.File != nil {
-				sym = fmt.Sprintf("@%s", page.File.Name)
-			}
-		} else {
-			sym = fmt.Sprintf(" %s", sym)
-		}
-		s.Printf("  %#x%s\n", frame.PC, sym)
+		s.Printf("  %#x\n", frame.PC, s.addrsym(frame.PC, true))
 	}
+}
+
+func (s *StreamUI) addrsym(addr uint64, includeSource bool) string {
+	_, sym := s.replay.Symbolicate(addr, true)
+	if sym == "" {
+		if page := s.replay.Mem.Maps().Find(addr); s.config.SymFile && page != nil && page.File != nil {
+			sym = fmt.Sprintf("@%s", page.File.Name)
+		}
+	} else {
+		sym = fmt.Sprintf(" %s", sym)
+	}
+	return fmt.Sprintf("%#x%s", addr, sym)
 }
 
 func (s *StreamUI) dis(addr, size uint64) (string, error) {
@@ -141,7 +149,13 @@ func (s *StreamUI) dis(addr, size uint64) (string, error) {
 
 // blockPrint() takes a basic block address to pretty-print
 func (s *StreamUI) blockPrint(addr uint64) {
-	s.Printf("\n%#x\n", addr)
+	// this fixes a problem displaying `rep mov`
+	if addr != s.lastPC {
+		_, sym := s.replay.Symbolicate(addr, true)
+		if sym != "" {
+			s.Printf("\n%s\n", sym)
+		}
+	}
 }
 
 func (s *StreamUI) Printf(f string, args ...interface{}) { fmt.Fprintf(s.config.Output, f, args...) }

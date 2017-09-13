@@ -26,9 +26,6 @@ type Replay struct {
 }
 
 func NewReplay(arch *models.Arch, os *models.OS, order binary.ByteOrder, dbg *debug.Debug) *Replay {
-	if dbg == nil {
-		dbg = debug.NewDebug(arch.Name, nil)
-	}
 	return &Replay{
 		Arch:   arch,
 		OS:     os,

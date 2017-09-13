@@ -10,6 +10,7 @@ import (
 
 	"github.com/lunixbochs/usercorn/go/arch"
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/lunixbochs/usercorn/go/models/debug"
 	"github.com/lunixbochs/usercorn/go/models/trace"
 	"github.com/lunixbochs/usercorn/go/ui"
 )
@@ -40,7 +41,7 @@ func PrintPretty(tf *trace.TraceReader) error {
 	}
 	config := &models.Config{}
 	config.Init()
-	replay := trace.NewReplay(arch, OS, tf.Header.CodeOrder, nil)
+	replay := trace.NewReplay(arch, OS, tf.Header.CodeOrder, debug.NewDebug(tf.Header.Arch, config))
 	defer replay.Flush()
 	stream := ui.NewStreamUI(config, replay)
 	replay.Listen(stream.Feed)
