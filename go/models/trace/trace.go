@@ -79,7 +79,6 @@ func (t *Trace) Attach() error {
 	if t.attached {
 		return nil
 	}
-	t.attached = true
 	t.regs = make([]uint64, len(t.regEnums))
 	// make a keyframe to catch up (temporary frame is created so we can call OnRegUpdate)
 	t.frame = &OpFrame{}
@@ -106,6 +105,11 @@ func (t *Trace) Attach() error {
 		t.tf.Pack(kf)
 	}
 	// send keyframe to UI to set initial state
+	// we attach and flush here so state predating the keyframe doesn't cause any side effects
+	t.attached = true
+	for _, f := range t.filters {
+		f.Flush()
+	}
 	t.Send(kf)
 
 	if t.config.Block || t.config.Ins || t.config.Reg || t.config.SpecialReg {
@@ -195,6 +199,9 @@ func (t *Trace) Detach() {
 // and on the middle ground, I want register information for an instruction
 // I guess everything between an OpStep/OpJmp goes to the next OpStep/Jmp?
 func (t *Trace) Send(op models.Op) {
+	if !t.attached {
+		return
+	}
 	for _, cb := range t.config.OpCallback {
 		cb(op)
 	}
