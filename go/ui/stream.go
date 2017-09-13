@@ -121,14 +121,13 @@ func (s *StreamUI) OnExit(clean bool, msg string) {
 	for _, frame := range s.replay.Callstack.Freeze(pc, sp) {
 		_, sym := s.replay.Symbolicate(frame.PC, true)
 		if sym == "" {
-			sym = fmt.Sprintf("%#x", frame.PC)
 			if page := s.replay.Mem.Maps().Find(frame.PC); s.config.SymFile && page != nil && page.File != nil {
-				sym = fmt.Sprintf("%#x@%s", frame.PC, page.File.Name)
+				sym = fmt.Sprintf("@%s", page.File.Name)
 			}
 		} else {
-			sym = fmt.Sprintf("%#x %s", frame.PC, sym)
+			sym = fmt.Sprintf(" %s", sym)
 		}
-		s.Printf("  %s\n", sym)
+		s.Printf("  %#x%s\n", frame.PC, sym)
 	}
 }
 

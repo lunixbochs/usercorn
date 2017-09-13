@@ -50,6 +50,7 @@ func (d *Debug) getFile(name string) (*DebugFile, error) {
 		Symbols: symbols,
 		DWARF:   DWARF,
 	}
+	df.CacheSym()
 	d.Lock()
 	d.files[name] = df
 	d.Unlock()
@@ -90,6 +91,10 @@ func (d *Debug) Symbolicate(addr uint64, mem cpu.Pages, includeSource bool) (*mo
 		df, _ := d.File(page.File.Name)
 		if df != nil {
 			sym, dist = df.Symbolicate(addr - page.Addr + page.File.Off)
+			if sym.Name == "" {
+				// FIXME: we should know if this is PIE or not and adjust how we look up symbols instead of trying both ways
+				sym, dist = df.Symbolicate(addr)
+			}
 			if sym.Name != "" && includeSource {
 				if fl := df.FileLine(addr); fl != nil {
 					fileLine = fmt.Sprintf("%s:%d", path.Base(fl.File.Name), fl.Line)
