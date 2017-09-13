@@ -22,8 +22,9 @@ const (
 	OP_MEM_WRITE = 8
 	OP_MEM_MAP   = 9
 	OP_MEM_UNMAP = 10
-	OP_SYSCALL   = 11
-	OP_EXIT      = 12
+	OP_MEM_PROT  = 11
+	OP_SYSCALL   = 12
+	OP_EXIT      = 13
 )
 
 // used by frame, keyframe, and syscall
@@ -78,6 +79,8 @@ func Unpack(r io.Reader, nested bool) (models.Op, int, error) {
 		op = &OpMemMap{}
 	case OP_MEM_UNMAP:
 		op = &OpMemUnmap{}
+	case OP_MEM_PROT:
+		op = &OpMemProt{}
 	case OP_SYSCALL:
 		op = &OpSyscall{}
 	case OP_FRAME:
@@ -261,81 +264,49 @@ type OpMemMap struct {
 	Size uint64
 	Prot uint8
 
-	New  bool
-	Desc string
-	File string
 	Off  uint64
 	Len  uint64
+	Desc string
+	File string
 }
 
 func (o *OpMemMap) Pack(w io.Writer) (int, error) {
-	var tmp [1 + 8 + 8 + 1 + 1]byte
+	desc, file := []byte(o.Desc), []byte(o.File)
+	// op, addr, size, prot(1), off, len, dlen, flen
+	tmp := make([]byte, 1+8+8+1+8+8+2+2+len(desc)+len(file))
 	tmp[0] = OP_MEM_MAP
 	order.PutUint64(tmp[1:], o.Addr)
 	order.PutUint64(tmp[9:], o.Size)
 	tmp[17] = o.Prot
-	if o.New {
-		tmp[18] = 1
-	} else {
-		tmp[18] = 0
-	}
-	n, err := w.Write(tmp[:])
-	if err != nil {
-		return n, err
-	}
-	total := n
-	if o.New {
-		desc, file := []byte(o.Desc), []byte(o.File)
-		tmp := make([]byte, 2+2+8+8+len(desc)+len(file))
-
-		order.PutUint16(tmp[0:], uint16(len(desc)))
-		order.PutUint16(tmp[2:], uint16(len(file)))
-		order.PutUint64(tmp[4:], o.Off)
-		order.PutUint64(tmp[12:], o.Len)
-		copy(tmp[2+2+8+8:], desc)
-		copy(tmp[2+2+8+8+len(desc):], file)
-
-		n, err = w.Write(tmp[:])
-		total += n
-	}
-	return total, err
+	order.PutUint64(tmp[18:], o.Off)
+	order.PutUint64(tmp[24:], o.Len)
+	order.PutUint16(tmp[32:], uint16(len(desc)))
+	order.PutUint16(tmp[34:], uint16(len(file)))
+	copy(tmp[36:], desc)
+	copy(tmp[36+len(desc):], file)
+	return w.Write(tmp[:])
 }
 
 func (o *OpMemMap) Unpack(r io.Reader) (int, error) {
-	var tmp [8 + 8 + 1 + 1]byte
+	var tmp [8 + 8 + 1 + 8 + 8 + 2 + 2]byte
 	total, err := io.ReadFull(r, tmp[:])
 	if err == nil {
 		o.Addr = order.Uint64(tmp[:])
 		o.Size = order.Uint64(tmp[8:])
 		o.Prot = tmp[16]
-		o.New = tmp[17] > 0
-		if o.New {
-			tmp := make([]byte, 2+2+8+8)
-			n, err := io.ReadFull(r, tmp[:])
-			total += n
-			if err != nil {
-				return total, err
-			}
+		o.Off = order.Uint64(tmp[17:])
+		o.Len = order.Uint64(tmp[23:])
+		dlen := order.Uint16(tmp[31:])
+		flen := order.Uint16(tmp[33:])
+		buf := make([]byte, dlen+flen)
 
-			desc := make([]byte, order.Uint16(tmp[0:]))
-			file := make([]byte, order.Uint16(tmp[2:]))
-			o.Off = order.Uint64(tmp[4:])
-			o.Len = order.Uint64(tmp[12:])
-
-			n, err = io.ReadFull(r, desc[:])
-			total += n
-			if err != nil {
-				return total, err
-			}
-
-			n, err = io.ReadFull(r, file[:])
-			total += n
-			if err != nil {
-				return total, err
-			}
-			o.Desc = string(desc)
-			o.File = string(file)
+		n, err := io.ReadFull(r, buf)
+		total += n
+		if err != nil {
+			return total, err
 		}
+		o.Desc = string(buf[:dlen])
+		o.File = string(buf[dlen:])
 	}
 	return total, err
 }
@@ -363,6 +334,32 @@ func (o *OpMemUnmap) Unpack(r io.Reader) (int, error) {
 	return n, err
 }
 
+type OpMemProt struct {
+	Addr uint64
+	Size uint64
+	Prot uint8
+}
+
+func (o *OpMemProt) Pack(w io.Writer) (int, error) {
+	var tmp [1 + 8 + 8 + 1]byte
+	tmp[0] = OP_MEM_PROT
+	order.PutUint64(tmp[1:], o.Addr)
+	order.PutUint64(tmp[9:], o.Size)
+	tmp[17] = o.Prot
+	return w.Write(tmp[:])
+}
+
+func (o *OpMemProt) Unpack(r io.Reader) (int, error) {
+	var tmp [8 + 8 + 1]byte
+	n, err := io.ReadFull(r, tmp[:])
+	if err == nil {
+		o.Addr = order.Uint64(tmp[:])
+		o.Size = order.Uint64(tmp[8:])
+		o.Prot = tmp[16]
+	}
+	return n, err
+}
+
 type OpSyscall struct {
 	Num  uint32
 	Ret  uint64
@@ -371,31 +368,26 @@ type OpSyscall struct {
 	Ops  []models.Op
 }
 
-func (o *OpSyscall) Pack(w io.Writer) (total int, err error) {
+func (o *OpSyscall) Pack(w io.Writer) (int, error) {
 	// pack header
-	var tmp [1 + 4 + 8 + 1 + 2]byte
+	size := 1 + 4 + 8 + 1 + 2
+	tmp := make([]byte, size+len(o.Args)*8)
 	tmp[0] = OP_SYSCALL
 	order.PutUint32(tmp[1:], o.Num)
 	order.PutUint64(tmp[5:], o.Ret)
 	tmp[13] = uint8(len(o.Args))
 	order.PutUint16(tmp[14:], uint16(len(o.Ops)))
-	if total, err = w.Write(tmp[:]); err != nil {
-		return total, err
-	}
-
 	// pack args
-	tmp2 := make([]byte, len(o.Args)*8)
 	for i, v := range o.Args {
-		order.PutUint64(tmp2[i*8:], v)
+		order.PutUint64(tmp[size+i*8:], v)
 	}
-	if n, err := w.Write(tmp2); err != nil {
-		return total + n, err
-	} else {
+	var n int
+	total, err := w.Write(tmp)
+	if err == nil {
+		// pack sub-ops
+		n, err = packOps(w, o.Ops)
 		total += n
 	}
-
-	// pack sub-ops
-	n, err := packOps(w, o.Ops)
 	return total + n, err
 }
 

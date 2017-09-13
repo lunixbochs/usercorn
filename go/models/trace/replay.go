@@ -58,18 +58,16 @@ func (r *Replay) update(op models.Op) {
 		r.SpRegs[int(o.Num)] = o.Val
 
 	case *OpMemMap: // memory
-		if o.New {
-			// TODO: can this be changed to not need direct access to Sim?
-			page := r.Mem.Sim.Map(o.Addr, uint64(o.Size), int(o.Prot), true)
-			page.Desc = o.Desc
-			if o.File != "" {
-				page.File = &cpu.FileDesc{Name: o.File, Off: o.Off, Len: o.Len}
-			}
-		} else {
-			r.Mem.MemProt(o.Addr, uint64(o.Size), int(o.Prot))
+		// TODO: can this be changed to not need direct access to Sim?
+		page := r.Mem.Sim.Map(o.Addr, uint64(o.Size), int(o.Prot), true)
+		page.Desc = o.Desc
+		if o.File != "" {
+			page.File = &cpu.FileDesc{Name: o.File, Off: o.Off, Len: o.Len}
 		}
 	case *OpMemUnmap:
 		r.Mem.MemUnmap(o.Addr, uint64(o.Size))
+	case *OpMemProt:
+		r.Mem.MemProt(o.Addr, uint64(o.Size), int(o.Prot))
 	case *OpMemWrite:
 		r.Mem.MemWrite(o.Addr, o.Data)
 

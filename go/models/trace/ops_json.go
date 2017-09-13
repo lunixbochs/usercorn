@@ -1,95 +1,119 @@
 package trace
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"strconv"
+
+	"github.com/lunixbochs/usercorn/go/models"
 )
 
 type msp map[string]interface{}
 
-func bprintf(f string, args ...interface{}) []byte {
-	return []byte(fmt.Sprintf(f, args...))
+func marshalOps(ops []models.Op) []byte {
+	bops := make([][]byte, len(ops))
+	for i, op := range ops {
+		bops[i], _ = op.MarshalJSON()
+	}
+	return bytes.Join(bops, []byte(","))
 }
 
 func (o *OpNop) MarshalJSON() ([]byte, error) {
-	return bprintf(`{"op":%d}`, OP_NOP), nil
+	return append(strconv.AppendUint([]byte(`{"op":`), OP_NOP, 10), '}'), nil
 }
 
 func (o *OpExit) MarshalJSON() ([]byte, error) {
-	return bprintf(`{"op":%d}`, OP_EXIT), nil
+	return append(strconv.AppendUint([]byte(`{"op":`), OP_EXIT, 10), '}'), nil
 }
 
 func (o *OpJmp) MarshalJSON() ([]byte, error) {
-	return bprintf(`{"op":%d,"addr":%d,"size":%d}`, OP_JMP, o.Addr, o.Size), nil
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_JMP, 10), []byte(`,"addr":`)...)
+	out = append(strconv.AppendUint(out, o.Addr, 10), []byte(`,"size":`)...)
+	return append(strconv.AppendUint(out, uint64(o.Size), 10), '}'), nil
 }
 
 func (o *OpStep) MarshalJSON() ([]byte, error) {
-	return bprintf(`{"op":%d,"size":%d}`, OP_STEP, o.Size), nil
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_STEP, 10), []byte(`,"size":`)...)
+	return append(strconv.AppendUint(out, uint64(o.Size), 10), '}'), nil
 }
 
 func (o *OpReg) MarshalJSON() ([]byte, error) {
-	return bprintf(`{"op":%d,"num":%d,"val":%d}`, OP_REG, o.Num, o.Val), nil
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_REG, 10), []byte(`,"num":`)...)
+	out = append(strconv.AppendUint(out, uint64(o.Num), 10), []byte(`,"val":`)...)
+	return append(strconv.AppendUint(out, uint64(o.Val), 10), '}'), nil
 }
 
 func (o *OpSpReg) MarshalJSON() ([]byte, error) {
-	val := base64.StdEncoding.EncodeToString(o.Val)
-	return bprintf(`{"op":%d,"num":%d,"val":"%s"}`, OP_SPREG, o.Num, val), nil
+	tmp := make([]byte, base64.StdEncoding.EncodedLen(len(o.Val)))
+	base64.StdEncoding.Encode(tmp, o.Val)
+
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_SPREG, 10), []byte(`,"num":`)...)
+	out = append(strconv.AppendUint(out, uint64(o.Num), 10), []byte(`,"val":"`)...)
+	return append(append(out, tmp...), []byte(`"}`)...), nil
 }
 
 func (o *OpMemRead) MarshalJSON() ([]byte, error) {
-	return bprintf(`{"op":%d,"addr":%d,"size":"%d"}`, OP_MEM_READ, o.Addr, o.Size), nil
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_MEM_READ, 10), []byte(`,"addr":`)...)
+	out = append(strconv.AppendUint(out, o.Addr, 10), []byte(`,"size":`)...)
+	return append(strconv.AppendUint(out, uint64(o.Size), 10), '}'), nil
 }
 
 func (o *OpMemWrite) MarshalJSON() ([]byte, error) {
-	data := base64.StdEncoding.EncodeToString(o.Data)
-	return bprintf(`{"op":%d,"addr":%d,"data":"%s"}`, OP_MEM_WRITE, o.Addr, data), nil
+	tmp := make([]byte, base64.StdEncoding.EncodedLen(len(o.Data)))
+	base64.StdEncoding.Encode(tmp, o.Data)
+
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_MEM_WRITE, 10), []byte(`,"addr":`)...)
+	out = append(strconv.AppendUint(out, o.Addr, 10), []byte(`,"data":"`)...)
+	return append(append(out, tmp...), []byte(`"}`)...), nil
 }
 
 func (o *OpMemMap) MarshalJSON() ([]byte, error) {
-	extra := ""
-	if o.New {
-		desc, err := json.Marshal(o.Desc)
-		if err != nil {
-			return nil, err
-		}
-		file, err := json.Marshal(o.File)
-		if err != nil {
-			return nil, err
-		}
-		extra = fmt.Sprintf(`,"desc":%s,"file":%s,"off":%d`, desc, file, o.Off)
-	}
-	return bprintf(`{"op":%d,"addr":%d,"size":%d,"prot":%d,"new":%v%s}`, OP_MEM_MAP, o.Addr, o.Size, o.Prot, o.New, extra), nil
+	desc, _ := json.Marshal(o.Desc)
+	file, _ := json.Marshal(o.File)
+	out := strconv.AppendUint([]byte(`{"op":`), OP_MEM_MAP, 10)
+	out = append(append(out, []byte(`,"desc":`)...), desc...)
+	out = append(append(out, []byte(`,"file":`)...), file...)
+
+	out = strconv.AppendUint(append(out, []byte(`,"off":`)...), o.Off, 10)
+	return append(strconv.AppendUint(append(out, []byte(`,"len":`)...), o.Len, 10), '}'), nil
 }
 
 func (o *OpMemUnmap) MarshalJSON() ([]byte, error) {
-	return bprintf(`{"op":%d,"addr":%d,"size":%d}`, OP_MEM_UNMAP, o.Addr, o.Size), nil
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_MEM_UNMAP, 10), []byte(`,"addr":`)...)
+	out = append(strconv.AppendUint(out, o.Addr, 10), []byte(`,"size":`)...)
+	return append(strconv.AppendUint(out, uint64(o.Size), 10), '}'), nil
+}
+
+func (o *OpMemProt) MarshalJSON() ([]byte, error) {
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_MEM_PROT, 10), []byte(`,"addr":`)...)
+	out = append(strconv.AppendUint(out, o.Addr, 10), []byte(`,"size":`)...)
+	out = append(strconv.AppendUint(out, uint64(o.Size), 10), []byte(`,"prot":`)...)
+	return append(strconv.AppendUint(out, uint64(o.Prot), 10), '}'), nil
 }
 
 func (o *OpSyscall) MarshalJSON() ([]byte, error) {
-	args, err := json.Marshal(o.Args)
-	if err != nil {
-		return nil, err
+	var args []byte
+	for i, v := range o.Args {
+		args = strconv.AppendUint(args, v, 10)
+		if i < len(o.Args)-1 {
+			args = append(args, ',')
+		}
 	}
-	ops, err := json.Marshal(o.Ops)
-	if err != nil {
-		return nil, err
-	}
-	return bprintf(`{"op":%d,"args":%s,"ret":%d,"ops":%s}`, OP_SYSCALL, args, o.Ret, ops), nil
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_SYSCALL, 10), []byte(`,"args":[`)...)
+	out = append(append(out, args...), []byte(`],"ret":`)...)
+	out = append(strconv.AppendUint(out, o.Ret, 10), []byte(`,"ops":[`)...)
+	return append(append(out, marshalOps(o.Ops)...), []byte(`]}`)...), nil
 }
 
 func (o *OpKeyframe) MarshalJSON() ([]byte, error) {
-	ops, err := json.Marshal(o.Ops)
-	if err != nil {
-		return nil, err
-	}
-	return bprintf(`{"op":%d,"pid":%d,"ops":%s}`, OP_KEYFRAME, o.Pid, ops), nil
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_KEYFRAME, 10), []byte(`,"pid":`)...)
+	out = append(strconv.AppendUint(out, uint64(o.Pid), 10), []byte(`,"ops":[`)...)
+	return append(append(out, marshalOps(o.Ops)...), []byte(`]}`)...), nil
 }
 
 func (o *OpFrame) MarshalJSON() ([]byte, error) {
-	ops, err := json.Marshal(o.Ops)
-	if err != nil {
-		return nil, err
-	}
-	return bprintf(`{"op":%d,"pid":%d,"ops":%s}`, OP_FRAME, o.Pid, ops), nil
+	out := append(strconv.AppendUint([]byte(`{"op":`), OP_FRAME, 10), []byte(`,"pid":`)...)
+	out = append(strconv.AppendUint(out, uint64(o.Pid), 10), []byte(`,"ops":[`)...)
+	return append(append(out, marshalOps(o.Ops)...), []byte(`]}`)...), nil
 }

@@ -12,8 +12,10 @@ import (
 // these OPs are ordered to be semi-valid, so not by number
 var allButSyscall = []models.Op{
 	&OpNop{},
-	&OpMemMap{0x1000, 0x1000, 7, false, "", "", 0, 0},
-	&OpMemMap{0x1000, 0x1000, 7, true, "desc", "filename", 1234, 0},
+	&OpMemMap{0x1000, 0x1000, 7, 0, 0, "", ""},
+	&OpMemMap{0x1000, 0x1000, 7, 1234, 0, "desc", "filename"},
+	&OpMemProt{0x1000, 0x1000, 0},
+	&OpMemProt{0x1000, 0x1000, 7},
 	&OpMemWrite{0x1000, []byte{0x48, 0xc7, 0xc0, 0x01, 0x00, 0x00, 0x00}}, // mov rax, 1
 	&OpJmp{0x1000, 0x7},
 	&OpStep{0x7},
@@ -26,9 +28,10 @@ var allButSyscall = []models.Op{
 }
 
 var testSyscall = &OpSyscall{
-	Num: 1,
-	Ret: 2,
-	Ops: allButSyscall,
+	Num:  1,
+	Ret:  2,
+	Args: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
+	Ops:  allButSyscall,
 }
 
 var allUnframed = append(allButSyscall, testSyscall)
@@ -79,8 +82,13 @@ func BenchmarkUnpack(b *testing.B) {
 }
 
 func BenchmarkJsonPack(b *testing.B) {
+	_, err := json.Marshal(testFrame)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		json.Marshal(testFrame)
+		testFrame.MarshalJSON()
 	}
 }
 

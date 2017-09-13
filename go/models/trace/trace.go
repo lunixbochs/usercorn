@@ -86,7 +86,7 @@ func (t *Trace) Attach() error {
 	kf := &OpKeyframe{Ops: t.frame.Ops}
 	t.frame = nil
 	for _, m := range t.u.Mappings() {
-		mo := &OpMemMap{Addr: m.Addr, Size: m.Size, Prot: uint8(m.Prot), New: true, Desc: m.Desc}
+		mo := &OpMemMap{Addr: m.Addr, Size: m.Size, Prot: uint8(m.Prot), Desc: m.Desc}
 		if m.File != nil {
 			mo.File = m.File.Name
 			mo.Off = m.File.Off
@@ -145,7 +145,7 @@ func (t *Trace) Attach() error {
 			}, 1, 0); err != nil {
 			return err
 		}
-		t.mapHook = t.u.HookMapAdd(t.OnMemMap, t.OnMemUnmap)
+		t.mapHook = t.u.HookMapAdd(t.OnMemMap, t.OnMemUnmap, t.OnMemProt)
 	}
 	if t.config.Sys {
 		// TODO: where are keyframes?
@@ -320,21 +320,24 @@ func (t *Trace) OnMemWrite(addr uint64, data []byte) {
 	t.Append(&OpMemWrite{addr, data}, false)
 }
 
-func (t *Trace) OnMemMap(addr, size uint64, prot int, new bool, desc string, file *cpu.FileDesc) {
+func (t *Trace) OnMemMap(addr, size uint64, prot int, desc string, file *cpu.FileDesc) {
 	var name string
 	var off, len uint64
 	if file != nil {
 		name, off, len = file.Name, file.Off, file.Len
 	}
 	t.Append(&OpMemMap{
-		Addr: addr, Size: size, Prot: uint8(prot),
-		New: new, Desc: desc,
+		Addr: addr, Size: size, Prot: uint8(prot), Desc: desc,
 		File: name, Off: off, Len: len,
 	}, false)
 }
 
 func (t *Trace) OnMemUnmap(addr, size uint64) {
 	t.Append(&OpMemUnmap{addr, size}, false)
+}
+
+func (t *Trace) OnMemProt(addr, size uint64, prot int) {
+	t.Append(&OpMemProt{addr, size, uint8(prot)}, false)
 }
 
 func (t *Trace) OnSysPre(num int, args []uint64, ret uint64, desc string) {

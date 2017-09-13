@@ -46,8 +46,9 @@ Message types
 | 8  | OP\_MEM\_WRITE
 | 9  | OP\_MEM\_MAP
 | 10 | OP\_MEM\_UNMAP
-| 11 | OP\_SYSCALL
-| 12 | OP\_EXIT
+| 11 | OP\_MEM\_PROT
+| 12 | OP\_SYSCALL
+| 13 | OP\_EXIT
 
 Message Formats
 ====
@@ -144,20 +145,18 @@ Memory write performed.
 OP\_MEM\_MAP
 ----
 
-A new memory region was mapped, or the protection of an existing region was changed. This opcode does not zero memory or include file mapping information unless the `new` flag is set to 1.
+A new memory region was mapped. The new memory region is zero-filled, including any areas overlapping existing mappings.
 
 | name | type | desc |
 |------|------|------|
 | op   |uint8 | OP\_MEM\_MAP
 | addr |uint64| Memory address
 | size |uint32| Size of region
-| prot |uint8 | Protection flags (RWX)
-| new  |uint8 | (1) if region is a new mapping. If not, the following fields will be omitted.
-|------|------|------|
-| dlen |uint16| length of desc field
-| flen |uint16| length of file field
+| prot |uint8 | Protection mask (R=1 W=2 X=4)
 | off  |uint64| mmap offset into backing file
 | size |uint64| size mapped from backing file
+| dlen |uint16| length of desc field
+| flen |uint16| length of file field
 | desc |utf8  | description of region (such as "heap", "brk", "ld-linux.so")
 | file |utf8  | filename backing region
 
@@ -171,6 +170,18 @@ A memory region was unmapped.
 | op   |uint8 | OP\_MEM\_UNMAP
 | addr |uint64| Memory address
 | size |uint32| Size of region
+
+OP\_MEM\_PROT
+----
+
+Protection changed on an arbitrary memory area, which may be a subset of one region or overlap multiple regions.
+
+| name | type | desc |
+|------|------|------|
+| op   |uint8 | OP\_MEM\_PROT
+| addr |uint64| Memory address
+| size |uint32| Size of region
+| prot |uint8 | Protection mask (R=1 W=2 X=4)
 
 OP\_SYSCALL
 ----

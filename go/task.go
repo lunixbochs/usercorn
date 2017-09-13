@@ -77,7 +77,7 @@ func (t *Task) MemMap(addr, size uint64, prot int) error {
 	return err
 }
 
-func (t *Task) MemProtect(addr, size uint64, prot int) error {
+func (t *Task) MemProt(addr, size uint64, prot int) error {
 	// TODO: mapping a subregion should split the mapping?
 	addr, size = align(addr, size, true)
 	if mmap := t.mapping(addr, size); mmap != nil {
@@ -86,10 +86,10 @@ func (t *Task) MemProtect(addr, size uint64, prot int) error {
 	err := t.Cpu.MemProt(addr, size, prot)
 	if err == nil {
 		for _, v := range t.mapHooks {
-			v.Map(addr, size, prot, false, "", nil)
+			v.Prot(addr, size, prot)
 		}
 	}
-	return errors.Wrap(err, "t.MemProtect() failed")
+	return errors.Wrap(err, "t.MemProt() failed")
 }
 
 func (t *Task) MemUnmap(addr, size uint64) error {
@@ -201,7 +201,7 @@ func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *
 		t.mem = append(t.mem, page)
 		sort.Sort(t.mem)
 		for _, v := range t.mapHooks {
-			v.Map(page.Addr, page.Size, page.Prot, true, page.Desc, page.File)
+			v.Map(page.Addr, page.Size, page.Prot, page.Desc, page.File)
 		}
 	}
 	return page.Addr, err
@@ -303,8 +303,8 @@ func (t *Task) MemReadInto(p []byte, addr uint64) error {
 	return errors.Wrap(err, "t.MemReadInto() failed")
 }
 
-func (t *Task) HookMapAdd(mapCb models.MapCb, unmap models.UnmapCb) *models.MapHook {
-	hook := &models.MapHook{Map: mapCb, Unmap: unmap}
+func (t *Task) HookMapAdd(mapCb models.MapCb, unmap models.UnmapCb, prot models.ProtCb) *models.MapHook {
+	hook := &models.MapHook{Map: mapCb, Unmap: unmap, Prot: prot}
 	t.mapHooks = append(t.mapHooks, hook)
 	return hook
 }

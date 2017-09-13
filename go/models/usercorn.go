@@ -12,11 +12,13 @@ type SysHook struct {
 	Before, After SysCb
 }
 
-type MapCb func(addr, size uint64, prot int, new bool, desc string, file *cpu.FileDesc)
+type MapCb func(addr, size uint64, prot int, desc string, file *cpu.FileDesc)
 type UnmapCb func(addr, size uint64)
+type ProtCb func(addr, size uint64, prot int)
 type MapHook struct {
 	Map   MapCb
 	Unmap UnmapCb
+	Prot  ProtCb
 }
 
 type Usercorn interface {
@@ -64,7 +66,7 @@ type Usercorn interface {
 
 	HookSysAdd(before, after SysCb) *SysHook
 	HookSysDel(cb *SysHook)
-	HookMapAdd(mapCb MapCb, unmapCb UnmapCb) *MapHook
+	HookMapAdd(mapCb MapCb, unmapCb UnmapCb, protCb ProtCb) *MapHook
 	HookMapDel(cb *MapHook)
 
 	AddKernel(kernel interface{}, first bool)
