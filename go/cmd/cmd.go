@@ -244,8 +244,8 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	if *looproll == 0 && *trace {
 		*looproll = 8
 	}
-	if *tracefile == "" && !*tui && *trace && !*streamui {
-		*trace = true
+	anytrace := *trace || *strace || *mtrace || *mtrace2 || *btrace || *etrace || *rtrace || *ftrace
+	if *tracefile == "" && anytrace && !*tui && !*streamui {
 		*streamui = true
 	}
 	if *startrepl || *tui {
