@@ -127,7 +127,11 @@ func (c *Config) PrefixPath(path string, force bool) string {
 	if filepath.IsAbs(path) && !strings.HasPrefix(path, c.LoadPrefix) {
 		target = filepath.Join(c.LoadPrefix, path)
 	}
-	return c.resolveSymlink(target, path, force)
+	resolved := c.resolveSymlink(target, path, force)
+	if _, err := os.Stat(resolved); force || err == nil {
+		return resolved
+	}
+	return path
 }
 
 func (c *Config) PrefixRel(path string) string {
