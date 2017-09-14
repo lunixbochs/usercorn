@@ -28,15 +28,11 @@ const (
 )
 
 // used by frame, keyframe, and syscall
-func packOps(w io.Writer, ops []models.Op) (total int, err error) {
-	for _, v := range ops {
-		if n, err := v.Pack(w); err != nil {
-			return total + n, errors.Wrap(err, "packing op list")
-		} else {
-			total += n
-		}
+func packOps(p []byte, ops []models.Op) {
+	for _, op := range ops {
+		op.Pack(p)
+		p = p[op.Sizeof():]
 	}
-	return total, nil
 }
 
 // used by frame, keyframe, and syscall
@@ -101,24 +97,25 @@ func Unpack(r io.Reader, nested bool) (models.Op, int, error) {
 
 type OpNop struct{}
 
-func (o *OpNop) Pack(w io.Writer) (int, error)   { return w.Write([]byte{OP_NOP}) }
+func (o *OpNop) Sizeof() int   { return 1 }
+func (o *OpNop) Pack(p []byte) { p[0] = OP_NOP }
+
 func (o *OpNop) Unpack(r io.Reader) (int, error) { return 0, nil }
 
 type OpExit struct{ OpNop }
 
-func (o *OpExit) Pack(w io.Writer) (int, error) { return w.Write([]byte{OP_EXIT}) }
+func (o *OpExit) Pack(p []byte) { p[0] = OP_EXIT }
 
 type OpJmp struct {
 	Addr uint64
 	Size uint32
 }
 
-func (o *OpJmp) Pack(w io.Writer) (int, error) {
-	var tmp [1 + 8 + 4]byte
-	tmp[0] = OP_JMP
-	order.PutUint64(tmp[1:], o.Addr)
-	order.PutUint32(tmp[9:], o.Size)
-	return w.Write(tmp[:])
+func (o *OpJmp) Sizeof() int { return 1 + 8 + 4 }
+func (o *OpJmp) Pack(p []byte) {
+	p[0] = OP_JMP
+	order.PutUint64(p[1:], o.Addr)
+	order.PutUint32(p[9:], o.Size)
 }
 
 func (o *OpJmp) Unpack(r io.Reader) (int, error) {
@@ -135,8 +132,10 @@ type OpStep struct {
 	Size uint8
 }
 
-func (o *OpStep) Pack(w io.Writer) (int, error) {
-	return w.Write([]byte{OP_STEP, o.Size})
+func (o *OpStep) Sizeof() int { return 2 }
+func (o *OpStep) Pack(p []byte) {
+	p[0] = OP_STEP
+	p[1] = o.Size
 }
 
 func (o *OpStep) Unpack(r io.Reader) (int, error) {
@@ -153,12 +152,11 @@ type OpReg struct {
 	Val uint64
 }
 
-func (o *OpReg) Pack(w io.Writer) (int, error) {
-	var tmp [1 + 2 + 8]byte
-	tmp[0] = OP_REG
-	order.PutUint16(tmp[1:], o.Num)
-	order.PutUint64(tmp[3:], o.Val)
-	return w.Write(tmp[:])
+func (o *OpReg) Sizeof() int { return 1 + 2 + 8 }
+func (o *OpReg) Pack(p []byte) {
+	p[0] = OP_REG
+	order.PutUint16(p[1:], o.Num)
+	order.PutUint64(p[3:], o.Val)
 }
 
 func (o *OpReg) Unpack(r io.Reader) (int, error) {
@@ -176,17 +174,12 @@ type OpSpReg struct {
 	Val []byte
 }
 
-func (o *OpSpReg) Pack(w io.Writer) (int, error) {
-	var tmp [1 + 2 + 2]byte
-	tmp[0] = OP_SPREG
-	order.PutUint16(tmp[1:], o.Num)
-	order.PutUint16(tmp[3:], uint16(len(o.Val)))
-	total, err := w.Write(tmp[:])
-	if err != nil {
-		return total, err
-	}
-	n, err := w.Write(o.Val)
-	return total + n, err
+func (o *OpSpReg) Sizeof() int { return 1 + 2 + 2 + len(o.Val) }
+func (o *OpSpReg) Pack(p []byte) {
+	p[0] = OP_SPREG
+	order.PutUint16(p[1:], o.Num)
+	order.PutUint16(p[3:], uint16(len(o.Val)))
+	copy(p[5:], o.Val)
 }
 
 func (o *OpSpReg) Unpack(r io.Reader) (int, error) {
@@ -207,12 +200,11 @@ type OpMemRead struct {
 	Size uint32
 }
 
-func (o *OpMemRead) Pack(w io.Writer) (int, error) {
-	var tmp [1 + 8 + 4]byte
-	tmp[0] = OP_MEM_READ
-	order.PutUint64(tmp[1:], o.Addr)
-	order.PutUint32(tmp[9:], o.Size)
-	return w.Write(tmp[:])
+func (o *OpMemRead) Sizeof() int { return 1 + 8 + 4 }
+func (o *OpMemRead) Pack(p []byte) {
+	p[0] = OP_MEM_READ
+	order.PutUint64(p[1:], o.Addr)
+	order.PutUint32(p[9:], o.Size)
 }
 
 func (o *OpMemRead) Unpack(r io.Reader) (int, error) {
@@ -230,17 +222,12 @@ type OpMemWrite struct {
 	Data []byte
 }
 
-func (o *OpMemWrite) Pack(w io.Writer) (int, error) {
-	var tmp [1 + 8 + 4]byte
-	tmp[0] = OP_MEM_WRITE
-	order.PutUint64(tmp[1:], o.Addr)
-	order.PutUint32(tmp[9:], uint32(len(o.Data)))
-	total, err := w.Write(tmp[:])
-	if err != nil {
-		return total, err
-	}
-	n, err := w.Write(o.Data)
-	return total + n, err
+func (o *OpMemWrite) Sizeof() int { return 1 + 8 + 4 + len(o.Data) }
+func (o *OpMemWrite) Pack(p []byte) {
+	p[0] = OP_MEM_WRITE
+	order.PutUint64(p[1:], o.Addr)
+	order.PutUint32(p[9:], uint32(len(o.Data)))
+	copy(p[13:], o.Data)
 }
 
 func (o *OpMemWrite) Unpack(r io.Reader) (int, error) {
@@ -270,21 +257,22 @@ type OpMemMap struct {
 	File string
 }
 
-func (o *OpMemMap) Pack(w io.Writer) (int, error) {
+func (o *OpMemMap) Sizeof() int {
+	return 1 + 8 + 8 + 1 + 8 + 8 + 2 + 2 + len([]byte(o.Desc)) + len([]byte(o.File))
+}
+func (o *OpMemMap) Pack(p []byte) {
 	desc, file := []byte(o.Desc), []byte(o.File)
 	// op, addr, size, prot(1), off, len, dlen, flen
-	tmp := make([]byte, 1+8+8+1+8+8+2+2+len(desc)+len(file))
-	tmp[0] = OP_MEM_MAP
-	order.PutUint64(tmp[1:], o.Addr)
-	order.PutUint64(tmp[9:], o.Size)
-	tmp[17] = o.Prot
-	order.PutUint64(tmp[18:], o.Off)
-	order.PutUint64(tmp[24:], o.Len)
-	order.PutUint16(tmp[32:], uint16(len(desc)))
-	order.PutUint16(tmp[34:], uint16(len(file)))
-	copy(tmp[36:], desc)
-	copy(tmp[36+len(desc):], file)
-	return w.Write(tmp[:])
+	p[0] = OP_MEM_MAP
+	order.PutUint64(p[1:], o.Addr)
+	order.PutUint64(p[9:], o.Size)
+	p[17] = o.Prot
+	order.PutUint64(p[18:], o.Off)
+	order.PutUint64(p[26:], o.Len)
+	order.PutUint16(p[34:], uint16(len(desc)))
+	order.PutUint16(p[36:], uint16(len(file)))
+	copy(p[38:], desc)
+	copy(p[38+len(desc):], file)
 }
 
 func (o *OpMemMap) Unpack(r io.Reader) (int, error) {
@@ -295,9 +283,9 @@ func (o *OpMemMap) Unpack(r io.Reader) (int, error) {
 		o.Size = order.Uint64(tmp[8:])
 		o.Prot = tmp[16]
 		o.Off = order.Uint64(tmp[17:])
-		o.Len = order.Uint64(tmp[23:])
-		dlen := order.Uint16(tmp[31:])
-		flen := order.Uint16(tmp[33:])
+		o.Len = order.Uint64(tmp[25:])
+		dlen := order.Uint16(tmp[33:])
+		flen := order.Uint16(tmp[35:])
 		buf := make([]byte, dlen+flen)
 
 		n, err := io.ReadFull(r, buf)
@@ -316,12 +304,11 @@ type OpMemUnmap struct {
 	Size uint64
 }
 
-func (o *OpMemUnmap) Pack(w io.Writer) (int, error) {
-	var tmp [1 + 8 + 8]byte
-	tmp[0] = OP_MEM_UNMAP
-	order.PutUint64(tmp[1:], o.Addr)
-	order.PutUint64(tmp[9:], o.Size)
-	return w.Write(tmp[:])
+func (o *OpMemUnmap) Sizeof() int { return 1 + 8 + 8 }
+func (o *OpMemUnmap) Pack(p []byte) {
+	p[0] = OP_MEM_UNMAP
+	order.PutUint64(p[1:], o.Addr)
+	order.PutUint64(p[9:], o.Size)
 }
 
 func (o *OpMemUnmap) Unpack(r io.Reader) (int, error) {
@@ -340,13 +327,12 @@ type OpMemProt struct {
 	Prot uint8
 }
 
-func (o *OpMemProt) Pack(w io.Writer) (int, error) {
-	var tmp [1 + 8 + 8 + 1]byte
-	tmp[0] = OP_MEM_PROT
-	order.PutUint64(tmp[1:], o.Addr)
-	order.PutUint64(tmp[9:], o.Size)
-	tmp[17] = o.Prot
-	return w.Write(tmp[:])
+func (o *OpMemProt) Sizeof() int { return 1 + 8 + 8 + 1 }
+func (o *OpMemProt) Pack(p []byte) {
+	p[0] = OP_MEM_PROT
+	order.PutUint64(p[1:], o.Addr)
+	order.PutUint64(p[9:], o.Size)
+	p[17] = o.Prot
 }
 
 func (o *OpMemProt) Unpack(r io.Reader) (int, error) {
@@ -368,27 +354,26 @@ type OpSyscall struct {
 	Ops  []models.Op
 }
 
-func (o *OpSyscall) Pack(w io.Writer) (int, error) {
+func (o *OpSyscall) Sizeof() int {
+	size := 1 + 4 + 8 + 1 + 2 + len(o.Args)*8
+	for _, op := range o.Ops {
+		size += op.Sizeof()
+	}
+	return size
+}
+func (o *OpSyscall) Pack(p []byte) {
 	// pack header
 	size := 1 + 4 + 8 + 1 + 2
-	tmp := make([]byte, size+len(o.Args)*8)
-	tmp[0] = OP_SYSCALL
-	order.PutUint32(tmp[1:], o.Num)
-	order.PutUint64(tmp[5:], o.Ret)
-	tmp[13] = uint8(len(o.Args))
-	order.PutUint16(tmp[14:], uint16(len(o.Ops)))
+	p[0] = OP_SYSCALL
+	order.PutUint32(p[1:], o.Num)
+	order.PutUint64(p[5:], o.Ret)
+	p[13] = uint8(len(o.Args))
+	order.PutUint16(p[14:], uint16(len(o.Ops)))
 	// pack args
 	for i, v := range o.Args {
-		order.PutUint64(tmp[size+i*8:], v)
+		order.PutUint64(p[size+i*8:], v)
 	}
-	var n int
-	total, err := w.Write(tmp)
-	if err == nil {
-		// pack sub-ops
-		n, err = packOps(w, o.Ops)
-		total += n
-	}
-	return total + n, err
+	packOps(p[size+len(o.Args)*8:], o.Ops)
 }
 
 func (o *OpSyscall) Unpack(r io.Reader) (int, error) {
@@ -426,18 +411,18 @@ type OpKeyframe struct {
 	Ops []models.Op
 }
 
-func (o *OpKeyframe) Pack(w io.Writer) (int, error) {
-	// pack header
-	var tmp [1 + 8 + 4]byte
-	tmp[0] = OP_KEYFRAME
-	order.PutUint64(tmp[1:], o.Pid)
-	order.PutUint32(tmp[9:], uint32(len(o.Ops)))
-	total, err := w.Write(tmp[:])
-	if err != nil {
-		return total, err
+func (o *OpKeyframe) Sizeof() int {
+	size := 1 + 8 + 4
+	for _, op := range o.Ops {
+		size += op.Sizeof()
 	}
-	n, err := packOps(w, o.Ops)
-	return total + n, err
+	return size
+}
+func (o *OpKeyframe) Pack(p []byte) {
+	p[0] = OP_KEYFRAME
+	order.PutUint64(p[1:], o.Pid)
+	order.PutUint32(p[9:], uint32(len(o.Ops)))
+	packOps(p[1+8+4:], o.Ops)
 }
 
 func (o *OpKeyframe) Unpack(r io.Reader) (int, error) {
@@ -449,19 +434,18 @@ type OpFrame struct {
 	Ops []models.Op
 }
 
-func (o *OpFrame) Pack(w io.Writer) (int, error) {
-	// pack header
-	var tmp [1 + 8 + 4]byte
-	tmp[0] = OP_FRAME
-	order.PutUint64(tmp[1:], o.Pid)
-	order.PutUint32(tmp[9:], uint32(len(o.Ops)))
-	total, err := w.Write(tmp[:])
-	if err != nil {
-		return total, err
+func (o *OpFrame) Sizeof() int {
+	size := 1 + 8 + 4
+	for _, op := range o.Ops {
+		size += op.Sizeof()
 	}
-	// pack sub-ops
-	n, err := packOps(w, o.Ops)
-	return total + n, err
+	return size
+}
+func (o *OpFrame) Pack(p []byte) {
+	p[0] = OP_FRAME
+	order.PutUint64(p[1:], o.Pid)
+	order.PutUint32(p[9:], uint32(len(o.Ops)))
+	packOps(p[1+8+4:], o.Ops)
 }
 
 func (o *OpFrame) Unpack(r io.Reader) (int, error) {

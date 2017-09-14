@@ -72,7 +72,9 @@ func NewWriter(w io.WriteCloser, u models.Usercorn) (*TraceWriter, error) {
 
 // write a frame at a time
 func (t *TraceWriter) Pack(frame models.Op) error {
-	_, err := frame.Pack(t.zw)
+	tmp := make([]byte, frame.Sizeof())
+	frame.Pack(tmp)
+	_, err := t.zw.Write(tmp)
 	return err
 }
 

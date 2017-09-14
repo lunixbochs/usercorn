@@ -3,7 +3,6 @@ package trace
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"testing"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -40,38 +39,35 @@ var testFrame = &OpFrame{Ops: allUnframed}
 var testKeyframe = &OpKeyframe{Ops: allUnframed}
 
 func TestOpFrame(t *testing.T) {
-	var buf bytes.Buffer
-	if _, err := testFrame.Pack(&buf); err != nil {
-		t.Fatal(err)
-	}
-	op, _, err := Unpack(&buf, false)
+	buf := make([]byte, testFrame.Sizeof())
+	testFrame.Pack(buf)
+	op, _, err := Unpack(bytes.NewReader(buf), false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var buf2 bytes.Buffer
-	if _, err := op.Pack(&buf2); err != nil {
-		t.Fatal(err)
-	}
-	_, _, err = Unpack(&buf2, false)
+	buf2 := make([]byte, op.Sizeof())
+	op.Pack(buf2)
+	_, _, err = Unpack(bytes.NewReader(buf2), false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(buf.Bytes(), buf2.Bytes()) {
+	if !bytes.Equal(buf, buf2) {
 		t.Error("encoded forms differ")
 	}
 }
 
 func BenchmarkPack(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		testFrame.Pack(ioutil.Discard)
+		tmp := make([]byte, testFrame.Sizeof())
+		testFrame.Pack(tmp)
 	}
 }
 
 func BenchmarkUnpack(b *testing.B) {
-	var buf bytes.Buffer
-	testFrame.Pack(&buf)
-	r := bytes.NewReader(buf.Bytes())
+	tmp := make([]byte, testFrame.Sizeof())
+	testFrame.Pack(tmp)
+	r := bytes.NewReader(tmp)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)

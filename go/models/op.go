@@ -8,6 +8,7 @@ import (
 type Op interface {
 	json.Marshaler
 
-	Pack(w io.Writer) (int, error)
+	Sizeof() int
+	Pack([]byte)
 	Unpack(r io.Reader) (int, error)
 }
