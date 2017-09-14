@@ -123,7 +123,7 @@ func (s *StreamUI) OnExit(clean bool, msg string) {
 	pc := s.replay.PC
 	sp := s.replay.SP
 	for _, frame := range s.replay.Callstack.Freeze(pc, sp) {
-		s.Printf("  %#x\n", frame.PC, s.addrsym(frame.PC, true))
+		s.Printf("  %s\n", s.addrsym(frame.PC, true))
 	}
 }
 
