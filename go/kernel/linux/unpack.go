@@ -25,6 +25,14 @@ func Unpack(k *LinuxKernel, arg interface{}, vals []interface{}) error {
 	switch v := arg.(type) {
 	case *syscall.Sockaddr:
 		*v = unpack.Sockaddr(buf, int(vals[1].(uint64)))
+	case **syscall.Timeval:
+		tmp := &native.Timeval{}
+		if err := buf.Unpack(tmp); err != nil {
+			return err
+		}
+		nsec := tmp.Sec*1e9 + tmp.Usec*1e3
+		*v = &syscall.Timeval{}
+		**v = syscall.NsecToTimeval(nsec)
 	case **native.Fdset32:
 		tmp := &native.Fdset32{}
 		if err := buf.Unpack(tmp); err != nil {
