@@ -39,7 +39,7 @@ func (k *PosixKernel) Sendto(fd co.Fd, buf co.Buf, size co.Len, flags int, sa sy
 
 func (k *PosixKernel) Recvfrom(fd co.Fd, buf co.Buf, size co.Len, flags int, from co.Buf, fromlen co.Len) uint64 {
 	p := make([]byte, size)
-	if n, _, err := syscall.Recvfrom(int(fd), p, flags); err != nil {
+	if n, _, err := syscall.Recvfrom(int(fd), p, flags); err == nil {
 		// TODO: need kernel.Pack() so we can pack a sockaddr into from
 		if err := buf.Pack(p); err != nil {
 			return UINT64_MAX // FIXME
