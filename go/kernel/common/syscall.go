@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"reflect"
 )
 
@@ -36,7 +37,8 @@ func (sys Syscall) Call(args []uint64) uint64 {
 	// convert syscall arguments
 	converted, err := sys.Kernel.Argjoy.Convert(sys.In, false, args)
 	if err != nil {
-		panic(err)
+		msg := fmt.Sprintf("calling %T.%s(): %s", sys.Instance.Interface(), sys.Method.Name, err)
+		panic(msg)
 	}
 	copy(in[extraArgs:], converted)
 	// call handler function
