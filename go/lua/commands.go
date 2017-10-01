@@ -144,4 +144,12 @@ func runto(name)
     end
     c
 end
+
+func regs(name)
+	reglist, err = us:RegDump()
+	for _, reg in reglist() do
+		print reg.Name reg.Val
+	end
+end
+r = regs
 `
