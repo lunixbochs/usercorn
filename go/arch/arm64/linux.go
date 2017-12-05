@@ -34,7 +34,7 @@ func LinuxInit(u models.Usercorn, args, env []string) error {
 }
 
 func LinuxSyscall(u models.Usercorn, num int) {
-	name, _ := sysnum.Linux_arm[int(num)]
+	name, _ := sysnum.Linux_arm64[int(num)]
 	ret, _ := u.Syscall(int(num), name, common.RegArgs(u, LinuxRegs))
 	u.RegWrite(uc.ARM64_REG_X0, ret)
 }

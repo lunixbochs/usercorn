@@ -225,6 +225,11 @@ func (k *PosixKernel) Dup2(oldFd co.Fd, newFd co.Fd) uint64 {
 	return uint64(newFd)
 }
 
+func (k *PosixKernel) Dup3(oldFd co.Fd, newFd co.Fd, flags int) uint64 {
+	// FIXME: flags (cloexec) not supported
+	return k.Dup2(oldFd, newFd)
+}
+
 func (k *PosixKernel) Readlink(path string, buf co.Obuf, size co.Len) uint64 {
 	// TODO: full proc emulation layer
 	// maybe have a syscall pre-hook for this after ghostrace makes it generic
@@ -246,6 +251,25 @@ func (k *PosixKernel) Readlink(path string, buf co.Obuf, size co.Len) uint64 {
 		return UINT64_MAX // FIXME
 	}
 	return uint64(len(name))
+}
+
+func (k *PosixKernel) Readlinkat(dirfd uint64, path string, buf co.Obuf, size co.Len) uint64 {
+	// FIXME: dirfd *at not supported
+	return k.Readlink(path, buf, size)
+}
+
+func (k *PosixKernel) Faccessat(dirfd uint64, path string, mode uint32, flags int) uint64 {
+	// FIXME: dirfd *at not supported, and flags are ignored
+	return k.Access(path, mode)
+}
+
+func (k *PosixKernel) Fstatat(dirfd uint64, path string, buf co.Obuf, flags int) uint64 {
+	// FIXME: dirfd *at not supported
+	if flags != 0 {
+		// we assume flags can only be AT_SYMLINK_NOFOLLOW or not
+		return k.Lstat(path, buf)
+	}
+	return k.Stat(path, buf)
 }
 
 func (k *PosixKernel) Symlink(src, dst string) uint64 {
