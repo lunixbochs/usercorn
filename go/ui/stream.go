@@ -18,13 +18,11 @@ func pad(s string, to int) string {
 }
 
 type StreamUI struct {
-	replay *trace.Replay
-	config *models.Config
-	regfmt string
-	inscol int
-	regcol int
-	// pending is an OpStep representing the last unflushed instruction. Cleared by Flush().
-	pending *trace.OpStep
+	replay  *trace.Replay
+	config  *models.Config
+	regfmt  string
+	inscol  int
+	regcol  int
 	effects []models.Op
 	lastPC  uint64
 }

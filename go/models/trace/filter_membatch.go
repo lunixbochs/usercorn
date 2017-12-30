@@ -41,13 +41,26 @@ func (o *OpMemBatch) Render(mem *cpu.Mem) string {
 }
 
 type MemBatch struct {
-	memOps []models.Op
+	memOps  []models.Op
+	pc      uint64
+	selfjmp bool
 }
 
 func (m *MemBatch) Filter(op models.Op) []models.Op {
-	switch op.(type) {
+	switch v := op.(type) {
 	case *OpJmp:
-		return append(m.Flush(), op)
+		m.selfjmp = v.Addr == m.pc
+		m.pc = v.Addr
+		if !m.selfjmp {
+			return append(m.Flush(), op)
+		}
+	case *OpStep:
+		m.pc += uint64(v.Size)
+		// flush rep-like selfjmp instructions after the instruction finishes
+		if m.selfjmp {
+			m.selfjmp = false
+			return append(m.Flush(), op)
+		}
 	case *OpMemRead, *OpMemWrite:
 		m.memOps = append(m.memOps, op)
 	}
@@ -56,7 +69,6 @@ func (m *MemBatch) Filter(op models.Op) []models.Op {
 
 func (m *MemBatch) Flush() []models.Op {
 	log := &MemLog{}
-
 	// Build a log of all reads and writes
 	for _, op := range m.memOps {
 		switch v := op.(type) {
@@ -75,7 +87,10 @@ func (m *MemBatch) Flush() []models.Op {
 			ops = append(ops, &OpMemRead{d.addr, d.size})
 		}
 	}
-	return []models.Op{&OpMemBatch{Ops: ops}}
+	if len(ops) > 0 {
+		return []models.Op{&OpMemBatch{Ops: ops}}
+	}
+	return nil
 }
 
 type memDelta struct {

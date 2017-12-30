@@ -100,7 +100,6 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	}
 	if u.config.Rewind || u.config.UI {
 		u.replay = trace.NewReplay(u.arch, u.os, l.ByteOrder(), u.debug)
-		defer u.replay.Flush()
 		config.Trace.OpCallback = append(config.Trace.OpCallback, u.replay.Feed)
 		if config.UI {
 			u.ui = ui.NewStreamUI(u.config, u.replay)
@@ -385,7 +384,20 @@ func (u *Usercorn) HookSysDel(hook *models.SysHook) {
 }
 
 func (u *Usercorn) Run() error {
+	// TODO: defers are expensive I hear
 	defer func() {
+		if u.trace != nil && u.exitStatus == nil {
+			u.trace.OnExit()
+		}
+		if u.trace != nil {
+			u.trace.Detach()
+		}
+		if u.replay != nil {
+			u.replay.Flush()
+		}
+		for _, v := range u.hooks {
+			u.HookDel(v)
+		}
 		if e := recover(); e != nil {
 			msg := fmt.Sprintf("\n+++ caught panic +++\n%s\n\n", e)
 			if u.ui == nil {
@@ -412,23 +424,12 @@ func (u *Usercorn) Run() error {
 		}
 	}
 	if u.config.Trace.Any() {
-		// TODO: defers are expensive I hear
 		if err := u.trace.Attach(); err != nil {
 			return err
-		} else {
-			defer func() {
-				u.trace.Detach()
-			}()
 		}
 	}
 	if err := u.addHooks(); err != nil {
 		return err
-	} else {
-		defer func() {
-			for _, v := range u.hooks {
-				u.HookDel(v)
-			}
-		}()
 	}
 	if u.config.InsCount {
 		u.HookAdd(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
@@ -495,9 +496,6 @@ func (u *Usercorn) Run() error {
 	}
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus
-	}
-	if u.trace != nil {
-		u.trace.OnExit()
 	}
 	return err
 }
@@ -804,6 +802,9 @@ func (u *Usercorn) Syscall(num int, name string, getArgs models.SysGetArgs) (uin
 func (u *Usercorn) Exit(err error) {
 	u.exitStatus = err
 	u.Stop()
+	if u.trace != nil {
+		u.trace.OnExit()
+	}
 }
 
 func (u *Usercorn) Close() error {
