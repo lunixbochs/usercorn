@@ -100,7 +100,7 @@ func (m *MemLog) Adjacent(addr uint64, size uint32, write bool) *memDelta {
 		if delta.write != write {
 			continue
 		}
-		if addr == delta.addr+uint64(len(delta.data)) || addr == delta.addr-uint64(size) {
+		if addr == delta.addr+uint64(delta.size) || addr == delta.addr-uint64(size) {
 			return delta
 		}
 	}
@@ -113,7 +113,7 @@ func (m *MemLog) Update(addr uint64, size uint32, p []byte, write bool) {
 	before := false
 	if delta = m.Adjacent(addr, size, write); delta != nil {
 		if addr < delta.addr {
-			delta.addr -= uint64(len(p))
+			delta.addr -= uint64(size)
 			before = true
 		}
 		var tag byte
