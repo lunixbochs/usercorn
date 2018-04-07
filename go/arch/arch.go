@@ -5,6 +5,7 @@ import (
 
 	"github.com/lunixbochs/usercorn/go/arch/arm"
 	"github.com/lunixbochs/usercorn/go/arch/arm64"
+	"github.com/lunixbochs/usercorn/go/arch/bpf"
 	"github.com/lunixbochs/usercorn/go/arch/m68k"
 	"github.com/lunixbochs/usercorn/go/arch/mips"
 	"github.com/lunixbochs/usercorn/go/arch/sparc"
@@ -17,6 +18,7 @@ import (
 var archMap = map[string]*models.Arch{
 	"arm":    arm.Arch,
 	"arm64":  arm64.Arch,
+	"bpf":    bpf.Arch,
 	"m68k":   m68k.Arch,
 	"mips":   mips.Arch,
 	"sparc":  sparc.Arch,
