@@ -1,7 +1,6 @@
 package bpf
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/pkg/errors"
@@ -18,13 +17,11 @@ func Main(args []string) {
 
 	c.SetupFlags = func() error {
 		// TODO: Default should be ""
-		packet = c.Flags.String("packet", "crackme.pcap", "packet file to run filter against")
+		packet = c.Flags.String("packet", "", "packet file to run filter against")
 		return nil
 	}
 
 	c.MakeUsercorn = func(filter string) (models.Usercorn, error) {
-		// TODO: Why is packet never parsing out (always the default!)
-		fmt.Printf("loading packet '%s' and filter '%s'\n", *packet, filter) // DELETEME
 		l, err := loader.NewBpfLoader(filter, *packet)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to load BPF filter")
