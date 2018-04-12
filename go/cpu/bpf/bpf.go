@@ -2,7 +2,6 @@ package bpf
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
@@ -47,6 +46,9 @@ type BpfCpu struct {
 	*cpu.Hooks
 	*cpu.Regs
 	*cpu.Mem
+
+	returnValue uint32
+	exitRequest bool
 }
 
 func NewCpu() (cpu.Cpu, error) {
@@ -122,9 +124,10 @@ func (c *BpfCpu) Start(begin, until uint64) error {
 	var dis Dis
 	pc := begin
 	c.RegWrite(PC, (pc))
+	c.OnBlock(pc, 0)
 	var err error
 
-	for pc <= until && err == nil {
+	for pc <= until && err == nil && !c.exitRequest {
 		var mem []byte
 		var code []models.Ins
 
@@ -135,9 +138,11 @@ func (c *BpfCpu) Start(begin, until uint64) error {
 			break
 		}
 		ins := code[0].(*ins)
-		fmt.Printf("%04x: %s\n", pc, ins)
 
 		c.OnCode(pc, uint32(len(ins.bytes)))
+		if c.exitRequest {
+			break
+		}
 
 		jumpoff := uint64(0)
 		al, _ := c.RegRead(A)
@@ -147,7 +152,9 @@ func (c *BpfCpu) Start(begin, until uint64) error {
 
 		switch ins.name {
 		case "ret":
-			err = fmt.Errorf("Returning value %#x", c.get(ins.arg))
+			c.exitRequest = true
+			c.returnValue = c.get(ins.arg)
+			c.OnBlock(pc, 0)
 		case "ld":
 			fallthrough
 		case "ldi":
@@ -219,16 +226,22 @@ func (c *BpfCpu) Start(begin, until uint64) error {
 		case "txa":
 			c.RegWrite(A, uint64(x))
 		}
+
 		pc += 8 + jumpoff
+		if jumpoff > 0 {
+			c.OnBlock(pc, 0)
+		}
+		c.RegWrite(PC, (pc))
 	}
 	return err
 }
 
-// TODO: Implement these
 func (c *BpfCpu) Stop() error {
+	c.exitRequest = true
 	return nil
 }
 
+// TODO: Implement these
 func (c *BpfCpu) Close() error {
 	return nil
 }

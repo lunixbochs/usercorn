@@ -13,6 +13,7 @@ import (
 
 func Main(args []string) {
 	c := cmd.NewUsercornRawCmd()
+	c.NoArgs = true
 	var packet *string
 
 	c.SetupFlags = func() error {
