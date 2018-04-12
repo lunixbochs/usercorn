@@ -93,26 +93,26 @@ func (c *BpfCpu) get(a arg) uint32 {
 }
 
 // getJump gets the jump target offset in bytes
-func (c *BpfCpu) getJump(a arg) uint32 {
+func (c *BpfCpu) getJump(a arg) uint64 {
 	switch a := a.(type) {
 	case *jabs:
-		return uint32(a.val) * 8
+		return uint64(a.val) * 8
 	case *j:
-		return uint32(a.jf) * 8
+		return uint64(a.jf) * 8
 	case *jelse:
-		return uint32(a.jf) * 8
+		return uint64(a.jf) * 8
 	default:
 		panic("Jump with illegal args!")
 	}
 }
 
 // getJumpElse gets the jump else case offset in bytes
-func (c *BpfCpu) getJumpElse(a arg) uint32 {
+func (c *BpfCpu) getJumpElse(a arg) uint64 {
 	switch a := a.(type) {
 	case *j:
 		return 0
 	case *jelse:
-		return uint32(a.jt) * 8
+		return uint64(a.jt) * 8
 	default:
 		panic("Jump with illegal args!")
 	}
@@ -120,26 +120,26 @@ func (c *BpfCpu) getJumpElse(a arg) uint32 {
 
 func (c *BpfCpu) Start(begin, until uint64) error {
 	var dis Dis
-	pc := uint32(begin)
-	c.RegWrite(PC, uint64(pc))
+	pc := begin
+	c.RegWrite(PC, (pc))
 	var err error
 
-	for pc <= uint32(until) && err == nil {
+	for pc <= until && err == nil {
 		var mem []byte
 		var code []models.Ins
 
-		if mem, err = c.ReadProt(uint64(pc), 8, cpu.PROT_EXEC); err != nil {
+		if mem, err = c.ReadProt(pc, 8, cpu.PROT_EXEC); err != nil {
 			break
 		}
-		if code, err = dis.Dis(mem, uint64(pc)); err != nil {
+		if code, err = dis.Dis(mem, pc); err != nil {
 			break
 		}
 		ins := code[0].(*ins)
 		fmt.Printf("%04x: %s\n", pc, ins)
 
-		c.OnCode(uint64(pc), uint32(len(ins.bytes)))
+		c.OnCode(pc, uint32(len(ins.bytes)))
 
-		jumpoff := uint32(0)
+		jumpoff := uint64(0)
 		al, _ := c.RegRead(A)
 		a := uint32(al)
 		xl, _ := c.RegRead(X)

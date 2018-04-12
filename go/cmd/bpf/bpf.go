@@ -2,8 +2,9 @@ package bpf
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
+
+	"github.com/pkg/errors"
 
 	usercorn "github.com/lunixbochs/usercorn/go"
 	"github.com/lunixbochs/usercorn/go/cmd"

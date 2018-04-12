@@ -17,12 +17,8 @@ type ins struct {
 	name  string
 	arg   arg
 	bytes []byte
-
-	ptr  uint64
-	tipe uint64
 }
 
-// Needs to conform to models.Ins
 func (i *ins) String() string {
 	return i.name + " " + i.OpStr()
 }
