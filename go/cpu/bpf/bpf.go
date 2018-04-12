@@ -64,28 +64,28 @@ func NewCpu() (cpu.Cpu, error) {
 
 func (c *BpfCpu) get(a arg) uint32 {
 	var val uint64
-	switch v := a.(type) {
+	switch arg := a.(type) {
 	case *regX:
 		val, _ = c.RegRead(X)
 	case *abs:
-		val, _ = c.ReadUint(uint64(v.val), 4, 0)
+		val, _ = c.ReadUint(uint64(arg.val), arg.size, 0)
 	case *mem:
-		val = uint64(v.val)
+		val = uint64(arg.val)
 	case *ind:
 		off, _ := c.RegRead(X)
-		val, _ = c.ReadUint(uint64(v.val)+off, 4, 0)
+		val, _ = c.ReadUint(uint64(arg.val)+off, arg.size, 0)
 	case *imm:
-		val = uint64(v.val)
+		val = uint64(arg.val)
 	case *msh:
 		// TODO: How does this work for ldx?
-		val, _ = c.ReadUint(uint64(v.val), 1, 0)
+		val, _ = c.ReadUint(uint64(arg.val), 1, 0)
 		val = uint64((val & 0xf) * 4)
 	case *jabs:
-		val = uint64(v.val)
+		val = uint64(arg.val)
 	case *jelse:
-		val = uint64(v.val)
+		val = uint64(arg.val)
 	case *j:
-		val = uint64(v.val)
+		val = uint64(arg.val)
 	case *regA:
 		val, _ = c.RegRead(A)
 	default:
@@ -157,9 +157,9 @@ func (c *BpfCpu) Start(begin, until uint64) error {
 			c.returnValue = c.get(ins.arg)
 			c.OnBlock(pc, 0)
 		case CLASS_LD:
-			c.RegWrite(A, uint64(c.get(ins.arg))&ins.mask)
+			c.RegWrite(A, uint64(c.get(ins.arg)))
 		case CLASS_LDX:
-			c.RegWrite(X, uint64(c.get(ins.arg))&ins.mask)
+			c.RegWrite(X, uint64(c.get(ins.arg)))
 		case CLASS_ST:
 			c.RegWrite(int(c.get(ins.arg)), uint64(a))
 		case CLASS_STX:

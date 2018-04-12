@@ -47,9 +47,15 @@ type arg interface {
 
 // Define arg types
 type regX struct{}
-type abs struct{ val uint32 }
+type abs struct {
+	val  uint32
+	size int
+}
 type mem struct{ val uint32 }
-type ind struct{ val uint32 }
+type ind struct {
+	val  uint32
+	size int
+}
 type imm struct{ val uint32 }
 type msh struct{ val uint32 }
 type jabs struct{ val uint32 }
@@ -108,11 +114,11 @@ func (ir *insReader) ins() models.Ins {
 		case A_X:
 			arg = &regX{}
 		case A_ABS:
-			arg = &abs{i.k}
+			arg = &abs{i.k, op.size}
 		case A_MEM:
 			arg = &mem{i.k}
 		case A_IND:
-			arg = &ind{i.k}
+			arg = &ind{i.k, op.size}
 		case A_IMM:
 			arg = &imm{i.k}
 		case A_MSH:
@@ -132,7 +138,6 @@ func (ir *insReader) ins() models.Ins {
 		}
 		i.name = op.name
 		i.optype = op.optype
-		i.mask = op.mask
 		i.arg = arg
 		return i
 	} else {

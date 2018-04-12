@@ -167,7 +167,7 @@ const (
 type op struct {
 	name   string
 	optype int
-	mask   uint64
+	size   int
 	arg    int
 }
 
@@ -175,20 +175,20 @@ var opCodes = map[uint16]op{
 	OP_RET_A:           op{"ret", CLASS_RET, 0, A_A},
 	OP_RET_IMM:         op{"ret", CLASS_RET, 0, A_IMM},
 	OP_RET_X:           op{"ret", CLASS_RET, 0, A_X},
-	OP_LD_B_ABS:        op{"ldb", CLASS_LD, 0xff, A_ABS},
-	OP_LD_B_IND:        op{"ldb", CLASS_LD, 0xff, A_IND},
-	OP_LD_H_ABS:        op{"ldh", CLASS_LD, 0xffff, A_ABS},
-	OP_LD_H_IND:        op{"ldh", CLASS_LD, 0xffff, A_IND},
-	OP_LD_W_ABS:        op{"ld", CLASS_LD, 0xffffffff, A_ABS},
-	OP_LD_W_IND:        op{"ld", CLASS_LD, 0xffffffff, A_IND},
-	OP_LD_W_IMM:        op{"ldi", CLASS_LD, 0xffffffff, A_IMM},
-	OP_LD_W_MEM:        op{"ld", CLASS_LD, 0xffffffff, A_MEM},
-	OP_LDX_W_IND:       op{"ldx", CLASS_LDX, 0xffffffff, A_IND},
-	OP_LDX_W_MEM:       op{"ldx", CLASS_LDX, 0xffffffff, A_MEM},
-	OP_LDX_W_MSH:       op{"ldx", CLASS_LDX, 0xffffffff, A_MSH},
-	OP_LDX_W_LEN:       op{"ldx", CLASS_LDX, 0xffffffff, A_LEN},
-	OP_LDX_W_IMM:       op{"ldxi", CLASS_LDX, 0xffffffff, A_IMM},
-	OP_LDX_B_MSH:       op{"ldxb", CLASS_LDX, 0xff, A_MSH},
+	OP_LD_B_ABS:        op{"ldb", CLASS_LD, 1, A_ABS},
+	OP_LD_B_IND:        op{"ldb", CLASS_LD, 1, A_IND},
+	OP_LD_H_ABS:        op{"ldh", CLASS_LD, 2, A_ABS},
+	OP_LD_H_IND:        op{"ldh", CLASS_LD, 2, A_IND},
+	OP_LD_W_ABS:        op{"ld", CLASS_LD, 4, A_ABS},
+	OP_LD_W_IND:        op{"ld", CLASS_LD, 4, A_IND},
+	OP_LD_W_IMM:        op{"ldi", CLASS_LD, 0, A_IMM},
+	OP_LD_W_MEM:        op{"ld", CLASS_LD, 0, A_MEM},
+	OP_LDX_W_IND:       op{"ldx", CLASS_LDX, 4, A_IND},
+	OP_LDX_W_MEM:       op{"ldx", CLASS_LDX, 0, A_MEM},
+	OP_LDX_W_MSH:       op{"ldx", CLASS_LDX, 0, A_MSH},
+	OP_LDX_W_LEN:       op{"ldx", CLASS_LDX, 0, A_LEN},
+	OP_LDX_W_IMM:       op{"ldxi", CLASS_LDX, 0, A_IMM},
+	OP_LDX_B_MSH:       op{"ldxb", CLASS_LDX, 0, A_MSH},
 	OP_ST:              op{"st", CLASS_ST, 0, A_MEM},
 	OP_STX:             op{"stx", CLASS_STX, 0, A_MEM},
 	OP_JMP_JA:          op{"jmp", OP_JMP_JA, 0, A_JABS},
