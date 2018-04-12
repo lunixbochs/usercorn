@@ -9,14 +9,16 @@ import (
 )
 
 type ins struct {
-	addr  uint64
-	op    uint16
-	jt    uint8
-	jf    uint8
-	k     uint32 // Depends on addressing mode?
-	name  string
-	arg   arg
-	bytes []byte
+	addr   uint64
+	op     uint16
+	jt     uint8
+	jf     uint8
+	k      uint32
+	name   string
+	optype int
+	mask   uint64
+	arg    arg
+	bytes  []byte
 }
 
 func (i *ins) String() string {
@@ -129,6 +131,8 @@ func (ir *insReader) ins() models.Ins {
 			arg = &misc{""}
 		}
 		i.name = op.name
+		i.optype = op.optype
+		i.mask = op.mask
 		i.arg = arg
 		return i
 	} else {

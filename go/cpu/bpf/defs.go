@@ -12,13 +12,13 @@ const (
 	CLASS_RET  = 0x06
 	CLASS_MISC = 0x07
 
-	//[> ld/ldx fields <]
-	//#define BPF_SIZE(code)  ((code) & 0x18)
+	// ld size fields
 	// Only cares about 2 bits
 	SIZE_W = 0x00
 	SIZE_H = 0x08
 	SIZE_B = 0x10
-	//#define BPF_MODE(code)  ((code) & 0xe0)
+
+	// Addressing modes
 	MODE_IMM = 0x00
 	MODE_ABS = 0x20
 	MODE_IND = 0x40
@@ -29,8 +29,7 @@ const (
 	MISC_TAX = 0x00
 	MISC_TXA = 0x80
 
-	//[> alu/jmp fields <]
-	//#define BPF_OP(code)    ((code) & 0xf0)
+	// ALU ops
 	ALU_ADD = 0x00
 	ALU_SUB = 0x10
 	ALU_MUL = 0x20
@@ -43,14 +42,14 @@ const (
 	ALU_MOD = 0x90
 	ALU_XOR = 0xa0
 
+	// JMP ops
 	JMP_JA   = 0x00
 	JMP_JEQ  = 0x10
 	JMP_JGT  = 0x20
 	JMP_JGE  = 0x30
 	JMP_JSET = 0x40
-	//#define BPF_SRC(code)   ((code) & 0x08)
-	// Addressing modes?
-	// TODO: Are these different based on the CLASS?
+
+	// operand source
 	BPF_K = 0x00
 	BPF_X = 0x08
 	BPF_A = 0x10
@@ -166,60 +165,62 @@ const (
 )
 
 type op struct {
-	name string
-	arg  int
+	name   string
+	optype int
+	mask   uint64
+	arg    int
 }
 
 var opCodes = map[uint16]op{
-	OP_RET_A:           op{"ret", A_A}, // TODO: Is RET_A real?
-	OP_RET_IMM:         op{"ret", A_IMM},
-	OP_RET_X:           op{"ret", A_X},
-	OP_LD_B_ABS:        op{"ldb", A_ABS},
-	OP_LD_B_IND:        op{"ldb", A_IND},
-	OP_LD_H_ABS:        op{"ldh", A_ABS},
-	OP_LD_H_IND:        op{"ldh", A_IND},
-	OP_LD_W_ABS:        op{"ld", A_ABS},
-	OP_LD_W_IND:        op{"ld", A_IND},
-	OP_LD_W_IMM:        op{"ldi", A_IMM},
-	OP_LD_W_MEM:        op{"ld", A_MEM},
-	OP_LDX_W_IND:       op{"ldx", A_IND},
-	OP_LDX_W_MEM:       op{"ldx", A_MEM},
-	OP_LDX_W_MSH:       op{"ldx", A_MSH},
-	OP_LDX_W_LEN:       op{"ldx", A_LEN},
-	OP_LDX_W_IMM:       op{"ldxi", A_IMM},
-	OP_LDX_B_MSH:       op{"ldxb", A_MSH},
-	OP_ST:              op{"st", A_MEM},
-	OP_STX:             op{"stx", A_MEM},
-	OP_JMP_JA:          op{"jmp", A_JABS},
-	OP_JMP_JEQ_NOELSE:  op{"jeq", A_J},
-	OP_JMP_JEQ_ELSE:    op{"jeq", A_JELSE},
-	OP_JMP_JGT_NOELSE:  op{"jgt", A_J},
-	OP_JMP_JGT:         op{"jgt", A_JELSE},
-	OP_JMP_JGE_NOELSE:  op{"jge", A_J},
-	OP_JMP_JGE:         op{"jge", A_JELSE},
-	OP_JMP_JSET_NOELSE: op{"jset", A_J},
-	OP_JMP_JSET:        op{"jset", A_JELSE},
-	OP_ADD_X:           op{"add", A_X},
-	OP_ADD_IMM:         op{"add", A_IMM},
-	OP_SUB_X:           op{"sub", A_X},
-	OP_SUB_IMM:         op{"sub", A_IMM},
-	OP_MUL_X:           op{"mul", A_X},
-	OP_MUL_IMM:         op{"mul", A_IMM},
-	OP_DIV_X:           op{"div", A_X},
-	OP_DIV_IMM:         op{"div", A_IMM},
-	OP_MOD_X:           op{"mod", A_X},
-	OP_MOD_IMM:         op{"mod", A_IMM},
-	OP_NEG:             op{"neg", A_A},
-	OP_AND_X:           op{"and", A_X},
-	OP_AND_IMM:         op{"and", A_IMM},
-	OP_OR_X:            op{"or", A_X},
-	OP_OR_IMM:          op{"or", A_IMM},
-	OP_XOR_X:           op{"xor", A_X},
-	OP_XOR_IMM:         op{"xor", A_IMM},
-	OP_LSH_X:           op{"lsh", A_X},
-	OP_LSH_IMM:         op{"lsh", A_IMM},
-	OP_RSH_X:           op{"rsh", A_X},
-	OP_RSH_IMM:         op{"rsh", A_IMM},
-	OP_TAX:             op{"tax", A_NONE},
-	OP_TXA:             op{"txa", A_NONE},
+	OP_RET_A:           op{"ret", CLASS_RET, 0, A_A},
+	OP_RET_IMM:         op{"ret", CLASS_RET, 0, A_IMM},
+	OP_RET_X:           op{"ret", CLASS_RET, 0, A_X},
+	OP_LD_B_ABS:        op{"ldb", CLASS_LD, 0xff, A_ABS},
+	OP_LD_B_IND:        op{"ldb", CLASS_LD, 0xff, A_IND},
+	OP_LD_H_ABS:        op{"ldh", CLASS_LD, 0xffff, A_ABS},
+	OP_LD_H_IND:        op{"ldh", CLASS_LD, 0xffff, A_IND},
+	OP_LD_W_ABS:        op{"ld", CLASS_LD, 0xffffffff, A_ABS},
+	OP_LD_W_IND:        op{"ld", CLASS_LD, 0xffffffff, A_IND},
+	OP_LD_W_IMM:        op{"ldi", CLASS_LD, 0xffffffff, A_IMM},
+	OP_LD_W_MEM:        op{"ld", CLASS_LD, 0xffffffff, A_MEM},
+	OP_LDX_W_IND:       op{"ldx", CLASS_LDX, 0xffffffff, A_IND},
+	OP_LDX_W_MEM:       op{"ldx", CLASS_LDX, 0xffffffff, A_MEM},
+	OP_LDX_W_MSH:       op{"ldx", CLASS_LDX, 0xffffffff, A_MSH},
+	OP_LDX_W_LEN:       op{"ldx", CLASS_LDX, 0xffffffff, A_LEN},
+	OP_LDX_W_IMM:       op{"ldxi", CLASS_LDX, 0xffffffff, A_IMM},
+	OP_LDX_B_MSH:       op{"ldxb", CLASS_LDX, 0xff, A_MSH},
+	OP_ST:              op{"st", CLASS_ST, 0, A_MEM},
+	OP_STX:             op{"stx", CLASS_STX, 0, A_MEM},
+	OP_JMP_JA:          op{"jmp", OP_JMP_JA, 0, A_JABS},
+	OP_JMP_JEQ_NOELSE:  op{"jeq", OP_JMP_JEQ, 0, A_J},
+	OP_JMP_JEQ_ELSE:    op{"jeq", OP_JMP_JEQ, 0, A_JELSE},
+	OP_JMP_JGT_NOELSE:  op{"jgt", OP_JMP_JGT, 0, A_J},
+	OP_JMP_JGT_ELSE:    op{"jgt", OP_JMP_JGT, 0, A_JELSE},
+	OP_JMP_JGE_NOELSE:  op{"jge", OP_JMP_JGE, 0, A_J},
+	OP_JMP_JGE_ELSE:    op{"jge", OP_JMP_JGE, 0, A_JELSE},
+	OP_JMP_JSET_NOELSE: op{"jset", OP_JMP_JSET, 0, A_J},
+	OP_JMP_JSET_ELSE:   op{"jset", OP_JMP_JSET, 0, A_JELSE},
+	OP_ADD_X:           op{"add", OP_ALU_ADD, 0, A_X},
+	OP_ADD_IMM:         op{"add", OP_ALU_ADD, 0, A_IMM},
+	OP_SUB_X:           op{"sub", OP_ALU_SUB, 0, A_X},
+	OP_SUB_IMM:         op{"sub", OP_ALU_SUB, 0, A_IMM},
+	OP_MUL_X:           op{"mul", OP_ALU_MUL, 0, A_X},
+	OP_MUL_IMM:         op{"mul", OP_ALU_MUL, 0, A_IMM},
+	OP_DIV_X:           op{"div", OP_ALU_DIV, 0, A_X},
+	OP_DIV_IMM:         op{"div", OP_ALU_DIV, 0, A_IMM},
+	OP_MOD_X:           op{"mod", OP_ALU_MOD, 0, A_X},
+	OP_MOD_IMM:         op{"mod", OP_ALU_ADD, 0, A_IMM},
+	OP_NEG:             op{"neg", OP_ALU_NEG, 0, A_A},
+	OP_AND_X:           op{"and", OP_ALU_AND, 0, A_X},
+	OP_AND_IMM:         op{"and", OP_ALU_AND, 0, A_IMM},
+	OP_OR_X:            op{"or", OP_ALU_OR, 0, A_X},
+	OP_OR_IMM:          op{"or", OP_ALU_OR, 0, A_IMM},
+	OP_XOR_X:           op{"xor", OP_ALU_XOR, 0, A_X},
+	OP_XOR_IMM:         op{"xor", OP_ALU_XOR, 0, A_IMM},
+	OP_LSH_X:           op{"lsh", OP_ALU_LSH, 0, A_X},
+	OP_LSH_IMM:         op{"lsh", OP_ALU_LSH, 0, A_IMM},
+	OP_RSH_X:           op{"rsh", OP_ALU_RSH, 0, A_X},
+	OP_RSH_IMM:         op{"rsh", OP_ALU_RSH, 0, A_IMM},
+	OP_TAX:             op{"tax", OP_TAX, 0, A_NONE},
+	OP_TXA:             op{"txa", OP_TAX, 0, A_NONE},
 }

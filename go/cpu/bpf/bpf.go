@@ -150,80 +150,70 @@ func (c *BpfCpu) Start(begin, until uint64) error {
 		xl, _ := c.RegRead(X)
 		x := uint32(xl)
 
-		switch ins.name {
-		case "ret":
+		switch ins.optype {
+		case CLASS_RET:
 			c.exitRequest = true
 			c.returnValue = c.get(ins.arg)
 			c.OnBlock(pc, 0)
-		case "ld":
-			fallthrough
-		case "ldi":
-			c.RegWrite(A, uint64(c.get(ins.arg)))
-		case "ldh":
-			c.RegWrite(A, uint64(c.get(ins.arg))&0xffff)
-		case "ldb":
-			c.RegWrite(A, uint64(c.get(ins.arg))&0xff)
-		case "ldx":
-			fallthrough
-		case "ldxi":
-			c.RegWrite(X, uint64(c.get(ins.arg)))
-		case "ldxb":
-			c.RegWrite(X, uint64(c.get(ins.arg))&0xff)
-		case "st":
+		case CLASS_LD:
+			c.RegWrite(A, uint64(c.get(ins.arg))&ins.mask)
+		case CLASS_LDX:
+			c.RegWrite(X, uint64(c.get(ins.arg))&ins.mask)
+		case CLASS_ST:
 			c.RegWrite(int(c.get(ins.arg)), uint64(a))
-		case "stx":
+		case CLASS_STX:
 			c.RegWrite(int(c.get(ins.arg)), uint64(x))
-		case "jmp":
+		case OP_JMP_JA:
 			jumpoff = c.getJump(ins.arg)
-		case "jeq":
+		case OP_JMP_JEQ:
 			if c.get(ins.arg) == a {
 				jumpoff = c.getJump(ins.arg)
 			} else {
 				jumpoff = c.getJumpElse(ins.arg)
 			}
-		case "jgt":
+		case OP_JMP_JGT:
 			if c.get(ins.arg) > a {
 				jumpoff = c.getJump(ins.arg)
 			} else {
 				jumpoff = c.getJumpElse(ins.arg)
 			}
-		case "jge":
+		case OP_JMP_JGE:
 			if c.get(ins.arg) >= a {
 				jumpoff = c.getJump(ins.arg)
 			} else {
 				jumpoff = c.getJumpElse(ins.arg)
 			}
-		case "jset":
+		case OP_JMP_JSET:
 			if (c.get(ins.arg) & a) != 0 {
 				jumpoff = c.getJump(ins.arg)
 			} else {
 				jumpoff = c.getJumpElse(ins.arg)
 			}
-		case "add":
+		case OP_ALU_ADD:
 			c.RegWrite(A, uint64(a+c.get(ins.arg)))
-		case "sub":
+		case OP_ALU_SUB:
 			c.RegWrite(A, uint64(a-c.get(ins.arg)))
-		case "mul":
+		case OP_ALU_MUL:
 			c.RegWrite(A, uint64(a*c.get(ins.arg)))
-		case "div":
+		case OP_ALU_DIV:
 			c.RegWrite(A, uint64(a/c.get(ins.arg)))
-		case "mod":
+		case OP_ALU_MOD:
 			c.RegWrite(A, uint64(a%c.get(ins.arg)))
-		case "neg":
+		case OP_ALU_NEG:
 			c.RegWrite(A, uint64(-a))
-		case "and":
+		case OP_ALU_AND:
 			c.RegWrite(A, uint64(a&c.get(ins.arg)))
-		case "or":
-			c.RegWrite(A, uint64(a&c.get(ins.arg)))
-		case "xor":
+		case OP_ALU_OR:
+			c.RegWrite(A, uint64(a|c.get(ins.arg)))
+		case OP_ALU_XOR:
 			c.RegWrite(A, uint64(a^c.get(ins.arg)))
-		case "lsh":
+		case OP_ALU_LSH:
 			c.RegWrite(A, uint64(a<<c.get(ins.arg)))
-		case "rsh":
+		case OP_ALU_RSH:
 			c.RegWrite(A, uint64(a>>c.get(ins.arg)))
-		case "tax":
+		case OP_TAX:
 			c.RegWrite(X, uint64(a))
-		case "txa":
+		case OP_TXA:
 			c.RegWrite(A, uint64(x))
 		}
 
