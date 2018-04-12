@@ -127,6 +127,7 @@ func (c *BpfCpu) Start(begin, until uint64) error {
 	c.OnBlock(pc, 0)
 	var err error
 
+	c.exitRequest = false
 	for pc <= until && err == nil && !c.exitRequest {
 		var mem []byte
 		var code []models.Ins
