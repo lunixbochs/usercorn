@@ -386,6 +386,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		go debug.NewGdbstub(corn).Run(conn)
 	}
 
+	var repl *ui.Repl
 	if *tui {
 		tui, err := ui.NewTui(corn)
 		if err != nil {
@@ -396,7 +397,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		defer tui.Close()
 		tui.Run()
 	} else if *startrepl || len(exec) > 0 {
-		repl, err := ui.NewRepl(corn)
+		repl, err = ui.NewRepl(corn)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error starting repl: %v\n", err)
 			return 1
@@ -424,6 +425,9 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		err = c.RunUsercorn()
 	} else {
 		err = corn.Run()
+	}
+	if *startrepl && !repl.Closed {
+		corn.Gate().Lock()
 	}
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {

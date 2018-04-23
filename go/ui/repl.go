@@ -19,6 +19,7 @@ type Repl struct {
 
 	multiline bool
 	lines     []string
+	Closed    bool
 }
 
 type nullCloser struct{ io.Writer }
@@ -135,4 +136,5 @@ func (r *Repl) runSync() {
 func (r *Repl) Close() {
 	r.Lua.Close()
 	r.rl.Close()
+	r.Closed = true
 }
