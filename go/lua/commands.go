@@ -54,7 +54,8 @@ func dir()
 end
 
 local _hook_types = {
-	-- TODO: hook sys, map?
+	-- TODO: hook memory map?
+	-- sys and sys_pre are hardcoded to call hook_sys
 	code = cpu.HOOK_CODE,
 	block = cpu.HOOK_BLOCK,
 	intr = cpu.HOOK_INTR,
@@ -64,6 +65,12 @@ local _hook_types = {
 }
 
 func _on_hook(name, fn, start, stop)
+	if name == 'sys_pre' then
+		return u.hook_sys_add(start, fn, nil)
+	end
+	if name == 'sys' then
+		return u.hook_sys_add(start, nil, fn)
+	end
 	local type = _hook_types[name]
 	if type != nil then
 		if start == nil then
@@ -80,6 +87,7 @@ end
 func off()
 	if hh then
 		u.hook_del(hh)
+		u.hook_sys_del(hh)
 		hh = nil
 	end
 end

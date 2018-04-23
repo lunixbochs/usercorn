@@ -53,8 +53,10 @@ func (b *ubind) Exports() map[string]lua.LGFunction {
 		"start": b.Start,
 		"stop":  b.Stop,
 
-		"hook_add": b.HookAdd,
-		"hook_del": b.HookDel,
+		"hook_add":     b.HookAdd,
+		"hook_del":     b.HookDel,
+		"hook_sys_add": b.HookSysAdd,
+		"hook_sys_del": b.HookSysDel,
 
 		"context_save":    b.ContextSave,
 		"context_restore": b.ContextRestore,
@@ -262,6 +264,62 @@ func (b *ubind) Stop(L *lua.LState) int {
 	return 0
 }
 
+func (b *ubind) HookSysAdd(_ *lua.LState) int {
+	L := b.L
+	match_name := L.CheckString(1)
+	before := L.Get(2)
+	if before != lua.LNil {
+		L.CheckFunction(2)
+	}
+	after := L.Get(3)
+	if after != lua.LNil {
+		L.CheckFunction(3)
+	}
+	var hhptr *lua.LUserData
+	makeCb := func(fn lua.LValue) models.SysCb {
+		return func(num int, name string, args []uint64, ret uint64, desc string) bool {
+			if match_name != "" && name != match_name {
+				return false
+			}
+			if fn != lua.LNil {
+				lnum, lname, lret, ldesc := lua.LInt(num), lua.LString(name), lua.LInt(ret), lua.LString(desc)
+				largs := L.NewTable()
+				for _, v := range args {
+					largs.Append(lua.LInt(v))
+				}
+				L.EnvToLua()
+				L.SetGlobal("hh", hhptr)
+				L.SetGlobal("num", lnum)
+				L.SetGlobal("name", lname)
+				L.SetGlobal("args", largs)
+				L.SetGlobal("ret", lret)
+				L.SetGlobal("desc", ldesc)
+				luap := lua.P{Fn: fn, NRet: 1, Protect: true}
+				if err := L.CallByParam(luap, lnum, lname, largs, lret, ldesc); err != nil {
+					fmt.Println(err)
+					return false
+				}
+				L.EnvFromLua()
+				return L.Get(1) == lua.LTrue
+			}
+			return false
+		}
+	}
+	hh := b.u.HookSysAdd(makeCb(before), makeCb(after))
+	hhptr = L.NewUserData()
+	hhptr.Value = hh
+	L.Push(hhptr)
+	return 1
+}
+
+func (b *ubind) HookSysDel(L *lua.LState) int {
+	hh := L.CheckUserData(1)
+	if chh, ok := hh.Value.(*models.SysHook); ok {
+		b.u.HookSysDel(chh)
+	}
+	return 0
+}
+
 // copy-pasted from models/cpu.Cpu
 // func (h *Hooks) HookAdd(htype int, cb interface{}, start uint64, end uint64, extra ...int) (Hook, error) {
 func (b *ubind) HookAdd(_ *lua.LState) int {
@@ -333,7 +391,7 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 				return false
 			}
 			L.EnvFromLua()
-			return L.CheckBool(1)
+			return L.Get(1) == lua.LTrue
 		}
 	default:
 		L.RaiseError("Unknown hook type: %d", htype)
@@ -349,7 +407,9 @@ func (b *ubind) HookAdd(_ *lua.LState) int {
 
 func (b *ubind) HookDel(L *lua.LState) int {
 	hh := L.CheckUserData(1)
-	b.u.HookDel(hh.Value.(cpu.Hook))
+	if chh, ok := hh.Value.(cpu.Hook); ok {
+		b.u.HookDel(chh)
+	}
 	return 0
 }
 
