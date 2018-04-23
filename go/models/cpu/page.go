@@ -40,6 +40,9 @@ func (p *Page) String() string {
 	}
 	if p.File != nil {
 		desc += fmt.Sprintf(" %s", p.File.Name)
+		if p.File.Off > 0 {
+			desc += fmt.Sprintf("(%#x)", p.File.Off)
+		}
 	}
 	return desc
 }
