@@ -14,15 +14,22 @@ func strslen(strs []string) int {
 	return i
 }
 
-func (L *LuaRepl) PrettyDump(lv []lua.LValue, implicit bool, outer bool) []string {
+func (L *LuaRepl) prettydump(lv []lua.LValue, implicit bool, outer bool, seen map[lua.LValue]bool) []string {
 	pretty := make([]string, len(lv))
 	for i, v := range lv {
 		switch s := v.(type) {
 		case *lua.LTable:
+			// seen[v] is used to skip recursive table references
+			if _, ok := seen[v]; ok {
+				pretty[i] = "{\"<skipped recursion>\"]}"
+				continue
+			}
+			seen[v] = true
+
 			table := make([]string, 0, s.Len())
 			idx := 1
 			s.ForEach(func(k, v lua.LValue) {
-				tmp := L.PrettyDump([]lua.LValue{k, v}, implicit, false)
+				tmp := L.prettydump([]lua.LValue{k, v}, implicit, false, seen)
 				if n, ok := k.(lua.LInt); ok && int(n) == idx {
 					idx += 1
 					table = append(table, tmp[1])
@@ -30,6 +37,8 @@ func (L *LuaRepl) PrettyDump(lv []lua.LValue, implicit bool, outer bool) []strin
 					table = append(table, strings.Join(tmp, " = "))
 				}
 			})
+
+			seen[v] = false
 			if outer {
 				pretty[i] = "{" + strings.Join(table, ",\n ") + "}"
 			} else {
@@ -59,6 +68,10 @@ func (L *LuaRepl) PrettyDump(lv []lua.LValue, implicit bool, outer bool) []strin
 		}
 	}
 	return pretty
+}
+
+func (L *LuaRepl) PrettyDump(lv []lua.LValue, implicit bool, outer bool) []string {
+	return L.prettydump(lv, implicit, outer, make(map[lua.LValue]bool))
 }
 
 func (L *LuaRepl) PrettyPrint(lv []lua.LValue, implicit bool) {
