@@ -152,11 +152,13 @@ func (t *Trace) Attach() error {
 		// idea: could write keyframes backwards while tracking dirty addrs
 		// this will prevent repeated writes from doing anything
 		// TODO: "push/pop" syscall frames?
-		before := func(num int, name string, args []uint64, ret uint64, desc string) {
+		before := func(num int, name string, args []uint64, ret uint64, desc string) bool {
 			t.OnSysPre(num, args, ret, desc)
+			return false
 		}
-		after := func(num int, name string, args []uint64, ret uint64, desc string) {
+		after := func(num int, name string, args []uint64, ret uint64, desc string) bool {
 			t.OnSysPost(num, args, ret, desc)
+			return false
 		}
 		t.sysHook = t.u.HookSysAdd(before, after)
 	}

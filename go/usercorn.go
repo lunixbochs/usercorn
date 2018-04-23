@@ -778,8 +778,14 @@ func (u *Usercorn) Syscall(num int, name string, getArgs models.SysGetArgs) (uin
 				return 0, err
 			}
 			desc := sys.Trace(args)
+			prevent := false
 			for _, v := range u.sysHooks {
-				v.Before(num, name, args, 0, desc)
+				if v.Before(num, name, args, 0, desc) {
+					prevent = true
+				}
+			}
+			if prevent {
+				return 0, nil
 			}
 			ret := sys.Call(args)
 			desc = sys.TraceRet(args, ret)
