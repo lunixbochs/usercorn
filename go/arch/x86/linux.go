@@ -1,6 +1,7 @@
 package x86
 
 import (
+	"fmt"
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 
@@ -88,6 +89,22 @@ func (k *LinuxKernel) gdtWrite(sel, base, limit, access, flags uint32) error {
 	s := k.U.StrucAt(k.gdt + uint64(sel)*8)
 	s.Pack(entry)
 	return s.Error
+}
+
+type mmapArgs struct {
+	Args []uint64 `struc:"[6]size_t"`
+}
+
+func (k *LinuxKernel) Mmap(buf co.Buf) uint64 {
+	var args mmapArgs
+	if err := buf.Unpack(&args); err != nil {
+		return posix.UINT64_MAX // FIXME
+	}
+	results, err := k.Argjoy.Call(k.PosixKernel.Mmap, args.Args)
+	if err != nil {
+		panic(fmt.Sprintf("LinuxKernel.Mmap(): %v", err))
+	}
+	return results[0].(uint64)
 }
 
 func (k *LinuxKernel) Socketcall(index int, params co.Buf) uint64 {
