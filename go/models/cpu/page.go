@@ -12,6 +12,17 @@ type FileDesc struct {
 	Len  uint64
 }
 
+func (f *FileDesc) shift(off uint64) *FileDesc {
+	if f != nil && off < f.Len {
+		return &FileDesc{
+			Name: f.Name,
+			Len:  f.Len - off,
+			Off:  f.Off + off,
+		}
+	}
+	return f
+}
+
 type Page struct {
 	Addr uint64
 	Size uint64
@@ -90,14 +101,7 @@ if delta < len1 {
 */
 func (p *Page) slice(addr, size uint64) *Page {
 	o := addr - p.Addr
-	var file *FileDesc
-	if p.File != nil && o < p.File.Len {
-		file = &FileDesc{
-			Name: p.File.Name,
-			Len:  p.File.Len - o,
-			Off:  p.File.Off + o,
-		}
-	}
+	file := p.File.shift(o)
 	return &Page{Addr: addr, Size: size, Prot: p.Prot, Data: p.Data[o : o+size], Desc: p.Desc, File: file}
 }
 
@@ -154,6 +158,7 @@ func (p *Page) Split(addr, size uint64) (left, right *Page) {
 		extra := bytes.Repeat([]byte{0}, int(nraddr-raddr))
 		p.Data = append(p.Data, extra...)
 	}
+	p.File = p.File.shift(addr - p.Addr)
 	p.Addr, p.Size = addr, size
 	return left, right
 }
