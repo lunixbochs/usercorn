@@ -779,12 +779,12 @@ func (u *Usercorn) Syscall(num int, name string, getArgs models.SysGetArgs) (uin
 			}
 			desc := sys.Trace(args)
 			for _, v := range u.sysHooks {
-				v.Before(num, args, 0, desc)
+				v.Before(num, name, args, 0, desc)
 			}
 			ret := sys.Call(args)
 			desc = sys.TraceRet(args, ret)
 			for _, v := range u.sysHooks {
-				v.After(num, args, ret, desc)
+				v.After(num, name, args, ret, desc)
 			}
 			return ret, nil
 		}
