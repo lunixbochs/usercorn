@@ -9,6 +9,50 @@ func _fallback(name, val)
     end
 end
 
+func _is_public(name)
+	return _builtins[name] != true and name:sub(1, 1) != '_'
+end
+
+func help()
+	local funcs = {}
+	local vars = {}
+	local vkeys = {}
+    for name, val in pairs(_G) do
+		if _is_public(name) then
+			if type(val) == 'function' then
+				table.insert(funcs, name)
+			else
+				vars[name] = val
+				table.insert(vkeys, name)
+			end
+        end
+    end
+	table.sort(funcs)
+	print 'Functions:'
+	for _, name in ipairs(funcs) do
+		print(name)
+	end
+	print
+
+	table.sort(vkeys)
+	print 'Variables:'
+	for _, name in ipairs(vkeys) do
+		local val = vars[name]
+		print name '=' val
+	end
+end
+
+func dir()
+	local ret = {}
+    for name, _ in pairs(_G) do
+		if _is_public(name) then
+			table.insert(ret, name)
+        end
+    end
+	table.sort(ret)
+	return ret
+end
+
 local _hook_types = {
 	-- TODO: hook sys, map?
 	code = cpu.HOOK_CODE,
