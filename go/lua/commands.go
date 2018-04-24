@@ -101,11 +101,23 @@ func write(addr, s)
     u.mem_write(addr, s)
 end
 
-func maps()
+func maps(addr)
     print 'Memory map:'
     local m = us:Mappings()
     for i in m() do
-        print m[i]:String()
+        local map = m[i]
+        if addr != nil then
+            if map:Contains(addr) then
+                print map:String()
+                print '%#x: %#x+%#x' % {addr, map.Addr, addr-map.Addr}
+                return
+            end
+        else
+            print map:String()
+        end
+    end
+    if addr != nil then
+        print '%#x not found.' % addr
     end
 end
 
