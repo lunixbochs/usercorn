@@ -20,6 +20,10 @@ type ArmLinuxKernel struct {
 
 func (k *ArmLinuxKernel) SetTls(addr uint64) {
 	k.tls = addr
+	k.U.RunAsm(0, "mcr p15, 0, r0, c13, c0, 3",
+		map[int]uint64{uc.ARM_REG_R0: addr},
+		[]int{uc.ARM_REG_R0},
+	)
 }
 
 func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
