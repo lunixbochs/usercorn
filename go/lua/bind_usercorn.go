@@ -266,7 +266,11 @@ func (b *ubind) Stop(L *lua.LState) int {
 
 func (b *ubind) HookSysAdd(_ *lua.LState) int {
 	L := b.L
-	match_name := L.CheckString(1)
+	match_name := ""
+	name_var := L.Get(1)
+	if name_var != lua.LNil {
+		match_name = L.CheckString(1)
+	}
 	before := L.Get(2)
 	if before != lua.LNil {
 		L.CheckFunction(2)
