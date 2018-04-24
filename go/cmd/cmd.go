@@ -318,7 +318,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		}
 		config.Output = out
 	} else {
-		config.Output = models.NewAsyncStream(os.Stderr)
+		// config.Output = models.NewAsyncStream(os.Stderr)
 	}
 
 	// merge environment with flags
