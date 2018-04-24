@@ -317,6 +317,8 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			panic(err)
 		}
 		config.Output = out
+	} else {
+		config.Output = models.NewAsyncStream(os.Stderr)
 	}
 
 	// merge environment with flags
@@ -420,6 +422,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			repl.Run()
 		}
 	}
+	defer config.Output.Close()
 	// start executable
 	if c.RunUsercorn != nil {
 		err = c.RunUsercorn()
@@ -428,6 +431,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	}
 	if *startrepl && !repl.Closed {
 		corn.Gate().Lock()
+		config.Output.Close()
 	}
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {
