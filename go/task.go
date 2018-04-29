@@ -17,6 +17,7 @@ type Task struct {
 	bits     int
 	Bsz      int
 	order    binary.ByteOrder
+	memsim   cpu.MemSim
 	mem      cpu.Pages
 	mapHooks []*models.MapHook
 }
@@ -48,18 +49,6 @@ func (t *Task) ByteOrder() binary.ByteOrder {
 	return t.order
 }
 
-func (t *Task) mapping(addr, size uint64) *cpu.Page {
-	for _, m := range t.mem {
-		if addr < m.Addr && addr+size > m.Addr {
-			return m
-		}
-		if addr >= m.Addr && addr < m.Addr+m.Size {
-			return m
-		}
-	}
-	return nil
-}
-
 func (t *Task) Asm(asm string, addr uint64) ([]byte, error) {
 	return models.Assemble(asm, addr, t.arch)
 }
@@ -78,11 +67,8 @@ func (t *Task) MemMap(addr, size uint64, prot int) error {
 }
 
 func (t *Task) MemProt(addr, size uint64, prot int) error {
-	// TODO: mapping a subregion should split the mapping?
 	addr, size = align(addr, size, true)
-	if mmap := t.mapping(addr, size); mmap != nil {
-		mmap.Prot = prot
-	}
+	t.memsim.Prot(addr, size, prot)
 	err := t.Cpu.MemProt(addr, size, prot)
 	if err == nil {
 		for _, v := range t.mapHooks {
@@ -93,75 +79,19 @@ func (t *Task) MemProt(addr, size uint64, prot int) error {
 }
 
 func (t *Task) MemUnmap(addr, size uint64) error {
-	// note: if there are errors during map, this could generate more unmap events than maps *shrug*
 	addr, size = align(addr, size, true)
-	for _, v := range t.mapHooks {
-		v.Unmap(addr, size)
+	for _, mm := range t.memsim.Mem.FindRange(addr, size) {
+		t.Cpu.MemUnmap(mm.Addr, mm.Size)
+		for _, v := range t.mapHooks {
+			v.Unmap(mm.Addr, mm.Size)
+		}
 	}
-	// TODO: alignment check?
-	for {
-		mmap := t.mapping(addr, size)
-		if mmap == nil {
-			break
-		}
-		left := mmap.Addr
-		right := left + mmap.Size
-		// if unmap overlaps an edge, shrink that edge
-		if addr <= left && addr+size > left {
-			left = addr + size
-		}
-		if addr < right && addr+size >= right {
-			right = addr
-		}
-		inMiddle := left < addr && right > addr+size
-		// unmap in Cpu
-		if left >= right {
-			t.Cpu.MemUnmap(mmap.Addr, mmap.Size)
-		} else {
-			if left > mmap.Addr {
-				t.Cpu.MemUnmap(mmap.Addr, left-mmap.Addr)
-			}
-			if right < mmap.Addr+mmap.Size {
-				t.Cpu.MemUnmap(right, (mmap.Addr+mmap.Size)-right)
-			}
-		}
-		// if our mapping now has size <= 0, delete it
-		// also delete if the unmap was fully in the middle (as we'll split the mapping into each side)
-		if left >= right || inMiddle {
-			// delete by copying to a new array
-			tmp := make([]*cpu.Page, 0, len(t.mem))
-			for _, v := range t.mem {
-				if v != mmap {
-					tmp = append(tmp, v)
-				}
-			}
-			t.mem = tmp
-		} else {
-			// otherwise resize our existing mapping
-			mmap.Addr = left
-			mmap.Size = right - left
-		}
-		// if unmap range is fully in the middle, split and create a new mapping for each side
-		if inMiddle {
-			t.Cpu.MemUnmap(addr, size)
-			left := &cpu.Page{
-				Addr: mmap.Addr, Size: addr - mmap.Addr,
-				Prot: mmap.Prot, File: mmap.File, Desc: mmap.Desc,
-			}
-			right := &cpu.Page{
-				Addr: addr + size, Size: (mmap.Addr + mmap.Size) - (addr + size),
-				Prot: mmap.Prot, File: mmap.File, Desc: mmap.Desc,
-			}
-			t.mem = append(t.mem, left)
-			t.mem = append(t.mem, right)
-		}
-
-	}
+	t.memsim.Unmap(addr, size)
 	return nil
 }
 
 func (t *Task) Mappings() cpu.Pages {
-	return t.mem
+	return t.memsim.Mem
 }
 
 func (t *Task) MemReserve(addr, size uint64, fixed bool) (*cpu.Page, error) {
@@ -176,7 +106,7 @@ func (t *Task) MemReserve(addr, size uint64, fixed bool) (*cpu.Page, error) {
 	}
 	lastPage := ^uint64(0)>>uint8(64-t.bits) - UC_MEM_ALIGN + 2
 	for i := addr; i < lastPage; i += UC_MEM_ALIGN {
-		if t.mapping(i, size) == nil {
+		if len(t.memsim.Mem.FindRange(i, size)) == 0 {
 			page := &cpu.Page{Addr: i, Size: size, Prot: cpu.PROT_NONE}
 			return page, nil
 		}
@@ -198,10 +128,10 @@ func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *
 	page.Prot = prot
 	err = t.Cpu.MemMap(page.Addr, page.Size, prot)
 	if err == nil {
-		t.mem = append(t.mem, page)
-		sort.Sort(t.mem)
+		t.memsim.Mem = append(t.memsim.Mem, page)
+		sort.Sort(t.memsim.Mem)
 		for _, v := range t.mapHooks {
-			v.Map(page.Addr, page.Size, page.Prot, page.Desc, page.File)
+			v.Map(page.Addr, page.Size, prot, desc, file)
 		}
 	}
 	return page.Addr, err
