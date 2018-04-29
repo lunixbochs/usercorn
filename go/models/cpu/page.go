@@ -99,7 +99,7 @@ if delta < len1 {
     off2 = off1 + delta
 }
 */
-func (p *Page) slice(addr, size uint64) *Page {
+func (p *Page) Slice(addr, size uint64) *Page {
 	o := addr - p.Addr
 	file := p.File.shift(o)
 	data := p.Data
@@ -142,7 +142,7 @@ func (p *Page) Split(addr, size uint64) (left, right *Page) {
 	if addr+size < p.Addr+p.Size {
 		ra := addr + size
 		rs := (p.Addr + p.Size) - ra
-		right = p.slice(ra, rs)
+		right = p.Slice(ra, rs)
 		if p.Data != nil {
 			p.Data = p.Data[:ra-p.Addr]
 		}
@@ -150,7 +150,7 @@ func (p *Page) Split(addr, size uint64) (left, right *Page) {
 	// space on the left
 	if addr > p.Addr {
 		ls := addr - p.Addr
-		left = p.slice(p.Addr, ls)
+		left = p.Slice(p.Addr, ls)
 		if p.Data != nil {
 			p.Data = p.Data[ls:]
 		}
