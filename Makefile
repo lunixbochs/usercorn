@@ -104,7 +104,7 @@ ifeq "$(OS)" "Darwin"
 else
 	export LD_LIBRARY_PATH := "$(LD_LIBRARY_PATH):$(DEST)/lib"
 endif
-GOBUILD := go build -i
+GOBUILD := go build
 PATH := '$(DEST)/$(GODIR)/bin:$(PATH)'
 SHELL := env PATH=$(PATH) /bin/bash
 
