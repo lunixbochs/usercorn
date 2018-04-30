@@ -24,7 +24,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/ui"
 )
 
-// #cgo LDFLAGS: -Wl,-rpath -Wl,$ORIGIN/deps/lib:$ORIGIN/lib
+// #cgo LDFLAGS: -Wl,-rpath,\$ORIGIN/deps/lib:\$ORIGIN/lib
 import "C"
 
 type tramp struct {

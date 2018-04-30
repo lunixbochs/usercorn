@@ -94,17 +94,19 @@ deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/
 	mkdir -p .gopath/src/github.com/lunixbochs
 	ln -s ../../../.. .gopath/src/github.com/lunixbochs/usercorn
 
-LD_LIBRARY_PATH=
-DYLD_LIBRARY_PATH=
-ifneq "$(OS)" "Darwin"
-	LD_LIBRARY_PATH := "$(LD_LIBRARY_PATH):$(DEST)/lib"
-else
-	DYLD_LIBRARY_PATH := "$(DYLD_LIBRARY_PATH):$(DEST)/lib"
-endif
-GOBUILD := go build -i
-PATHX := '$(DEST)/$(GODIR)/bin:$(PATH)'
 export CGO_CFLAGS = -I$(DEST)/include
 export CGO_LDFLAGS = -L$(DEST)/lib
+
+LD_LIBRARY_PATH=
+DYLD_LIBRARY_PATH=
+ifeq "$(OS)" "Darwin"
+	export DYLD_LIBRARY_PATH := "$(DYLD_LIBRARY_PATH):$(DEST)/lib"
+else
+	export LD_LIBRARY_PATH := "$(LD_LIBRARY_PATH):$(DEST)/lib"
+endif
+GOBUILD := go build -i
+PATH := '$(DEST)/$(GODIR)/bin:$(PATH)'
+SHELL := env PATH=$(PATH) /bin/bash
 
 ifneq ($(wildcard $(DEST)/$(GODIR)/.),)
 	export GOROOT := $(DEST)/$(GODIR)
@@ -114,70 +116,56 @@ ifneq ($(GOPATH),)
 else
 	export GOPATH := $(DEST)/gopath:$(shell pwd)/.gopath
 endif
-DEPS=$(shell env PATH=$(PATHX) GOROOT=$(GOROOT) GOPATH=$(GOPATH) go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
-PKGS=$(shell env PATH=$(PATHX) GOROOT=$(GOROOT) GOPATH=$(GOPATH) go list ./go/... | sort -u | rev | sed -e 's,og/.*$$,,' | rev | sed -e 's,^,github.com/lunixbochs/usercorn/go,')
+DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
+PKGS=$(shell go list ./go/... | sort -u | rev | sed -e 's,og/.*$$,,' | rev | sed -e 's,^,github.com/lunixbochs/usercorn/go,')
 
 # TODO: more DRY?
 usercorn: .gopath
-	@echo "$(GOBUILD) -o usercorn ./go/cmd/usercorn"
-	@sh -c "PATH=$(PATHX) $(GOBUILD) -o usercorn ./go/cmd/usercorn"
+	$(GOBUILD) ./go/cmd/usercorn
 	$(FIXRPATH) usercorn
 
 imgtrace: .gopath
-	@echo "$(GOBUILD) -o imgtrace ./go/cmd/imgtrace"
-	@sh -c "PATH=$(PATHX) $(GOBUILD) -o imgtrace ./go/cmd/imgtrace"
+	$(GOBUILD) -o imgtrace ./go/cmd/imgtrace
 	$(FIXRPATH) imgtrace
 
 shellcode: .gopath
-	@echo "$(GOBUILD) -o shellcode ./go/cmd/shellcode"
-	@sh -c "PATH=$(PATHX) $(GOBUILD) -o shellcode ./go/cmd/shellcode"
+	$(GOBUILD) -o shellcode ./go/cmd/shellcode
 	$(FIXRPATH) shellcode
 
 repl: .gopath
-	@echo "$(GOBUILD) -o repl ./go/cmd/repl"
-	@sh -c "PATH=$(PATHX) $(GOBUILD) -o repl ./go/cmd/repl"
+	$(GOBUILD) -o repl ./go/cmd/repl
 	$(FIXRPATH) repl
 
 fuzz: .gopath
-	@echo "$(GOBUILD) -o fuzz ./go/cmd/fuzz"
-	@sh -c "PATH=$(PATHX) $(GOBUILD) -o fuzz ./go/cmd/fuzz"
+	$(GOBUILD) -o fuzz ./go/cmd/fuzz
 	$(FIXRPATH) fuzz
 
 cfg: .gopath
-	@echo "$(GOBUILD) -o cfg ./go/cmd/cfg"
-	@sh -c "PATH=$(PATHX) $(GOBUILD) -o cfg ./go/cmd/cfg"
+	$(GOBUILD) -o cfg ./go/cmd/cfg
 	$(FIXRPATH) cfg
 
 cgc: .gopath
-	@echo "$(GOBUILD) -o cgc ./go/cmd/cgc"
-	@sh -c "PATH=$(PATHX) $(GOBUILD) -o cgc ./go/cmd/cgc"
+	$(GOBUILD) -o cgc ./go/cmd/cgc
 	$(FIXRPATH) cgc
 
 trace: .gopath
-	@echo "$(GOBUILD) -o trace ./go/cmd/trace"
-	@sh -c "PATH=$(PATHX) $(GOBUILD) -o trace ./go/cmd/trace"
+	$(GOBUILD) -o trace ./go/cmd/trace
 	$(FIXRPATH) trace
 
 com: .gopath
-	@echo "$(GOBUILD) -o com ./go/cmd/com"
-	@sh -c "PATH=$(PATHX) $(GOBUILD) -o com ./go/cmd/com"
+	$(GOBUILD) -o com ./go/cmd/com
 	$(FIXRPATH) com
 
 get: .gopath
-	sh -c "PATH=$(PATHX) go get -u ${DEPS}"
+	go get -u ${DEPS}
 
 test: .gopath
-	@echo "go test -v ./go/..."
-	@sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test -v ./go/..."
+	go test -v ./go/...
 
 cov: .gopath
-	@echo "go get -u github.com/haya14busa/goverage"
-	@sh -c "PATH=$(PATHX) go get -u github.com/haya14busa/goverage"
-	@echo "goverage -v -coverprofile=coverage.out ${PKGS}"
-	@-sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) goverage -v -coverprofile=coverage.out ${PKGS}"
-	@echo "go tool cover -html=coverage.out"
-	@sh -c "PATH=$(PATHX) go tool cover -html=coverage.out"
+	go get -u github.com/haya14busa/goverage
+	goverage -v -coverprofile=coverage.out ${PKGS}
+	go tool cover -html=coverage.out
 
 bench: .gopath
-	@echo "go test -v -benchmem -bench=. ./go/..."
-	@sh -c "LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH) PATH=$(PATHX) go test -v -benchmem -bench=. ./go/..."
+	go test -v -benchmem -bench=. ./go/...
