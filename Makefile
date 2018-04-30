@@ -2,10 +2,10 @@
 ALL_TARGETS := usercorn imgtrace shellcode repl fuzz cfg trace com cgc
 .PHONY: get test cov bench deps ${ALL_TARGETS}
 
-all: ${ALL_TARGETS}
+all: usercorn
 
 clean:
-	rm ${ALL_TARGETS}
+	rm -f usercorn
 
 build: get all
 
@@ -97,16 +97,9 @@ deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/
 export CGO_CFLAGS = -I$(DEST)/include
 export CGO_LDFLAGS = -L$(DEST)/lib
 
-LD_LIBRARY_PATH=
-DYLD_LIBRARY_PATH=
-ifeq "$(OS)" "Darwin"
-	export DYLD_LIBRARY_PATH := "$(DYLD_LIBRARY_PATH):$(DEST)/lib"
-else
-	export LD_LIBRARY_PATH := "$(LD_LIBRARY_PATH):$(DEST)/lib"
-endif
 GOBUILD := go build
 PATH := '$(DEST)/$(GODIR)/bin:$(PATH)'
-SHELL := env PATH=$(PATH) /bin/bash
+SHELL := env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$(DEST)/lib DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH):$(DEST)/lib PATH=$(PATH) /bin/bash
 
 ifneq ($(wildcard $(DEST)/$(GODIR)/.),)
 	export GOROOT := $(DEST)/$(GODIR)
