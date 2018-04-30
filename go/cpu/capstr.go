@@ -13,14 +13,14 @@ type Capstr struct {
 	cs *cs.Engine
 	// FIXME: there's a special case on every capstone just for thumb
 	thumb *Capstr
-	dc    discache
+	dc    *models.Discache
 }
 
 func (c *Capstr) Open() (err error) {
 	engine, err := cs.New(c.Arch, c.Mode)
 	if err == nil {
 		c.cs = engine
-		c.dc.cache = make(map[uint64]*discacheEntry)
+		c.dc = models.NewDiscache()
 	}
 	return errors.Wrap(err, "cs.New() failed")
 }
@@ -40,7 +40,7 @@ func (c *Capstr) Dis(mem []byte, addr uint64) ([]models.Ins, error) {
 		return c.thumb.Dis(mem, addr)
 	}
 	if ent := c.dc.Get(addr, mem); ent != nil {
-		return ent.dis, nil
+		return ent.Dis, nil
 	}
 	dis, err := c.cs.Dis(mem, addr, 0)
 	if err != nil {
