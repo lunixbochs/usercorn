@@ -10,26 +10,24 @@ Building
 
 Usercorn depends on Go 1.6 or newer, as well as the latest unstable versions of Capstone, Unicorn, and Keystone.
 
-`make deps` will attempt to install all of the above into the source tree.
+`make deps` will attempt to install all of the above dependencies into the source tree under `deps/`.
 
 `make` will update Go packages and build `usercorn`
-
-Additional binaries such as `repl`, `imgtrace`, and `shellcode` can be built with `make all`
 
 Example Commands
 ---
 
-    usercorn bins/x86.linux.elf
-    usercorn bins/x86_64.linux.elf
-    usercorn bins/x86.darwin.macho
-    usercorn bins/x86_64.darwin.macho
-    usercorn bins/x86.linux.cgc
-    usercorn bins/mipsel.linux.elf
+    usercorn run bins/x86.linux.elf
+    usercorn run bins/x86_64.linux.elf
+    usercorn run bins/x86.darwin.macho
+    usercorn run bins/x86_64.darwin.macho
+    usercorn run bins/x86.linux.cgc
+    usercorn run bins/mipsel.linux.elf
 
-    usercorn -trace bins/x86.linux.elf
-    usercorn -trace -to trace.uc bins/x86.linux.elf
-    trace -pretty trace.uc
-    usercorn -repl bins/x86.linux.elf
+    usercorn run -trace bins/x86.linux.elf
+    usercorn run -trace -to trace.uc bins/x86.linux.elf
+    usercorn trace -pretty trace.uc
+    usercorn run -repl bins/x86.linux.elf
 
 What.
 ----

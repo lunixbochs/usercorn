@@ -1,4 +1,4 @@
-package main
+package cfg
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/cmd"
 )
 
-func main() {
+func Main(args []string) {
 	var backtrack, json *bool
 	c := cmd.NewUsercornCmd()
 
@@ -25,5 +25,7 @@ func main() {
 		}()
 		return CfgMain(c.Usercorn, *backtrack, *json)
 	}
-	os.Exit(c.Run(os.Args, os.Environ()))
+	os.Exit(c.Run(args, os.Environ()))
 }
+
+func init() { cmd.Register("cfg", "explore a program's control flow graph", Main) }

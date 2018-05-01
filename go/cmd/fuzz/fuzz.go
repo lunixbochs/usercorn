@@ -1,4 +1,4 @@
-package main
+package fuzz
 
 import (
 	"encoding/binary"
@@ -79,7 +79,7 @@ func (p *FakeProc) Start() error {
 	return nil
 }
 
-func main() {
+func Main(args []string) {
 	message := []byte("In fuzz main")
 	ioutil.WriteFile("/tmp/outfile", message, 0444)
 
@@ -194,5 +194,7 @@ func main() {
 			}
 		}
 	}
-	os.Exit(c.Run(os.Args, os.Environ()))
+	os.Exit(c.Run(args, os.Environ()))
 }
+
+func init() { cmd.Register("fuzz", "fuzz acts as an AFL fork server", Main) }

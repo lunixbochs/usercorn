@@ -1,6 +1,5 @@
 .DEFAULT_GOAL := build
-ALL_TARGETS := usercorn imgtrace shellcode repl fuzz cfg trace com cgc
-.PHONY: get test cov bench deps ${ALL_TARGETS}
+.PHONY: get test cov bench deps usercorn
 
 all: usercorn
 
@@ -114,40 +113,9 @@ PKGS=$(shell go list ./go/... | sort -u | rev | sed -e 's,og/.*$$,,' | rev | sed
 
 # TODO: more DRY?
 usercorn: .gopath
-	$(GOBUILD) ./go/cmd/usercorn
+	rm -f usercorn
+	$(GOBUILD) -o usercorn ./go/cmd/main
 	$(FIXRPATH) usercorn
-
-imgtrace: .gopath
-	$(GOBUILD) -o imgtrace ./go/cmd/imgtrace
-	$(FIXRPATH) imgtrace
-
-shellcode: .gopath
-	$(GOBUILD) -o shellcode ./go/cmd/shellcode
-	$(FIXRPATH) shellcode
-
-repl: .gopath
-	$(GOBUILD) -o repl ./go/cmd/repl
-	$(FIXRPATH) repl
-
-fuzz: .gopath
-	$(GOBUILD) -o fuzz ./go/cmd/fuzz
-	$(FIXRPATH) fuzz
-
-cfg: .gopath
-	$(GOBUILD) -o cfg ./go/cmd/cfg
-	$(FIXRPATH) cfg
-
-cgc: .gopath
-	$(GOBUILD) -o cgc ./go/cmd/cgc
-	$(FIXRPATH) cgc
-
-trace: .gopath
-	$(GOBUILD) -o trace ./go/cmd/trace
-	$(FIXRPATH) trace
-
-com: .gopath
-	$(GOBUILD) -o com ./go/cmd/com
-	$(FIXRPATH) com
 
 get: .gopath
 	go get -u ${DEPS}

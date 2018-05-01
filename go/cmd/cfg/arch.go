@@ -1,4 +1,4 @@
-package main
+package cfg
 
 import (
 	cs "github.com/bnagy/gapstone"

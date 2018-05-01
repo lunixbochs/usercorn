@@ -1,4 +1,4 @@
-package main
+package repl
 
 import (
 	"bufio"
@@ -87,7 +87,7 @@ func handleCmd(c *cmd.UsercornCmd, line string) bool {
 	return true
 }
 
-func main() {
+func Main(args []string) {
 	c := cmd.NewUsercornRawCmd()
 	c.NoExe = true
 	c.NoArgs = true
@@ -135,5 +135,7 @@ func main() {
 		fmt.Printf("\n%s", status.Changes(false).String(c.Config.Color))
 		return nil
 	}
-	c.Run(os.Args, os.Environ())
+	c.Run(args, os.Environ())
 }
+
+func init() { cmd.Register("repl", "execute assembly on an interactive command line", Main) }

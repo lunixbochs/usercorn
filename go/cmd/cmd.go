@@ -189,7 +189,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			usage += " [args...]"
 		}
 		usage += "\n\nOptions:\n"
-		fmt.Fprintf(os.Stderr, usage, os.Args[0])
+		fmt.Fprintf(os.Stderr, usage, argv[0])
 		var flags []*flag.Flag
 		var tflags []*flag.Flag
 		fs.VisitAll(func(f *flag.Flag) {
@@ -204,7 +204,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		models.PrintFlags(flags)
 		fmt.Fprintf(os.Stderr, "\nTrace Options:\n")
 		models.PrintFlags(tflags)
-		fmt.Fprintf(os.Stderr, "\nExample:\n  %s -trace -symfile bins/x86_64.linux.elf\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "\nExample:\n  %s -trace -symfile bins/x86_64.linux.elf\n", argv[0])
 	}
 	if c.SetupFlags != nil {
 		if err := c.SetupFlags(); err != nil {
