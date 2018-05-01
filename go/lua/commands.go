@@ -121,6 +121,16 @@ func maps(addr)
     end
 end
 
+func malloc(size, desc)
+	if desc == nil then desc = "[script]" end
+	addr, err = us:Malloc(size, desc)
+	if err != nil then
+		print err
+	else
+		return addr
+	end
+end
+
 func map(addr, size, prot)
     if addr == nil then
         maps()
@@ -128,6 +138,10 @@ func map(addr, size, prot)
         if prot == nil then prot = cpu.PROT_ALL end
         u.mem_map(addr, size, prot)
     end
+end
+
+func unmap(addr, size)
+	u.mem_unmap(addr, size)
 end
 
 func asm(src, addr)
