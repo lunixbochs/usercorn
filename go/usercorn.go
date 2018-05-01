@@ -557,7 +557,7 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 	if addr > 0 && addr >= cur {
 		// take brk protections from last brk segment (not sure if this is right)
 		prot := cpu.PROT_READ | cpu.PROT_WRITE
-		if brk := u.mem.Find(cur); brk != nil {
+		if brk := u.memsim.Mem.Find(cur); brk != nil {
 			prot = brk.Prot
 			u.brk = brk.Addr + brk.Size
 		}
@@ -900,7 +900,7 @@ func (u *Usercorn) RunShellcodeMapped(addr uint64, code []byte, setRegs map[int]
 // will trampoline if unicorn is already running
 func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
 	size := uint64(len(code))
-	exists := len(u.mem.FindRange(addr, size)) > 0
+	exists := len(u.memsim.Mem.FindRange(addr, size)) > 0
 	if addr != 0 && exists {
 		return errors.Errorf("RunShellcode: 0x%x - 0x%x overlaps mapped memory", addr, addr+uint64(len(code)))
 	}

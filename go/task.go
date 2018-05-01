@@ -18,7 +18,6 @@ type Task struct {
 	Bsz      int
 	order    binary.ByteOrder
 	memsim   cpu.MemSim
-	mem      cpu.Pages
 	mapHooks []*models.MapHook
 }
 
