@@ -63,7 +63,8 @@ func WriteDrcov(tf *trace.TraceReader, out *os.File) error {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return errors.Wrap(err, "error reading next trace operation")
+			fmt.Println(errors.Wrap(err, "error reading next trace operation"))
+			break
 		}
 		switch frame := op.(type) {
 		case *trace.OpKeyframe:
@@ -78,15 +79,24 @@ func WriteDrcov(tf *trace.TraceReader, out *os.File) error {
 				switch o := op.(type) {
 				case *trace.OpJmp:
 					mod := modlookup.Find(o.Addr)
-					bb := drcovBB{
-						Start: uint32(o.Addr - mod.Addr),
-						Size:  uint16(o.Size),
-						ModId: uint16(mod.Prot),
+					if mod != nil {
+						bb := drcovBB{
+							Start: uint32(o.Addr - mod.Addr),
+							Size:  uint16(o.Size),
+							ModId: uint16(mod.Prot),
+						}
+						struc.PackWithOptions(&blocks, &bb, strucOptions)
+						bbCount++
 					}
-					struc.PackWithOptions(&blocks, &bb, strucOptions)
-					bbCount++
 				case *trace.OpMemMap:
 					addmod(o)
+				case *trace.OpSyscall:
+					for _, op := range o.Ops {
+						switch o := op.(type) {
+						case *trace.OpMemMap:
+							addmod(o)
+						}
+					}
 				}
 			}
 		}
