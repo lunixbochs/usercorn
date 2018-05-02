@@ -94,6 +94,10 @@ func (k *PosixKernel) Lseek(fd co.Fd, offset co.Off, whence int) uint64 {
 	return uint64(off)
 }
 
+func (k *PosixKernel) Literal_llseek(fd co.Fd, off_low, off_high co.Off, whence int) uint64 {
+	return k.Lseek(fd, (off_low<<32)|off_high, whence)
+}
+
 func (k *PosixKernel) Fstat(fd co.Fd, buf co.Obuf) uint64 {
 	var stat syscall.Stat_t
 	if err := syscall.Fstat(int(fd), &stat); err != nil {
