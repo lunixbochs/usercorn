@@ -219,6 +219,13 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	return u, nil
 }
 
+func (u *Usercorn) Callstack() []models.Stackframe {
+	if u.replay == nil {
+		return nil
+	}
+	return u.replay.Callstack.Freeze(u.replay.PC, u.replay.SP)
+}
+
 func (u *Usercorn) Rewind(by, addr uint64) error {
 	if !u.config.Rewind {
 		return errors.New("rewind not enabled in config")

@@ -97,6 +97,15 @@ func read(addr, size)
     return u.mem_read(addr, size)
 end
 
+func readstr(addr)
+	local s = ''
+	while not string.find(s, '\0') do
+		s = s .. u.mem_read(addr, 32)
+		addr = addr + 32
+	end
+	return string.match(s, '[^\0]+')
+end
+
 func write(addr, s)
     u.mem_write(addr, s)
 end
@@ -211,6 +220,13 @@ func b(baddr)
     print 'Breakpoint N at 0x%x' % baddr
 end
 
+func bt()
+	local cs = us:Callstack()
+	for _, frame in cs() do
+		print '  %#x' % frame.PC
+	end
+end
+
 func runto(name)
     on code do
         if ins.name == name then
@@ -224,7 +240,7 @@ func runto(name)
 end
 
 func regs(name)
-    reglist, err = us:RegDump()
+    local reglist, err = us:RegDump()
     for _, reg in reglist() do
         print reg.Name reg.Val
     end

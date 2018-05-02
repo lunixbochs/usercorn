@@ -27,6 +27,7 @@ type Usercorn interface {
 	Run() error
 	Trampoline(func() error) error
 
+	Callstack() []Stackframe
 	Restart(func(Usercorn, error) error)
 	Rewind(n, addr uint64) error
 
