@@ -10,9 +10,16 @@ import (
 func HandleStat(buf co.Obuf, stat *syscall.Stat_t, u models.Usercorn, large bool) uint64 {
 	var pack interface{}
 	os, bits := u.OS(), u.Bits()
+	arch := u.Arch().Name
 	switch os {
 	case "linux":
-		pack = NewLinuxStat(stat, bits, large)
+		switch arch {
+		case "x86":
+		case "x86_64":
+			pack = NewLinuxStat_x86(stat, bits, large)
+		default:
+			pack = NewLinuxStat_generic(stat, bits, large)
+		}
 	case "darwin":
 		pack = NewDarwinStat(stat, bits, large)
 	default:
@@ -24,8 +31,32 @@ func HandleStat(buf co.Obuf, stat *syscall.Stat_t, u models.Usercorn, large bool
 	return 0
 }
 
-// TODO: these might only work on x86
-type Linux32Stat struct {
+type LinuxStat_generic struct {
+	Dev uint32
+	Ino uint64
+
+	Mode     uint32
+	Nlink    uint32
+	Uid, Gid uint32
+	Rdev     uint32
+	Pad0     [4]byte
+
+	Size    int64
+	Blksize uint32
+	Pad1    [4]byte
+	Blkcnt  uint64
+
+	Atime     uint32
+	AtimeNsec uint32
+	Mtime     uint32
+	MtimeNsec uint32
+	Ctime     uint32
+	CtimeNsec uint32
+
+	Reserved [8]byte
+}
+
+type Linux32Stat_x86 struct {
 	Dev      uint32
 	Ino      uint32
 	Mode     uint16
@@ -47,7 +78,7 @@ type Linux32Stat struct {
 	Reserved5 uint32
 }
 
-type Linux32Stat64 struct {
+type Linux32Stat64_x86 struct {
 	Dev  uint64
 	Pad0 [4]byte
 	Ino  uint32
@@ -72,7 +103,7 @@ type Linux32Stat64 struct {
 	LongIno uint64
 }
 
-type LinuxStat64 struct {
+type LinuxStat64_x86 struct {
 	Dev      uint64
 	Ino      uint64
 	Nlink    uint64
