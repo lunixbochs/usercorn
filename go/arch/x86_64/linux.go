@@ -87,8 +87,6 @@ func (k *LinuxKernel) ArchPrctl(code int, addr uint64) {
 	}
 }
 
-func (k *LinuxKernel) SetTidAddress() {}
-
 func LinuxKernels(u models.Usercorn) []interface{} {
 	kernel := &LinuxKernel{linux.NewKernel()}
 	// TODO: LinuxInit needs to have a copy of the kernel
