@@ -156,6 +156,7 @@ func (c *BpfCpu) Start(begin, until uint64) error {
 			c.exitRequest = true
 			c.returnValue = c.get(ins.arg)
 			c.OnBlock(pc, 0)
+			err = models.ExitStatus(int(c.returnValue))
 		case CLASS_LD:
 			c.RegWrite(A, uint64(c.get(ins.arg)))
 		case CLASS_LDX:
