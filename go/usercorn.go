@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	rdebug "runtime/debug"
 	"strings"
 	"sync"
 
@@ -406,7 +407,7 @@ func (u *Usercorn) Run() error {
 			u.HookDel(v)
 		}
 		if e := recover(); e != nil {
-			msg := fmt.Sprintf("\n+++ caught panic +++\n%s\n\n", e)
+			msg := fmt.Sprintf("\n+++ caught panic +++\n%s\n%s\n\n", e, rdebug.Stack())
 			if u.ui == nil {
 				// FIXME: replay and task should be api-compatible, so we can pass a cpu in here instead
 				if u.replay == nil {
