@@ -15,6 +15,7 @@ func HandleStat(buf co.Obuf, stat *syscall.Stat_t, u models.Usercorn, large bool
 	case "linux":
 		switch arch {
 		case "x86":
+			fallthrough
 		case "x86_64":
 			pack = NewLinuxStat_x86(stat, bits, large)
 		default:
