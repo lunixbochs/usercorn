@@ -3,6 +3,7 @@ package bpf
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/lunixbochs/usercorn/go/models"
@@ -84,7 +85,6 @@ func (a *misc) String() string  { return a.name }
 
 type insReader struct {
 	*bytes.Reader
-	err  error
 	addr uint64
 }
 
@@ -95,13 +95,13 @@ func (ir *insReader) tell() int64 {
 }
 
 // ins reads out exactly one instruction
-func (ir *insReader) ins() models.Ins {
+func (ir *insReader) ins() (models.Ins, error) {
 	i := &ins{}
 	i.bytes = make([]byte, 8)
 	i.addr = ir.addr + uint64(ir.tell())
 	_, err := ir.Read(i.bytes)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	i.op = binary.LittleEndian.Uint16(i.bytes)
 	i.jt = i.bytes[2]
@@ -132,19 +132,17 @@ func (ir *insReader) ins() models.Ins {
 		case A_A:
 			arg = &regA{}
 		case A_LEN:
-			arg = nil // TODO
+			return nil, errors.New("bpf extensions not supported")
 		case A_NONE:
 			arg = &misc{""}
 		}
 		i.name = op.name
 		i.optype = op.optype
 		i.arg = arg
-		return i
+		return i, nil
 	} else {
-		// TODO: Remove this once we have all legal opcodes
-		fmt.Printf("opcode %#x not found in table\n", i.op)
+		panic(fmt.Sprintf("opcode %#x not found in table\n", i.op))
 	}
-	return nil
 }
 
 type Dis struct{}
@@ -156,9 +154,9 @@ func (d *Dis) Dis(mem []byte, addr uint64) ([]models.Ins, error) {
 	}
 	var ret []models.Ins
 	for {
-		ins := reader.ins()
-		if ins == nil || reader.err != nil {
-			break
+		ins, err := reader.ins()
+		if ins == nil || err != nil {
+			return nil, err
 		}
 		ret = append(ret, ins)
 	}
