@@ -80,9 +80,9 @@ func (t *Task) MemProt(addr, size uint64, prot int) error {
 func (t *Task) MemUnmap(addr, size uint64) error {
 	addr, size = align(addr, size, true)
 	for _, mm := range t.memsim.Mem.FindRange(addr, size) {
-		t.Cpu.MemUnmap(mm.Addr, mm.Size)
+		t.Cpu.MemUnmap(addr, size)
 		for _, v := range t.mapHooks {
-			v.Unmap(mm.Addr, mm.Size)
+			v.Unmap(addr, size)
 		}
 	}
 	t.memsim.Unmap(addr, size)
