@@ -28,6 +28,9 @@ func (u *UnicornCpu) Backend() interface{} {
 }
 
 func (u *UnicornCpu) ContextSave(reuse interface{}) (interface{}, error) {
+	if reuse == nil {
+		return u.Unicorn.ContextSave(nil)
+	}
 	return u.Unicorn.ContextSave(reuse.(uc.Context))
 }
 
