@@ -6,6 +6,7 @@ import (
 
 func (k *PosixKernel) Ioctl(fd co.Fd, req uint64) {}
 func (k *PosixKernel) Fcntl(fd co.Fd, cmd int)    {}
+func (k *PosixKernel) Fcntl64(fd co.Fd, cmd int)  {}
 
 func (k *PosixKernel) RtSigprocmask() {}
 func (k *PosixKernel) RtSigaction()   {}
