@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"github.com/pkg/errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"runtime/debug"
@@ -120,9 +119,6 @@ func (p *FakeProc) Start() error {
 }
 
 func Main(args []string) {
-	message := []byte("In fuzz main")
-	ioutil.WriteFile("/tmp/outfile", message, 0444)
-
 	forksrvCtrl := os.NewFile(uintptr(FORKSRV_FD), "afl_ctrl")
 	forksrvStatus := os.NewFile(uintptr(FORKSRV_FD+1), "afl_status")
 
