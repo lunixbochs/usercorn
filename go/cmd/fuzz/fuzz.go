@@ -132,17 +132,17 @@ func Main(args []string) {
 
 	nofork := os.Getenv("AFL_NO_FORKSRV") == "1"
 
-	aflArea := C.afl_setup()
-	if aflArea == nil {
-		panic("could not set up AFL shared memory")
-	}
-
 	c.SetupFlags = func() error {
 		forkAddr = c.Flags.Uint64("forkaddr", 0, "wait until this address to fork and begin fuzzing")
 		fuzzInterp = c.Flags.Bool("fuzzinterp", false, "controls whether fuzzing is delayed until program's main entry point")
 		return nil
 	}
 	c.RunUsercorn = func() error {
+		aflArea := C.afl_setup()
+		if aflArea == nil {
+			panic("could not set up AFL shared memory")
+		}
+
 		var err error
 		u := c.Usercorn
 		defer func() {
@@ -157,14 +157,13 @@ func Main(args []string) {
 			panic("failed to setup hooks")
 		}
 		if nofork {
-			status := 0
 			err = u.Run()
 			if _, ok := err.(models.ExitStatus); ok {
 			} else if err != nil {
 				u.Printf("Usercorn err: %s\n", err)
-				status = 257
+				return models.ExitStatus(257)
 			}
-			os.Exit(status)
+			return err
 		}
 
 		// save cpu and memory state
