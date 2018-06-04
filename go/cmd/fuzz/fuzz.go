@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"runtime/debug"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -121,8 +122,15 @@ func Main(args []string) {
 	c.RunUsercorn = func() error {
 		var err error
 		u := c.Usercorn
+		defer func() {
+			if r := recover(); r != nil {
+				u.Println("caught panic", r)
+				u.Println(string(debug.Stack()))
+			}
+		}()
 
 		if err := addHook(u); err != nil {
+			u.Println("failed to setup hooks")
 			return err
 		}
 		if nofork {
@@ -150,6 +158,7 @@ func Main(args []string) {
 		child := FakeProc{Argv: []string{"/bin/cat"}, Usercorn: u}
 		var aflMsg [4]byte
 		// afl forkserver loop
+		u.Println("starting forkserver")
 		for {
 			lastPos = 0
 			if _, err := forksrvCtrl.Read(aflMsg[:]); err != nil {
