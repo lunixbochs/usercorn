@@ -64,13 +64,14 @@ func Main(args []string) {
 	jsonFlag := fs.Bool("json", false, "output trace as line-delimited JSON objects")
 	prettyFlag := fs.Bool("pretty", false, "output trace as human-readable console text")
 	drcovFlag := fs.String("drcov", "", "output trace to drcov file")
+	ecovFlag := fs.String("ecov", "", "output trace to ecov file")
 	fs.Usage = func() {
 		fmt.Printf("Usage: %s [options] <tracefile>\n", args[0])
 		fs.PrintDefaults()
 	}
 
 	fs.Parse(args[1:])
-	if fs.NArg() == 0 || !(*jsonFlag || *prettyFlag || *drcovFlag != "") {
+	if fs.NArg() == 0 || !(*jsonFlag || *prettyFlag || *drcovFlag != "" || *ecovFlag != "") {
 		fs.Usage()
 		os.Exit(1)
 	}
@@ -105,6 +106,17 @@ func Main(args []string) {
 		defer f.Close()
 		if err := WriteDrcov(tf, f); err != nil {
 			fmt.Fprintf(os.Stderr, "error generating drcov file: %v\n", err)
+			os.Exit(1)
+		}
+	} else if *ecovFlag != "" {
+		f, err := os.Create(*ecovFlag)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error opening ecov output file: %v\n", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		if err := WriteEcov(tf, f); err != nil {
+			fmt.Fprintf(os.Stderr, "error generating ecov file: %v\n", err)
 			os.Exit(1)
 		}
 	}
