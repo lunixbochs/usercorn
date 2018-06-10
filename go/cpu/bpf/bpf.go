@@ -77,7 +77,6 @@ func (c *BpfCpu) get(a arg) uint32 {
 	case *imm:
 		val = uint64(arg.val)
 	case *msh:
-		// TODO: How does this work for ldx?
 		val, _ = c.ReadUint(uint64(arg.val), 1, 0)
 		val = uint64((val & 0xf) * 4)
 	case *jabs:
@@ -233,7 +232,6 @@ func (c *BpfCpu) Stop() error {
 	return nil
 }
 
-// TODO: Implement these
 func (c *BpfCpu) Close() error {
 	return nil
 }

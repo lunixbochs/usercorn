@@ -17,7 +17,6 @@ func Main(args []string) {
 	var packet *string
 
 	c.SetupFlags = func() error {
-		// TODO: Default should be ""
 		packet = c.Flags.String("packet", "", "packet file to run filter against")
 		return nil
 	}
