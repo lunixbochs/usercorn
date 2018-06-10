@@ -45,7 +45,7 @@ func NewBpfLoader(filename, pcap string) (models.Loader, error) {
 
 	packetreader, packetsize, err := tryRead(pcap)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not load filter")
+		return nil, errors.Wrap(err, "could not load packet")
 	}
 
 	return &BpfLoader{

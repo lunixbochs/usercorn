@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -156,6 +157,9 @@ func (d *Dis) Dis(mem []byte, addr uint64) ([]models.Ins, error) {
 	for {
 		ins, err := reader.ins()
 		if ins == nil || err != nil {
+			if err == io.EOF {
+				break
+			}
 			return nil, err
 		}
 		ret = append(ret, ins)
