@@ -1,8 +1,9 @@
 package linux
 
 import (
-	"github.com/lunixbochs/argjoy"
 	"syscall"
+
+	"github.com/lunixbochs/argjoy"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux/unpack"
@@ -10,7 +11,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/native/enum"
 )
 
-func Unpack(k *LinuxKernel, arg interface{}, vals []interface{}) error {
+func Unpack(k co.Kernel, arg interface{}, vals []interface{}) error {
 	reg0 := vals[0].(uint64)
 	// null pointer guard
 	if reg0 == 0 {

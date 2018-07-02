@@ -43,6 +43,6 @@ func (c *CgcLoader) OS() string {
 }
 
 func NewCgcLoader(r io.ReaderAt, arch string) (models.Loader, error) {
-	l, err := NewElfLoader(&FakeCgcReader{r, true}, arch)
+	l, err := NewElfLoader(&FakeCgcReader{r, true}, arch, NoOSHint)
 	return &CgcLoader{l}, err
 }

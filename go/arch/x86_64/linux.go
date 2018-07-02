@@ -2,6 +2,7 @@ package x86_64
 
 import (
 	"fmt"
+
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
 	"github.com/pkg/errors"
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
@@ -9,15 +10,17 @@ import (
 	"github.com/lunixbochs/usercorn/go/arch/x86"
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
+	"github.com/lunixbochs/usercorn/go/kernel/linux/vlinux"
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
-type LinuxKernel struct {
-	*linux.LinuxKernel
+// LinuxAMD64Kernel implements AMD64 specific syscalls (like stetting up GS and FS)
+type LinuxAMD64Kernel struct {
+	common.KernelBase
 }
 
-func setupVsyscall(u models.Usercorn, kernel *LinuxKernel) error {
+func setupVsyscall(u models.Usercorn) error {
 	base := uint64(0xffffffffff600000)
 	vgettimeofday := base + 0x0
 	vtime := base + 0x400
@@ -65,7 +68,7 @@ const (
 	ARCH_GET_GS = 0x1004
 )
 
-func (k *LinuxKernel) ArchPrctl(code int, addr uint64) {
+func (k *LinuxAMD64Kernel) ArchPrctl(code int, addr uint64) {
 	fsmsr := uint64(0xC0000100)
 	gsmsr := uint64(0xC0000101)
 
@@ -88,12 +91,19 @@ func (k *LinuxKernel) ArchPrctl(code int, addr uint64) {
 }
 
 func LinuxKernels(u models.Usercorn) []interface{} {
-	kernel := &LinuxKernel{linux.NewKernel()}
 	// TODO: LinuxInit needs to have a copy of the kernel
-	if err := setupVsyscall(u, kernel); err != nil {
+	if err := setupVsyscall(u); err != nil {
 		panic(err)
 	}
-	return []interface{}{kernel}
+	return []interface{}{&LinuxAMD64Kernel{}, linux.NewKernel()}
+}
+
+// VirtualLinuxKernels returns a list of kernels to use.
+func VirtualLinuxKernels(u models.Usercorn) []interface{} {
+	if err := setupVsyscall(u); err != nil {
+		panic(err)
+	}
+	return []interface{}{&LinuxAMD64Kernel{}, vlinux.NewVirtualKernel()}
 }
 
 func LinuxInit(u models.Usercorn, args, env []string) error {
@@ -120,5 +130,16 @@ func LinuxInterrupt(u models.Usercorn, intno uint32) {
 }
 
 func init() {
-	Arch.RegisterOS(&models.OS{Name: "linux", Kernels: LinuxKernels, Init: LinuxInit, Interrupt: LinuxInterrupt})
+	Arch.RegisterOS(&models.OS{
+		Name:      "linux",
+		Kernels:   LinuxKernels,
+		Init:      LinuxInit,
+		Interrupt: LinuxInterrupt,
+	})
+	Arch.RegisterOS(&models.OS{
+		Name:      "virtual-linux",
+		Kernels:   VirtualLinuxKernels,
+		Init:      LinuxInit,
+		Interrupt: LinuxInterrupt,
+	})
 }

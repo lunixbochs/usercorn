@@ -7,6 +7,9 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
+// NoOSHint indicates that there is no os hint
+const NoOSHint = ""
+
 type LoaderBase struct {
 	arch      string
 	bits      int

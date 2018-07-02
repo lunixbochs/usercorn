@@ -12,6 +12,8 @@ func HandleStat(buf co.Obuf, stat *syscall.Stat_t, u models.Usercorn, large bool
 	os, bits := u.OS(), u.Bits()
 	arch := u.Arch().Name
 	switch os {
+	case "virtual-linux":
+		fallthrough
 	case "linux":
 		switch arch {
 		case "x86":

@@ -39,7 +39,7 @@ func (d *Debug) getFile(name string) (*DebugFile, error) {
 		return df, nil
 	}
 	d.RUnlock()
-	l, err := loader.LoadFileArch(name, d.arch)
+	l, err := loader.LoadFileArch(name, d.arch, loader.NoOSHint)
 	if err != nil {
 		return nil, err
 	}

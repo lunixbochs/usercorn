@@ -67,6 +67,7 @@ type Config struct {
 	SkipInterp      bool
 	Strsize         int
 	Verbose         bool
+	OSHint          string // If set, use this OS
 
 	Trace  TraceConfig
 	Rewind bool

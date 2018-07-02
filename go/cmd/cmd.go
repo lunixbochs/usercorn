@@ -3,7 +3,6 @@ package cmd
 import (
 	"flag"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,8 +12,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	usercorn "github.com/lunixbochs/usercorn/go"
 	"github.com/lunixbochs/usercorn/go/debug"
+	"github.com/lunixbochs/usercorn/go/loader"
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/ui"
 )
@@ -157,6 +159,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 	verbose := fs.Bool("v", false, "verbose output")
 	prefix := fs.String("prefix", "", "library load prefix")
 	base := fs.Uint64("base", 0, "force executable base address")
+	osHint := fs.String("os-hint", loader.NoOSHint, "try to use this os instead of the default one")
 	ibase := fs.Uint64("ibase", 0, "force interpreter base address")
 	skipinterp := fs.Bool("nointerp", false, "don't load binary's interpreter")
 	native := fs.Bool("native", false, "[stub] use native syscall override (only works if host/guest arch/ABI matches)")
@@ -268,6 +271,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		ForceBase:       *base,
 		ForceInterpBase: *ibase,
 		LoadPrefix:      absPrefix,
+		OSHint:          *osHint,
 		NativeFallback:  *native,
 		SkipInterp:      *skipinterp,
 		Strsize:         *strsize,

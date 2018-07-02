@@ -1,9 +1,14 @@
 deps/
 
+/cfg
 /cgc
 /com
 /fuzz
 /imgtrace
 /repl
 /shellcode
+/trace
 /usercorn
+
+.gopath/
+.DS_Store

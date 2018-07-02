@@ -5,10 +5,11 @@ import (
 	"debug/dwarf"
 	"debug/elf"
 	"encoding/binary"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -41,7 +42,7 @@ func MatchElf(r io.ReaderAt) bool {
 	return bytes.Equal(getMagic(r), elfMagic)
 }
 
-func NewElfLoader(r io.ReaderAt, arch string) (models.Loader, error) {
+func NewElfLoader(r io.ReaderAt, arch string, osHint string) (models.Loader, error) {
 	file, err := elf.NewFile(r)
 	if err != nil {
 		return nil, err
@@ -50,10 +51,14 @@ func NewElfLoader(r io.ReaderAt, arch string) (models.Loader, error) {
 	if !ok {
 		return nil, errors.Errorf("Unsupported machine: %s", file.Machine)
 	}
+	os := "linux"
+	if osHint != NoOSHint {
+		os = osHint
+	}
 	l := &ElfLoader{
 		LoaderBase: LoaderBase{
 			arch:      machineName,
-			os:        "linux",
+			os:        os,
 			entry:     file.Entry,
 			byteOrder: file.ByteOrder,
 		},
