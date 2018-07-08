@@ -25,16 +25,30 @@ func (k *VirtualLinuxKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, fla
 	)
 	// if there's a file descriptor, map (copy for now) the file here before messing with guest memory
 	if fd > 0 {
-		fd2, ok := k.Fds[fd]
+		fd, ok := k.Fds[fd]
 		if !ok {
 			log.Printf("Invalid mmap of fd %d", fd)
 			return MinusOne
 		}
-		fileDesc = &cpu.FileDesc{Name: fd2.File.Path, Off: uint64(off), Len: size}
-		if size > uint64(len(fd2.File.Data)) {
-			size = uint64(len(fd2.File.Data))
+		stat, err := fd.Stat()
+		if err != nil {
+			return MinusOne
 		}
-		data = fd2.File.Data[:size]
+		fileDesc = &cpu.FileDesc{Name: stat.Name(), Off: uint64(off), Len: size}
+		defer fd.Close()
+		if size+uint64(off) > uint64(stat.Size()) {
+			size = uint64(stat.Size()) - uint64(off)
+		}
+		dup, err := k.Fs.Open(stat.Name())
+		if err != nil {
+			return MinusOne
+		}
+		defer dup.Close()
+		if o, err := dup.Seek(int64(off), 0); int64(off) != o || err != nil {
+			return MinusOne
+		}
+		data = make([]byte, size)
+		dup.Read(data)
 	}
 	fixed := flags&MapFixed != 0
 	if addrHint == 0 && !fixed {
@@ -53,4 +67,15 @@ func (k *VirtualLinuxKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, fla
 		}
 	}
 	return addr
+}
+
+// Mprotect syscall
+func (k *VirtualLinuxKernel) Mprotect(addr, size uint64, prot enum.MmapProt) uint64 {
+	// FIXME: Issue #137
+	prot = enum.MmapProt(cpu.PROT_ALL)
+	if err := k.U.MemProt(addr, size, int(prot)); err != nil {
+		log.Print(err)
+		return MinusOne
+	}
+	return 0
 }

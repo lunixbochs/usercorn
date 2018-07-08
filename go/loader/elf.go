@@ -9,9 +9,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/lunixbochs/usercorn/go/models"
+	"github.com/pkg/errors"
 )
 
 var machineMap = map[elf.Machine]string{

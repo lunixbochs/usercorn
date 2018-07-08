@@ -3,8 +3,9 @@ package linux
 import (
 	"bytes"
 	"crypto/rand"
-	"github.com/lunixbochs/struc"
 	"os"
+
+	"github.com/lunixbochs/struc"
 
 	"github.com/lunixbochs/usercorn/go/models"
 )
@@ -87,7 +88,7 @@ func setupElfAuxv(u models.Usercorn) ([]ElfAuxv, error) {
 	}
 	if phdrOff > 0 {
 		auxv = append([]ElfAuxv{
-			{ELF_AT_PHDR, phdrOff},
+			{ELF_AT_PHDR, phdrOff + u.Base()}, // TODO always correct?
 			{ELF_AT_PHENT, uint64(phdrEnt)},
 			{ELF_AT_PHNUM, uint64(phdrCount)},
 		}, auxv...)

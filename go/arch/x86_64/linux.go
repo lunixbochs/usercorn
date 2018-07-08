@@ -4,15 +4,14 @@ import (
 	"fmt"
 
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
-	"github.com/pkg/errors"
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
-
 	"github.com/lunixbochs/usercorn/go/arch/x86"
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
 	"github.com/lunixbochs/usercorn/go/kernel/linux/vlinux"
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
+	"github.com/pkg/errors"
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 )
 
 // LinuxAMD64Kernel implements AMD64 specific syscalls (like stetting up GS and FS)

@@ -14,8 +14,6 @@ import (
 	"github.com/lunixbochs/ghostrace/ghost/memio"
 	"github.com/lunixbochs/readline"
 	"github.com/lunixbochs/struc"
-	"github.com/pkg/errors"
-
 	"github.com/lunixbochs/usercorn/go/arch"
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/loader"
@@ -24,6 +22,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/models/debug"
 	"github.com/lunixbochs/usercorn/go/models/trace"
 	"github.com/lunixbochs/usercorn/go/ui"
+	"github.com/pkg/errors"
 )
 
 // #cgo LDFLAGS: -Wl,-rpath,\$ORIGIN/deps/lib:\$ORIGIN/lib
@@ -766,6 +765,10 @@ func (u *Usercorn) AddKernel(kernel interface{}, first bool) {
 	} else {
 		u.kernels = append(u.kernels, kco)
 	}
+}
+
+func (u *Usercorn) Kernel(i int) interface{} {
+	return u.kernels[i]
 }
 
 func (u *Usercorn) Syscall(num int, name string, getArgs models.SysGetArgs) (uint64, error) {
