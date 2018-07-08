@@ -173,13 +173,13 @@ func (k *VirtualLinuxKernel) Stat(path string, buf co.Obuf) uint64 {
 func handleStat(buf co.Obuf, stat os.FileInfo, u models.Usercorn) uint64 {
 	sum := md5.Sum([]byte(stat.Name()))
 	ino := binary.BigEndian.Uint64(sum[:])
-	s := syscall.Stat_t{
+	s := &syscall.Stat_t{
 		Ino:     ino,
-		Mode:    uint16(stat.Mode()),
 		Size:    stat.Size(),
 		Blksize: 1024,
 	}
-	return posix.HandleStat(buf, &s, u, false)
+	posix.SetStatMode(s, int(stat.Mode()))
+	return posix.HandleStat(buf, s, u, false)
 }
 
 func iovecIter(stream co.Buf, count uint64, bits uint) []posix.Iovec64 {

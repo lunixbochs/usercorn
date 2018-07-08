@@ -5,6 +5,13 @@ import (
 	"syscall"
 )
 
+// SetStatMode sets the mode of the stat.
+// This is uses as a workaround, as the struct has different sizes depending
+// on the host operating system.
+func SetStatMode(stat *syscall.Stat_t, mode int) {
+	stat.Mode = uint32(mode)
+}
+
 func NewLinuxStat_generic(stat *syscall.Stat_t, bits uint, large bool) interface{} {
 	return &LinuxStat_generic{
 		Dev:       uint32(stat.Dev),
