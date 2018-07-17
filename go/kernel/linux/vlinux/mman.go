@@ -4,8 +4,14 @@ import (
 	"log"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
+	"github.com/lunixbochs/usercorn/go/kernel/linux/unpack"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
 	"github.com/lunixbochs/usercorn/go/native/enum"
+)
+
+const (
+	// PageSize that the memory must be aligned
+	PageSize = 0x1000
 )
 
 // Brk syscall
@@ -25,6 +31,7 @@ func (k *VirtualLinuxKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, fla
 	)
 	// if there's a file descriptor, map (copy for now) the file here before messing with guest memory
 	if fd > 0 {
+		size := size
 		fd, ok := k.Fds[fd]
 		if !ok {
 			log.Printf("Invalid mmap of fd %d", fd)
@@ -56,6 +63,9 @@ func (k *VirtualLinuxKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, fla
 		brk, _ := k.U.Brk(0)
 		addrHint = brk + 0x800000
 	}
+	if size%PageSize != 0 {
+		size += PageSize - (size % PageSize)
+	}
 	addr, err := k.U.Mmap(addrHint, size, int(prot), fixed, "mmap", fileDesc)
 	if err != nil {
 		return MinusOne
@@ -70,11 +80,13 @@ func (k *VirtualLinuxKernel) Mmap(addrHint, size uint64, prot enum.MmapProt, fla
 }
 
 // Mprotect syscall
-func (k *VirtualLinuxKernel) Mprotect(addr, size uint64, prot enum.MmapProt) uint64 {
-	// FIXME: Issue #137
-	prot = enum.MmapProt(cpu.PROT_ALL)
-	if err := k.U.MemProt(addr, size, int(prot)); err != nil {
-		log.Print(err)
+func (k *VirtualLinuxKernel) Mprotect(addr, size uint64, prot uint64) uint64 {
+	if prot == 0 {
+		// FIXME: Issue #137
+		prot = cpu.PROT_ALL
+	}
+	p := unpack.MmapProt(prot)
+	if err := k.U.MemProt(addr, size, int(p)); err != nil {
 		return MinusOne
 	}
 	return 0

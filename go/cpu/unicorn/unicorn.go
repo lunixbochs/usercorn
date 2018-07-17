@@ -86,3 +86,7 @@ func (u *UnicornCpu) MemMap(addr, size uint64, prot int) error {
 func (u *UnicornCpu) MemProt(addr, size uint64, prot int) error {
 	return u.Unicorn.MemProtect(addr, size, prot)
 }
+
+func (u *UnicornCpu) MemRegions() ([]*uc.MemRegion, error) {
+	return u.Unicorn.MemRegions()
+}

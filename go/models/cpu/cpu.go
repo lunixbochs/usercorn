@@ -1,11 +1,16 @@
 package cpu
 
+import (
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
+)
+
 // This interface abstracts the minimum functionality Usercorn requires in a CPU emulator.
 type Cpu interface {
 	// memory mapping
 	MemMap(addr, size uint64, prot int) error
 	MemProt(addr, size uint64, prot int) error
 	MemUnmap(addr, size uint64) error
+	MemRegions() ([]*uc.MemRegion, error)
 
 	// memory IO
 	MemRead(addr, size uint64) ([]byte, error)

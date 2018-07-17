@@ -2,9 +2,9 @@ package x86_64
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/lunixbochs/ghostrace/ghost/sys/num"
-	"github.com/lunixbochs/usercorn/go/arch/x86"
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/kernel/linux"
 	"github.com/lunixbochs/usercorn/go/kernel/linux/vlinux"
@@ -69,23 +69,30 @@ const (
 
 func (k *LinuxAMD64Kernel) ArchPrctl(code int, addr uint64) {
 	fsmsr := uint64(0xC0000100)
-	gsmsr := uint64(0xC0000101)
+	//	gsmsr := uint64(0xC0000101)
 
-	var tmp [8]byte
+	log.Printf("code 0x%x, addr: 0x%x", code, addr)
+	//	var tmp [8]byte
 	// TODO: make SET check for valid mapped memory
 	switch code {
 	case ARCH_SET_FS:
-		x86.Wrmsr(k.U, fsmsr, addr)
-	case ARCH_SET_GS:
-		x86.Wrmsr(k.U, gsmsr, addr)
-	case ARCH_GET_FS:
-		val := x86.Rdmsr(k.U, fsmsr)
-		buf, _ := k.U.PackAddr(tmp[:], val)
-		k.U.MemWrite(addr, buf)
-	case ARCH_GET_GS:
-		val := x86.Rdmsr(k.U, gsmsr)
-		buf, _ := k.U.PackAddr(tmp[:], val)
-		k.U.MemWrite(addr, buf)
+		u := k.U.Backend().(uc.Unicorn)
+		u.X86MsrWrite(fsmsr, addr)
+	// case ARCH_GET_FS:
+	// 	v, _ := u.X86MsrRead(fsmsr)
+	/*	case ARCH_SET_GS:
+			x86.Wrmsr(k.U, gsmsr, addr)
+		case ARCH_GET_FS:
+			val := x86.Rdmsr(k.U, fsmsr)
+			buf, _ := k.U.PackAddr(tmp[:], val)
+			k.U.MemWrite(addr, buf)
+		case ARCH_GET_GS:
+			val := x86.Rdmsr(k.U, gsmsr)
+			buf, _ := k.U.PackAddr(tmp[:], val)
+			k.U.MemWrite(addr, buf)
+		}*/
+	default:
+		log.Fatalf("Unknown code 0x%x", code)
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"io"
-	"log"
 	"os"
 	"syscall"
 
@@ -109,7 +108,6 @@ func (k *VirtualLinuxKernel) Writev(fd co.Fd, iov co.Buf, count uint64) uint64 {
 func (k *VirtualLinuxKernel) Open(path string, flags enum.OpenFlag, mode uint64) uint64 {
 	f, err := k.Fs.OpenFile(path, int(flags), os.FileMode(mode))
 	if err != nil {
-		log.Print(err)
 		return MinusOne
 	}
 	fd := k.nextfd

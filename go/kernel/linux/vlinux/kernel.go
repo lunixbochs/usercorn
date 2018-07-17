@@ -39,6 +39,7 @@ func NewVirtualKernel() *VirtualLinuxKernel {
 
 func (k *VirtualLinuxKernel) initFs() {
 	// Stdout
-	k.Fds[1] = os.Stdin
+	k.Fds[0] = os.Stdin
+	k.Fds[1] = os.Stdout
 	k.nextfd = 3
 }

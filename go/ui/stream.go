@@ -2,9 +2,10 @@ package ui
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/trace"

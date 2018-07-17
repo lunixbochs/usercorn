@@ -1,12 +1,12 @@
 package common
 
 import (
-	"github.com/lunixbochs/argjoy"
 	"reflect"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/lunixbochs/argjoy"
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
@@ -80,8 +80,9 @@ func initKernel(kf Kernel) {
 			Kernel:   k,
 			Instance: instance,
 			Method:   method,
-			In:       in, Out: out,
-			ObufArr: obufArr,
+			In:       in,
+			Out:      out,
+			ObufArr:  obufArr,
 		}
 	}
 	k.Argjoy.Register(k.commonArgCodec)

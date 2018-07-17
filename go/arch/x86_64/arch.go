@@ -22,6 +22,8 @@ var Arch = &models.Arch{
 	PC: uc.X86_REG_RIP,
 	SP: uc.X86_REG_RSP,
 	Regs: map[string]int{
+		"fs":  uc.X86_REG_FS,
+		"gs":  uc.X86_REG_GS,
 		"rax": uc.X86_REG_RAX,
 		"rbx": uc.X86_REG_RBX,
 		"rcx": uc.X86_REG_RCX,
@@ -43,6 +45,7 @@ var Arch = &models.Arch{
 	DefaultRegs: []string{
 		"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp",
 		"r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
+		"rsp", "fs", "gs",
 	},
 	GdbXml: gdbXml,
 }
