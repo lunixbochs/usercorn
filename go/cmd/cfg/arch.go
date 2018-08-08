@@ -1,5 +1,6 @@
 package cfg
 
+/*
 import (
 	cs "github.com/bnagy/gapstone"
 
@@ -53,3 +54,4 @@ func ArchConfig(u models.Usercorn) *archConfig {
 		panic("unknown arch")
 	}
 }
+*/
