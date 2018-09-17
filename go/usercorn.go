@@ -391,6 +391,10 @@ func (u *Usercorn) HookSysDel(hook *models.SysHook) {
 	u.sysHooks = tmp
 }
 
+func (u *Usercorn) Inscount() uint64 {
+        return u.inscount
+}
+
 func (u *Usercorn) Run() error {
 	// TODO: defers are expensive I hear
 	defer func() {

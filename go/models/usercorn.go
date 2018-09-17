@@ -70,6 +70,8 @@ type Usercorn interface {
 	HookMapAdd(mapCb MapCb, unmapCb UnmapCb, protCb ProtCb) *MapHook
 	HookMapDel(cb *MapHook)
 
+        Inscount() uint64
+
 	AddKernel(kernel interface{}, first bool)
 	Syscall(num int, name string, getArgs SysGetArgs) (uint64, error)
 
