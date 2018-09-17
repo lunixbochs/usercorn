@@ -356,6 +356,10 @@ func (u *Usercorn) DirectWrite(addr uint64, p []byte) error {
 	return u.Task.MemWrite(addr, p)
 }
 
+func (u *Usercorn) Inscount() uint64 {
+        return u.inscount
+}
+
 func (u *Usercorn) HookAdd(htype int, cb interface{}, begin, end uint64, extra ...int) (cpu.Hook, error) {
 	hh, err := u.Cpu.HookAdd(htype, cb, begin, end, extra...)
 	if err == nil {
@@ -389,10 +393,6 @@ func (u *Usercorn) HookSysDel(hook *models.SysHook) {
 		}
 	}
 	u.sysHooks = tmp
-}
-
-func (u *Usercorn) Inscount() uint64 {
-        return u.inscount
 }
 
 func (u *Usercorn) Run() error {

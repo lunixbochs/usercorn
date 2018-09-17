@@ -62,6 +62,8 @@ type Usercorn interface {
 	SetEntry(entry uint64)
 	SetExit(exit uint64)
 
+        Inscount() uint64
+
 	// TODO: PrefixPath will be replaced by a full VFS subsystem
 	PrefixPath(s string, force bool) string
 
@@ -69,8 +71,6 @@ type Usercorn interface {
 	HookSysDel(cb *SysHook)
 	HookMapAdd(mapCb MapCb, unmapCb UnmapCb, protCb ProtCb) *MapHook
 	HookMapDel(cb *MapHook)
-
-        Inscount() uint64
 
 	AddKernel(kernel interface{}, first bool)
 	Syscall(num int, name string, getArgs SysGetArgs) (uint64, error)
