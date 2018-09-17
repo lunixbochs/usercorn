@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"unsafe"
 
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/native"
 )
 
 func (k *PosixKernel) Socket(domain, typ, protocol int) uint64 {
+	// TODO: enums for these
+	typ &= ^0x800 // remove SOCK_NONBLOCK for now
 	fd, err := syscall.Socket(domain, typ, protocol)
 	if err != nil {
 		return Errno(err)
@@ -39,7 +42,7 @@ func (k *PosixKernel) Sendto(fd co.Fd, buf co.Buf, size co.Len, flags int, sa sy
 
 func (k *PosixKernel) Recvfrom(fd co.Fd, buf co.Buf, size co.Len, flags int, from co.Buf, fromlen co.Len) uint64 {
 	p := make([]byte, size)
-	if n, _, err := syscall.Recvfrom(int(fd), p, flags); err != nil {
+	if n, _, err := syscall.Recvfrom(int(fd), p, flags); err == nil {
 		// TODO: need kernel.Pack() so we can pack a sockaddr into from
 		if err := buf.Pack(p); err != nil {
 			return UINT64_MAX // FIXME
@@ -119,6 +122,21 @@ func (k *PosixKernel) Select(args []co.Obuf, nfds int, readfds, writefds, errorf
 	putfdset(args[2], w)
 	putfdset(args[3], e)
 	return 0
+}
+
+func (k *PosixKernel) Poll(fds co.Buf, nfds co.Len, timeout int) uint64 {
+	tmp := make([]byte, nfds*8)
+	if err := fds.Struc().Unpack(&tmp); err != nil {
+		return UINT64_MAX // FIXME
+	}
+	n, _, errn := syscall.Syscall(syscall.SYS_POLL, uintptr(unsafe.Pointer(&tmp[0])), uintptr(nfds), uintptr(timeout))
+	if errn != 0 {
+		return Errno(errn)
+	}
+	if err := fds.Pack(&tmp); err != nil {
+		return UINT64_MAX // FIXME
+	}
+	return uint64(n)
 }
 
 func (k *PosixKernel) Socketpair(domain, typ, proto int, vector co.Obuf) uint64 {

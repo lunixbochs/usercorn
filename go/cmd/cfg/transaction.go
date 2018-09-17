@@ -1,4 +1,4 @@
-package main
+package cfg
 
 import (
 	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"

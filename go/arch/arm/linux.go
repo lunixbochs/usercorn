@@ -20,6 +20,10 @@ type ArmLinuxKernel struct {
 
 func (k *ArmLinuxKernel) SetTls(addr uint64) {
 	k.tls = addr
+	k.U.RunAsm(0, "mcr p15, 0, r0, c13, c0, 3",
+		map[int]uint64{uc.ARM_REG_R0: addr},
+		[]int{uc.ARM_REG_R0},
+	)
 }
 
 func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
@@ -47,13 +51,13 @@ func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
 			newval, _ := u.RegRead(uc.ARM_REG_R1)
 			ptr, _ := u.RegRead(uc.ARM_REG_R2)
 			var tmp [8]byte
-			var status uint64
+			var status uint64 = 1
 			if err := u.MemReadInto(tmp[:], ptr); err != nil {
 				// error
 			} else if u.ByteOrder().Uint64(tmp[:]) == oldval {
 				u.ByteOrder().PutUint64(tmp[:], newval)
 				u.MemWrite(ptr, tmp[:])
-				status = 1
+				status = 0
 			}
 			u.RegWrite(uc.ARM_REG_R0, status)
 		case 0xffff0fc0:
@@ -64,13 +68,13 @@ func setupTraps(u models.Usercorn, kernel *ArmLinuxKernel) error {
 			newval, _ := u.RegRead(uc.ARM_REG_R1)
 			ptr, _ := u.RegRead(uc.ARM_REG_R2)
 			var tmp [4]byte
-			var status uint64
+			var status uint64 = 1
 			if err := u.MemReadInto(tmp[:], ptr); err != nil {
 				// error
 			} else if u.UnpackAddr(tmp[:]) == oldval {
 				u.PackAddr(tmp[:], newval)
 				u.MemWrite(ptr, tmp[:])
-				status = 1
+				status = 0
 			}
 			u.RegWrite(uc.ARM_REG_R0, status)
 		case 0xffff0fe0:
@@ -100,9 +104,11 @@ func LinuxInit(u models.Usercorn, args, env []string) error {
 	if err := EnableFPU(u); err != nil {
 		return err
 	}
-	if err := EnterUsermode(u); err != nil {
-		return err
-	}
+	/*
+		if err := EnterUsermode(u); err != nil {
+			return err
+		}
+	*/
 	return linux.StackInit(u, args, env)
 }
 

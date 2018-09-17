@@ -1,4 +1,4 @@
-package main
+package trace
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/lunixbochs/usercorn/go/arch"
+	"github.com/lunixbochs/usercorn/go/cmd"
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/debug"
 	"github.com/lunixbochs/usercorn/go/models/trace"
@@ -58,25 +59,27 @@ func PrintPretty(tf *trace.TraceReader) error {
 	return nil
 }
 
-func main() {
+func Main(args []string) {
 	fs := flag.NewFlagSet("args", flag.ExitOnError)
 	jsonFlag := fs.Bool("json", false, "output trace as line-delimited JSON objects")
 	prettyFlag := fs.Bool("pretty", false, "output trace as human-readable console text")
+	drcovFlag := fs.String("drcov", "", "output trace to drcov file")
+	ecovFlag := fs.String("ecov", "", "output trace to ecov file")
 	fs.Usage = func() {
-		fmt.Printf("Usage: %s [options] <tracefile>\n", os.Args[0])
+		fmt.Printf("Usage: %s [options] <tracefile>\n", args[0])
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(os.Args[1:])
-	if fs.NArg() == 0 || !(*jsonFlag || *prettyFlag) {
+	fs.Parse(args[1:])
+	if fs.NArg() == 0 || !(*jsonFlag || *prettyFlag || *drcovFlag != "" || *ecovFlag != "") {
 		fs.Usage()
 		os.Exit(1)
 	}
-	args := fs.Args()
+	args = fs.Args()
 
 	f, err := os.Open(args[0])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to open: %s %v\n", os.Args[1], err)
+		fmt.Fprintf(os.Stderr, "failed to open: %s %v\n", args[1], err)
 		os.Exit(1)
 	}
 	tf, err := trace.NewReader(f)
@@ -94,5 +97,29 @@ func main() {
 			fmt.Fprintf(os.Stderr, "error printing pretty: %v\n", err)
 			os.Exit(1)
 		}
+	} else if *drcovFlag != "" {
+		f, err := os.Create(*drcovFlag)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error opening drcov output file: %v\n", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		if err := WriteDrcov(tf, f); err != nil {
+			fmt.Fprintf(os.Stderr, "error generating drcov file: %v\n", err)
+			os.Exit(1)
+		}
+	} else if *ecovFlag != "" {
+		f, err := os.Create(*ecovFlag)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error opening ecov output file: %v\n", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		if err := WriteEcov(tf, f); err != nil {
+			fmt.Fprintf(os.Stderr, "error generating ecov file: %v\n", err)
+			os.Exit(1)
+		}
 	}
 }
+
+func init() { cmd.Register("trace", "manipulate a saved trace file", Main) }

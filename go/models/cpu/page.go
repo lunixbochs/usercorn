@@ -12,6 +12,17 @@ type FileDesc struct {
 	Len  uint64
 }
 
+func (f *FileDesc) shift(off uint64) *FileDesc {
+	if f != nil && off < f.Len {
+		return &FileDesc{
+			Name: f.Name,
+			Len:  f.Len - off,
+			Off:  f.Off + off,
+		}
+	}
+	return f
+}
+
 type Page struct {
 	Addr uint64
 	Size uint64
@@ -40,6 +51,9 @@ func (p *Page) String() string {
 	}
 	if p.File != nil {
 		desc += fmt.Sprintf(" %s", p.File.Name)
+		if p.File.Off > 0 {
+			desc += fmt.Sprintf("(%#x)", p.File.Off)
+		}
 	}
 	return desc
 }
@@ -85,17 +99,14 @@ if delta < len1 {
     off2 = off1 + delta
 }
 */
-func (p *Page) slice(addr, size uint64) *Page {
+func (p *Page) Slice(addr, size uint64) *Page {
 	o := addr - p.Addr
-	var file *FileDesc
-	if p.File != nil && o < p.File.Len {
-		file = &FileDesc{
-			Name: p.File.Name,
-			Len:  p.File.Len - o,
-			Off:  p.File.Off + o,
-		}
+	file := p.File.shift(o)
+	data := p.Data
+	if p.Data != nil {
+		data = p.Data[o : o+size]
 	}
-	return &Page{Addr: addr, Size: size, Prot: p.Prot, Data: p.Data[o : o+size], Desc: p.Desc, File: file}
+	return &Page{Addr: addr, Size: size, Prot: p.Prot, Data: data, Desc: p.Desc, File: file}
 }
 
 /*
@@ -131,26 +142,35 @@ func (p *Page) Split(addr, size uint64) (left, right *Page) {
 	if addr+size < p.Addr+p.Size {
 		ra := addr + size
 		rs := (p.Addr + p.Size) - ra
-		right = p.slice(ra, rs)
-		p.Data = p.Data[:ra-p.Addr]
+		right = p.Slice(ra, rs)
+		if p.Data != nil {
+			p.Data = p.Data[:ra-p.Addr]
+		}
 	}
 	// space on the left
 	if addr > p.Addr {
 		ls := addr - p.Addr
-		left = p.slice(p.Addr, ls)
-		p.Data = p.Data[ls:]
+		left = p.Slice(p.Addr, ls)
+		if p.Data != nil {
+			p.Data = p.Data[ls:]
+		}
 	}
 	// pad the middle
 	if addr < p.Addr {
 		extra := bytes.Repeat([]byte{0}, int(p.Addr-addr))
-		p.Data = append(extra, p.Data...)
+		if p.Data != nil {
+			p.Data = append(extra, p.Data...)
+		}
 	}
 	// pad the end
 	raddr, nraddr := p.Addr+p.Size, addr+size
 	if nraddr > raddr {
 		extra := bytes.Repeat([]byte{0}, int(nraddr-raddr))
-		p.Data = append(p.Data, extra...)
+		if p.Data != nil {
+			p.Data = append(p.Data, extra...)
+		}
 	}
+	p.File = p.File.shift(addr - p.Addr)
 	p.Addr, p.Size = addr, size
 	return left, right
 }
@@ -174,7 +194,7 @@ func (p Pages) String() string {
 }
 
 // binary search to find index of first region containing addr, if any, else -1
-func (p Pages) bsearch(addr uint64) int {
+func (p Pages) bsearch(addr uint64) (int, int) {
 	l := 0
 	r := len(p) - 1
 	for l <= r {
@@ -182,20 +202,29 @@ func (p Pages) bsearch(addr uint64) int {
 		e := p[mid]
 		if addr >= e.Addr {
 			if addr < e.Addr+e.Size {
-				return mid
+				return mid, mid
 			}
 			l = mid + 1
 		} else if addr < e.Addr {
 			r = mid - 1
 		}
 	}
-	return -1
+	return l, -1
 }
 
 func (p Pages) Find(addr uint64) *Page {
-	i := p.bsearch(addr)
+	_, i := p.bsearch(addr)
 	if i >= 0 {
 		return p[i]
 	}
 	return nil
+}
+
+func (p Pages) FindRange(start, size uint64) []*Page {
+	pos, _ := p.bsearch(start)
+	st := pos
+	for pos >= 0 && pos < len(p) && p[pos].Overlaps(start, size) {
+		pos++
+	}
+	return p[st:pos]
 }

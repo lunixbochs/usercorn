@@ -53,17 +53,6 @@ func (k *PosixKernel) Open(path string, flags enum.OpenFlag, mode uint64) uint64
 	}
 	fd, err := syscall.Open(path, int(flags), uint32(mode))
 	if err != nil {
-		/*
-			k.U.Trampoline(func() error {
-				eflags, err := k.U.RegRead(uc.X86_REG_EFLAGS)
-
-				const CF uint64 = 1 << 0
-				eflags |= CF //set carry flag
-
-				err = k.U.RegWrite(uc.X86_REG_EFLAGS, eflags)
-				return err
-			})
-		*/
 		return Errno(err)
 	}
 	path, _ = filepath.Abs(path)
@@ -103,6 +92,10 @@ func (k *PosixKernel) Lseek(fd co.Fd, offset co.Off, whence int) uint64 {
 		return Errno(err)
 	}
 	return uint64(off)
+}
+
+func (k *PosixKernel) Literal_llseek(fd co.Fd, off_low, off_high co.Off, whence int) uint64 {
+	return k.Lseek(fd, (off_low<<32)|off_high, whence)
 }
 
 func (k *PosixKernel) Fstat(fd co.Fd, buf co.Obuf) uint64 {
@@ -236,6 +229,11 @@ func (k *PosixKernel) Dup2(oldFd co.Fd, newFd co.Fd) uint64 {
 	return uint64(newFd)
 }
 
+func (k *PosixKernel) Dup3(oldFd co.Fd, newFd co.Fd, flags int) uint64 {
+	// FIXME: flags (cloexec) not supported
+	return k.Dup2(oldFd, newFd)
+}
+
 func (k *PosixKernel) Readlink(path string, buf co.Obuf, size co.Len) uint64 {
 	// TODO: full proc emulation layer
 	// maybe have a syscall pre-hook for this after ghostrace makes it generic
@@ -257,6 +255,25 @@ func (k *PosixKernel) Readlink(path string, buf co.Obuf, size co.Len) uint64 {
 		return UINT64_MAX // FIXME
 	}
 	return uint64(len(name))
+}
+
+func (k *PosixKernel) Readlinkat(dirfd uint64, path string, buf co.Obuf, size co.Len) uint64 {
+	// FIXME: dirfd *at not supported
+	return k.Readlink(path, buf, size)
+}
+
+func (k *PosixKernel) Faccessat(dirfd uint64, path string, mode uint32, flags int) uint64 {
+	// FIXME: dirfd *at not supported, and flags are ignored
+	return k.Access(path, mode)
+}
+
+func (k *PosixKernel) Fstatat(dirfd uint64, path string, buf co.Obuf, flags int) uint64 {
+	// FIXME: dirfd *at not supported
+	if flags != 0 {
+		// we assume flags can only be AT_SYMLINK_NOFOLLOW or not
+		return k.Lstat(path, buf)
+	}
+	return k.Stat(path, buf)
 }
 
 func (k *PosixKernel) Symlink(src, dst string) uint64 {

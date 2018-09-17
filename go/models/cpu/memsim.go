@@ -37,7 +37,7 @@ type MemSim struct {
 // Checks whether the address range exists in the currently-mapped memory.
 // If prot > 0, ensures that each region has the entire protection mask provided.
 func (m *MemSim) RangeValid(addr, size uint64, prot int) (mapGood bool, protGood bool) {
-	first := m.Mem.bsearch(addr)
+	_, first := m.Mem.bsearch(addr)
 	if first == -1 {
 		return false, false
 	}
@@ -81,8 +81,12 @@ func (m *MemSim) Map(addr, size uint64, prot int, zero bool) *Page {
 func (m *MemSim) Prot(addr, size uint64, prot int) {
 	// truncate entries overlapping addr, size
 	tmp := make([]*Page, 0, len(m.Mem))
-	// TODO: use a binary search to find the leftmost mapping?
-	for _, mm := range m.Mem {
+	pos := 0
+	/*
+		pos, _ := m.Mem.bsearch(addr)
+		copy(tmp, m.Mem[:pos])
+	*/
+	for _, mm := range m.Mem[pos:] {
 		if oaddr, osize, ok := mm.Intersect(addr, size); ok {
 			left, right := mm.Split(oaddr, osize)
 			if left != nil {
@@ -103,8 +107,12 @@ func (m *MemSim) Prot(addr, size uint64, prot int) {
 func (m *MemSim) Unmap(addr, size uint64) {
 	// truncate entries overlapping addr, size
 	tmp := make([]*Page, 0, len(m.Mem))
-	// TODO: use a binary search to find the leftmost mapping?
-	for _, mm := range m.Mem {
+	pos := 0
+	/*
+		pos, _ := m.Mem.bsearch(addr)
+		copy(tmp, m.Mem[:pos])
+	*/
+	for _, mm := range m.Mem[pos:] {
 		if oaddr, osize, ok := mm.Intersect(addr, size); ok {
 			left, right := mm.Split(oaddr, osize)
 			if left != nil {
@@ -134,7 +142,7 @@ func (m *MemSim) Read(addr uint64, p []byte, prot int) error {
 		}
 		return &MemError{Addr: addr, Size: len(p), Enum: MEM_READ_PROT}
 	}
-	i := m.Mem.bsearch(addr)
+	_, i := m.Mem.bsearch(addr)
 	if i >= 0 {
 		for _, mm := range m.Mem[i:] {
 			if !mm.Contains(addr) {
@@ -156,7 +164,7 @@ func (m *MemSim) Write(addr uint64, p []byte, prot int) error {
 	} else if !gprot {
 		return &MemError{Addr: addr, Size: len(p), Enum: MEM_WRITE_PROT}
 	}
-	i := m.Mem.bsearch(addr)
+	_, i := m.Mem.bsearch(addr)
 	if i >= 0 {
 		for _, mm := range m.Mem[i:] {
 			if !mm.Contains(addr) {

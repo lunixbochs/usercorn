@@ -189,7 +189,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			usage += " [args...]"
 		}
 		usage += "\n\nOptions:\n"
-		fmt.Fprintf(os.Stderr, usage, os.Args[0])
+		fmt.Fprintf(os.Stderr, usage, argv[0])
 		var flags []*flag.Flag
 		var tflags []*flag.Flag
 		fs.VisitAll(func(f *flag.Flag) {
@@ -204,7 +204,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		models.PrintFlags(flags)
 		fmt.Fprintf(os.Stderr, "\nTrace Options:\n")
 		models.PrintFlags(tflags)
-		fmt.Fprintf(os.Stderr, "\nExample:\n  %s -trace -symfile bins/x86_64.linux.elf\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "\nExample:\n  %s -trace -symfile bins/x86_64.linux.elf\n", argv[0])
 	}
 	if c.SetupFlags != nil {
 		if err := c.SetupFlags(); err != nil {
@@ -317,6 +317,8 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			panic(err)
 		}
 		config.Output = out
+	} else {
+		// config.Output = models.NewAsyncStream(os.Stderr)
 	}
 
 	// merge environment with flags
@@ -386,6 +388,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		go debug.NewGdbstub(corn).Run(conn)
 	}
 
+	var repl *ui.Repl
 	if *tui {
 		tui, err := ui.NewTui(corn)
 		if err != nil {
@@ -396,7 +399,7 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 		defer tui.Close()
 		tui.Run()
 	} else if *startrepl || len(exec) > 0 {
-		repl, err := ui.NewRepl(corn)
+		repl, err = ui.NewRepl(corn)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error starting repl: %v\n", err)
 			return 1
@@ -419,11 +422,16 @@ func (c *UsercornCmd) Run(argv, env []string) int {
 			repl.Run()
 		}
 	}
+	defer config.Output.Close()
 	// start executable
 	if c.RunUsercorn != nil {
 		err = c.RunUsercorn()
 	} else {
 		err = corn.Run()
+	}
+	if *startrepl && !repl.Closed {
+		corn.Gate().Lock()
+		config.Output.Close()
 	}
 	if err != nil {
 		if e, ok := err.(models.ExitStatus); ok {

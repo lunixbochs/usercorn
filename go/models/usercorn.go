@@ -7,7 +7,7 @@ import (
 )
 
 type SysGetArgs func(n int) ([]uint64, error)
-type SysCb func(num int, args []uint64, ret uint64, desc string)
+type SysCb func(num int, name string, args []uint64, ret uint64, desc string) bool
 type SysHook struct {
 	Before, After SysCb
 }
@@ -27,6 +27,7 @@ type Usercorn interface {
 	Run() error
 	Trampoline(func() error) error
 
+	Callstack() []Stackframe
 	Restart(func(Usercorn, error) error)
 	Rewind(n, addr uint64) error
 

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	rdebug "runtime/debug"
 	"strings"
 	"sync"
 
@@ -24,7 +25,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/ui"
 )
 
-// #cgo LDFLAGS: -Wl,-rpath -Wl,$ORIGIN/deps/lib:$ORIGIN/lib
+// #cgo LDFLAGS: -Wl,-rpath,\$ORIGIN/deps/lib:\$ORIGIN/lib
 import "C"
 
 type tramp struct {
@@ -100,7 +101,6 @@ func NewUsercornRaw(l models.Loader, config *models.Config) (*Usercorn, error) {
 	}
 	if u.config.Rewind || u.config.UI {
 		u.replay = trace.NewReplay(u.arch, u.os, l.ByteOrder(), u.debug)
-		defer u.replay.Flush()
 		config.Trace.OpCallback = append(config.Trace.OpCallback, u.replay.Feed)
 		if config.UI {
 			u.ui = ui.NewStreamUI(u.config, u.replay)
@@ -218,6 +218,13 @@ func NewUsercorn(exe string, config *models.Config) (models.Usercorn, error) {
 	// make sure PC is set to entry point for debuggers
 	u.RegWrite(u.Arch().PC, u.Entry())
 	return u, nil
+}
+
+func (u *Usercorn) Callstack() []models.Stackframe {
+	if u.replay == nil {
+		return nil
+	}
+	return u.replay.Callstack.Freeze(u.replay.PC, u.replay.SP)
 }
 
 func (u *Usercorn) Rewind(by, addr uint64) error {
@@ -385,9 +392,22 @@ func (u *Usercorn) HookSysDel(hook *models.SysHook) {
 }
 
 func (u *Usercorn) Run() error {
+	// TODO: defers are expensive I hear
 	defer func() {
+		if u.trace != nil && u.exitStatus == nil {
+			u.trace.OnExit()
+		}
+		if u.trace != nil {
+			u.trace.Detach()
+		}
+		if u.replay != nil {
+			u.replay.Flush()
+		}
+		for _, v := range u.hooks {
+			u.HookDel(v)
+		}
 		if e := recover(); e != nil {
-			msg := fmt.Sprintf("\n+++ caught panic +++\n%s\n\n", e)
+			msg := fmt.Sprintf("\n+++ caught panic +++\n%s\n%s\n\n", e, rdebug.Stack())
 			if u.ui == nil {
 				// FIXME: replay and task should be api-compatible, so we can pass a cpu in here instead
 				if u.replay == nil {
@@ -412,23 +432,12 @@ func (u *Usercorn) Run() error {
 		}
 	}
 	if u.config.Trace.Any() {
-		// TODO: defers are expensive I hear
 		if err := u.trace.Attach(); err != nil {
 			return err
-		} else {
-			defer func() {
-				u.trace.Detach()
-			}()
 		}
 	}
 	if err := u.addHooks(); err != nil {
 		return err
-	} else {
-		defer func() {
-			for _, v := range u.hooks {
-				u.HookDel(v)
-			}
-		}()
 	}
 	if u.config.InsCount {
 		u.HookAdd(cpu.HOOK_CODE, func(_ cpu.Cpu, addr uint64, size uint32) {
@@ -496,9 +505,6 @@ func (u *Usercorn) Run() error {
 	if err == nil && u.exitStatus != nil {
 		err = u.exitStatus
 	}
-	if u.trace != nil {
-		u.trace.OnExit()
-	}
 	return err
 }
 
@@ -559,7 +565,7 @@ func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 	if addr > 0 && addr >= cur {
 		// take brk protections from last brk segment (not sure if this is right)
 		prot := cpu.PROT_READ | cpu.PROT_WRITE
-		if brk := u.mapping(cur, 1); brk != nil {
+		if brk := u.memsim.Mem.Find(cur); brk != nil {
 			prot = brk.Prot
 			u.brk = brk.Addr + brk.Size
 		}
@@ -780,13 +786,19 @@ func (u *Usercorn) Syscall(num int, name string, getArgs models.SysGetArgs) (uin
 				return 0, err
 			}
 			desc := sys.Trace(args)
+			prevent := false
 			for _, v := range u.sysHooks {
-				v.Before(num, args, 0, desc)
+				if v.Before(num, name, args, 0, desc) {
+					prevent = true
+				}
+			}
+			if prevent {
+				return 0, nil
 			}
 			ret := sys.Call(args)
 			desc = sys.TraceRet(args, ret)
 			for _, v := range u.sysHooks {
-				v.After(num, args, ret, desc)
+				v.After(num, name, args, ret, desc)
 			}
 			return ret, nil
 		}
@@ -804,6 +816,9 @@ func (u *Usercorn) Syscall(num int, name string, getArgs models.SysGetArgs) (uin
 func (u *Usercorn) Exit(err error) {
 	u.exitStatus = err
 	u.Stop()
+	if u.trace != nil {
+		u.trace.OnExit()
+	}
 }
 
 func (u *Usercorn) Close() error {
@@ -893,8 +908,8 @@ func (u *Usercorn) RunShellcodeMapped(addr uint64, code []byte, setRegs map[int]
 // will trampoline if unicorn is already running
 func (u *Usercorn) RunShellcode(addr uint64, code []byte, setRegs map[int]uint64, regsClobbered []int) error {
 	size := uint64(len(code))
-	exists := u.mapping(addr, size)
-	if addr != 0 && exists != nil {
+	exists := len(u.memsim.Mem.FindRange(addr, size)) > 0
+	if addr != 0 && exists {
 		return errors.Errorf("RunShellcode: 0x%x - 0x%x overlaps mapped memory", addr, addr+uint64(len(code)))
 	}
 	mapped, err := u.Mmap(addr, size, cpu.PROT_ALL, true, "shellcode", nil)

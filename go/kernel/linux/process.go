@@ -19,3 +19,5 @@ func (k *LinuxKernel) Setgid32(gid int32) int {
 func (k *LinuxKernel) Setuid32(uid int32) int {
 	return k.PosixKernel.Setuid(int(uid))
 }
+
+func (k *LinuxKernel) Ugetrlimit() {}

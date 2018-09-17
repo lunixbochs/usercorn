@@ -29,6 +29,16 @@ func (L *LuaRepl) intFunc(_ *lua.LState) int {
 }
 
 func (L *LuaRepl) loadBindings() error {
+	// populate predefined globals as "_builtins" so they can be skipped in help()/dir()
+	builtins := L.NewTable()
+	g := L.GetGlobal("_G")
+	if s, ok := g.(*lua.LTable); ok {
+		s.ForEach(func(k, v lua.LValue) {
+			builtins.RawSet(k, lua.LTrue)
+		})
+	}
+	L.SetGlobal("_builtins", builtins)
+
 	print := L.NewFunction(L.printFunc)
 	L.SetGlobal("print", print)
 

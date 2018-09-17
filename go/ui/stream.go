@@ -18,31 +18,40 @@ func pad(s string, to int) string {
 }
 
 type StreamUI struct {
-	replay *trace.Replay
-	config *models.Config
-	regfmt string
-	inscol int
-	regcol int
-	// pending is an OpStep representing the last unflushed instruction. Cleared by Flush().
-	pending *trace.OpStep
-	effects []models.Op
-	lastPC  uint64
+	replay   *trace.Replay
+	config   *models.Config
+	regfmt   string
+	inscol   int
+	regcol   int
+	effects  []models.Op
+	lastPC   uint64
+	regnames []string
 }
 
 func NewStreamUI(c *models.Config, r *trace.Replay) *StreamUI {
 	// find the longest register name
 	longest := 0
-	for _, name := range r.Arch.RegNames() {
+	biggest := 0
+	regmap := r.Arch.RegNames()
+	for i, name := range regmap {
 		if len(name) > longest {
 			longest = len(name)
 		}
+		if i > biggest {
+			biggest = i
+		}
+	}
+	regnames := make([]string, biggest+1)
+	for i, name := range regmap {
+		regnames[i] = name
 	}
 	return &StreamUI{
-		replay: r,
-		config: c,
-		regfmt: fmt.Sprintf("%%%ds = %%#0%dx", longest, r.Arch.Bits/4),
-		inscol: 60, // FIXME
-		regcol: longest + 5 + r.Arch.Bits/4,
+		replay:   r,
+		config:   c,
+		regfmt:   fmt.Sprintf("%%%ds = %%#0%dx", longest, r.Arch.Bits/4),
+		inscol:   60, // FIXME
+		regcol:   longest + 5 + r.Arch.Bits/4,
+		regnames: regnames,
 	}
 }
 
@@ -110,11 +119,11 @@ func (s *StreamUI) OnExit(clean bool, msg string) {
 		s.Printf("  %s\n", mm)
 	}
 	s.Println("[registers]")
-	// FIXME: cache reg names as a list
-	names := s.replay.Arch.RegNames()
 	for enum, val := range s.replay.Regs {
-		name, ok := names[enum]
-		if !ok {
+		var name string
+		if enum < len(s.regnames) {
+			name = s.regnames[enum]
+		} else {
 			name = strconv.Itoa(enum)
 		}
 		s.Printf("%s: %#x\n", name, val)
@@ -123,7 +132,7 @@ func (s *StreamUI) OnExit(clean bool, msg string) {
 	pc := s.replay.PC
 	sp := s.replay.SP
 	for _, frame := range s.replay.Callstack.Freeze(pc, sp) {
-		s.Printf("  %#x\n", frame.PC, s.addrsym(frame.PC, true))
+		s.Printf("  %s\n", s.addrsym(frame.PC, true))
 	}
 }
 
@@ -202,9 +211,10 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 	for _, op := range effects {
 		switch o := op.(type) {
 		case *trace.OpReg:
-			// FIXME: cache reg names as a list
-			name, ok := s.replay.Arch.RegNames()[int(o.Num)]
-			if !ok {
+			var name string
+			if int(o.Num) < len(s.regnames) {
+				name = s.regnames[o.Num]
+			} else {
 				name = strconv.Itoa(int(o.Num))
 			}
 			reg := fmt.Sprintf(s.regfmt, name, o.Val)

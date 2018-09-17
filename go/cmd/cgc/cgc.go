@@ -1,4 +1,4 @@
-package main
+package cgc
 
 import (
 	"bytes"
@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/lunixbochs/usercorn/go"
+	"github.com/lunixbochs/usercorn/go/cmd"
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
@@ -208,7 +209,7 @@ func (k *CgcHook) Fdwait(nfds int, reads, writes, timeoutBuf co.Buf, readyFds co
 	return -1
 }
 
-func main() {
+func Main(args []string) {
 	fs := flag.NewFlagSet("cgc", flag.ExitOnError)
 	fs.Usage = func() {
 		fmt.Println("Usage: cgc [options] [-pov POV] [-ids IDS] CB [CB [CB...]]")
@@ -231,7 +232,7 @@ func main() {
 	var flagtrace = fs.Bool("flagtrace", false, "trace secret flag page reads")
 	var timeout = fs.Int("timeout", 0, "")
 
-	fs.Parse(os.Args[1:])
+	fs.Parse(args[1:])
 	if fs.NArg() < 1 {
 		fs.Usage()
 		os.Exit(1)
@@ -428,3 +429,5 @@ func main() {
 	}
 	wg.Wait()
 }
+
+func init() { cmd.Register("cgc", "execute a Cyber Grand Challenge binary or set", Main) }

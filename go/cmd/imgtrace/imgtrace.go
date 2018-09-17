@@ -1,4 +1,4 @@
-package main
+package imgtrace
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
-func main() {
+func Main(args []string) {
 	c := cmd.NewUsercornCmd()
 	var width *int
 	var frameskip *int
@@ -97,5 +97,7 @@ func main() {
 		}
 		return nil
 	}
-	os.Exit(c.Run(os.Args, os.Environ()))
+	os.Exit(c.Run(args, os.Environ()))
 }
+
+func init() { cmd.Register("imgtrace", "record memory access patterns to image files", Main) }

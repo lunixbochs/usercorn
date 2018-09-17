@@ -1,7 +1,9 @@
 package trace
 
 import (
+	"container/list"
 	"encoding/binary"
+	"github.com/pkg/errors"
 
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
@@ -23,16 +25,20 @@ type Replay struct {
 	pending   *OpStep
 	effects   []models.Op
 	callbacks []func(models.Op, []models.Op)
+
+	History   *list.List
+	CanRewind bool
 }
 
 func NewReplay(arch *models.Arch, os *models.OS, order binary.ByteOrder, dbg *debug.Debug) *Replay {
 	return &Replay{
-		Arch:   arch,
-		OS:     os,
-		Mem:    cpu.NewMem(uint(arch.Bits), order),
-		Regs:   make(map[int]uint64),
-		SpRegs: make(map[int][]byte),
-		Debug:  dbg,
+		Arch:    arch,
+		OS:      os,
+		Mem:     cpu.NewMem(uint(arch.Bits), order),
+		Regs:    make(map[int]uint64),
+		SpRegs:  make(map[int][]byte),
+		Debug:   dbg,
+		History: list.New(),
 	}
 }
 
@@ -40,8 +46,67 @@ func (r *Replay) Listen(cb func(models.Op, []models.Op)) {
 	r.callbacks = append(r.callbacks, cb)
 }
 
-// update() applies state change(s) from op to the UI's internal state
+func (r *Replay) Rewind(by, addr uint64) error {
+	if !r.CanRewind {
+		return errors.New("rewind is not enabled")
+	}
+	return nil
+}
+
+func (r *Replay) pushMapUndo(addr, size uint64) {
+	for _, mm := range r.Mem.Maps().FindRange(addr, size) {
+		if addr, size, ok := mm.Intersect(addr, size); ok {
+			page := mm.Slice(addr, size)
+			op := &OpMemMap{Addr: page.Addr, Size: page.Size, Prot: uint8(mm.Prot), Desc: page.Desc}
+			if page.File != nil {
+				op.File = page.File.Name
+				op.Off = page.File.Off
+				op.Len = page.File.Len
+			}
+			r.History.PushBack(op)
+			data, _ := r.Mem.MemRead(addr, size)
+			r.History.PushBack(&OpMemWrite{addr, data})
+		}
+	}
+}
+
+// creates "undo operations" and adds them to the History list
+func (r *Replay) pushUndo(op models.Op) {
+	switch o := op.(type) {
+	case *OpJmp: // code
+		r.History.PushBack(&OpJmp{r.PC, 0})
+	case *OpStep:
+		// will just reverse the meaning of step on replay
+		r.History.PushBack(o)
+
+	case *OpReg: // register
+		r.History.PushBack(&OpReg{Num: o.Num, Val: r.Regs[int(o.Num)]})
+	case *OpSpReg:
+		r.History.PushBack(&OpSpReg{Num: o.Num, Val: r.SpRegs[int(o.Num)]})
+
+		// all memory unwind ops need a list of old overlapping regions
+		// they should make sure the list of regions post-rewind is identical, and has the same contents
+	case *OpMemMap: // memory
+		r.History.PushBack(&OpMemUnmap{o.Addr, o.Size})
+		r.pushMapUndo(o.Addr, o.Size)
+	case *OpMemUnmap:
+		r.pushMapUndo(o.Addr, o.Size)
+	case *OpMemProt:
+		// this should walk the regions and set old protections
+		for _, mm := range r.Mem.Maps().FindRange(o.Addr, o.Size) {
+			r.History.PushBack(&OpMemProt{mm.Addr, mm.Size, uint8(mm.Prot)})
+		}
+	case *OpMemWrite:
+		data, _ := r.Mem.MemRead(o.Addr, uint64(len(o.Data)))
+		r.History.PushBack(&OpMemWrite{o.Addr, data})
+	}
+}
+
+// update() applies state change(s) from op to the Replay's internal state
 func (r *Replay) update(op models.Op) {
+	if r.CanRewind {
+		r.pushUndo(op)
+	}
 	switch o := op.(type) {
 	case *OpJmp: // code
 		r.PC = o.Addr

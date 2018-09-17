@@ -152,11 +152,13 @@ func (t *Trace) Attach() error {
 		// idea: could write keyframes backwards while tracking dirty addrs
 		// this will prevent repeated writes from doing anything
 		// TODO: "push/pop" syscall frames?
-		before := func(num int, args []uint64, ret uint64, desc string) {
+		before := func(num int, name string, args []uint64, ret uint64, desc string) bool {
 			t.OnSysPre(num, args, ret, desc)
+			return false
 		}
-		after := func(num int, args []uint64, ret uint64, desc string) {
+		after := func(num int, name string, args []uint64, ret uint64, desc string) bool {
 			t.OnSysPost(num, args, ret, desc)
+			return false
 		}
 		t.sysHook = t.u.HookSysAdd(before, after)
 	}
@@ -167,8 +169,8 @@ func (t *Trace) Detach() {
 	if !t.attached {
 		return
 	}
-	t.attached = false
 	// TODO: flush last frame on detach (make sure to detach on the way out)
+	t.flushFilters()
 	t.flushStep()
 	if t.frame != nil {
 		t.Pack(t.frame)
@@ -178,6 +180,7 @@ func (t *Trace) Detach() {
 		t.tf.Close()
 		t.tf = nil
 	}
+	t.attached = false
 
 	for _, hh := range t.hooks {
 		t.u.HookDel(hh)
@@ -262,6 +265,16 @@ func (t *Trace) Append(op models.Op, canAdvance bool) {
 }
 
 // trace hooks are below
+func (t *Trace) flushFilters() {
+	var ops []models.Op
+	for _, filter := range t.filters {
+		ops = append(ops, filter.Flush()...)
+	}
+	for _, op := range ops {
+		t.Append(op, false)
+	}
+}
+
 func (t *Trace) flushStep() {
 	sys := t.syscall
 	t.syscall = nil
@@ -357,4 +370,7 @@ func (t *Trace) OnSysPost(num int, args []uint64, ret uint64, desc string) {
 
 func (t *Trace) OnExit() {
 	t.Append(&OpExit{}, false)
+	// flush here, because exit causes the block to finish
+	// but we don't want the block's finalizer to be attributed to our exit syscall
+	t.flushSys(t.syscall)
 }

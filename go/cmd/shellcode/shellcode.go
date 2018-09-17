@@ -1,4 +1,4 @@
-package main
+package shellcode
 
 import (
 	"encoding/hex"
@@ -11,7 +11,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/models/cpu"
 )
 
-func main() {
+func Main(args []string) {
 	c := cmd.NewUsercornRawCmd()
 	c.NoArgs = true
 
@@ -43,5 +43,7 @@ func main() {
 		u.SetExit(addr + size)
 		return u.Run()
 	}
-	c.Run(os.Args, os.Environ())
+	c.Run(args[1:], os.Environ())
 }
+
+func init() { cmd.Register("shellcode", "execute a blob of machine code directly", Main) }

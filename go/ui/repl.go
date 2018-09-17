@@ -19,6 +19,7 @@ type Repl struct {
 
 	multiline bool
 	lines     []string
+	Closed    bool
 }
 
 type nullCloser struct{ io.Writer }
@@ -49,6 +50,8 @@ func NewRepl(u models.Usercorn) (*Repl, error) {
 	// hijack usercorn output so we can reprint the prompt
 	if u.Config().Output == os.Stderr {
 		u.Config().Output = &nullCloser{rl.Stderr()}
+	} else if a, ok := u.Config().Output.(*models.AsyncStream); ok {
+		a.Move(&nullCloser{rl.Stderr()})
 	}
 	return &Repl{u: u, Lua: luaRepl, rl: rl}, nil
 }
@@ -135,4 +138,5 @@ func (r *Repl) runSync() {
 func (r *Repl) Close() {
 	r.Lua.Close()
 	r.rl.Close()
+	r.Closed = true
 }

@@ -1,4 +1,4 @@
-package main
+package com
 
 import (
 	"github.com/pkg/errors"
@@ -10,7 +10,7 @@ import (
 	"github.com/lunixbochs/usercorn/go/models"
 )
 
-func main() {
+func Main(args []string) {
 	c := cmd.NewUsercornRawCmd()
 	c.NoArgs = true
 
@@ -46,5 +46,7 @@ func main() {
 
 		return u, nil
 	}
-	c.Run(os.Args, os.Environ())
+	c.Run(args, os.Environ())
 }
+
+func init() { cmd.Register("com", "execute a DOS COM binary", Main) }

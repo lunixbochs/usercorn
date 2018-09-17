@@ -26,6 +26,16 @@ func (k *PosixKernel) ClockGettime(_ int, out co.Obuf) uint64 {
 	return 0
 }
 
+func (k *PosixKernel) Nanosleep(req *native.Timespec, rem co.Obuf) uint64 {
+	time.Sleep(req.Duration())
+	// TODO: 1. allow interrupts
+	// TODO: 2. handle remaining time
+	if err := rem.Pack(&native.Timespec{}); err != nil {
+		return UINT64_MAX // FIXME
+	}
+	return 0
+}
+
 // TODO: candidate for enum conversion
 // but OS X and Linux appeared to have the same values for now
 // TODO: these are stubbed because they're mostly for progress bars afaik

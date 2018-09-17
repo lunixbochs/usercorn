@@ -1,25 +1,29 @@
-package main
+package fuzz
 
 import (
 	"encoding/binary"
 	"github.com/pkg/errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
+	"runtime/debug"
 	"sync"
 	"syscall"
 	"unsafe"
 
 	"github.com/lunixbochs/usercorn/go/cmd"
 	"github.com/lunixbochs/usercorn/go/models"
-	"github.com/lunixbochs/usercorn/go/models/cpu"
+
+	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
 )
 
 /*
 #include <stdlib.h>
 #include <sys/shm.h>
 #include <string.h>
+
+#include <unicorn/unicorn.h>
+#cgo LDFLAGS: -lunicorn
 
 void *afl_setup() {
 	char *id = getenv("__AFL_SHM_ID");
@@ -33,6 +37,41 @@ void *afl_setup() {
 	return afl_area;
 }
 
+typedef struct {
+	uint64_t prev;
+	uint8_t *area;
+	uint64_t size;
+	uc_hook hh;
+} afl_state;
+
+uint64_t murmur64(uint64_t val) {
+	uint64_t h = val;
+	h ^= val >> 33;
+	h *= 0xff51afd7ed558ccd;
+	h ^= h >> 33;
+	h *= 0xc4ceb9fe1a85ec53;
+	h ^= h >> 33;
+	return h;
+}
+
+void afl_block_cb(uc_engine *uc, uint64_t addr, uint32_t size, void *user) {
+	afl_state *state = user;
+	// size must be a power of two
+	uint64_t cur = murmur64(addr) & (state->size - 1);
+	state->area[cur ^ state->prev]++;
+	state->prev = cur;
+}
+
+afl_state *afl_uc_hook(void *uc, void *area, uint64_t size) {
+	afl_state *state = malloc(sizeof(afl_state));
+	state->area = area;
+	state->size = size;
+	if (uc_hook_add(uc, &state->hh, UC_HOOK_BLOCK, afl_block_cb, state, 1, 0) != UC_ERR_OK) {
+		free(state);
+		return NULL;
+	}
+	return state;
+}
 */
 import "C"
 
@@ -79,10 +118,7 @@ func (p *FakeProc) Start() error {
 	return nil
 }
 
-func main() {
-	message := []byte("In fuzz main")
-	ioutil.WriteFile("/tmp/outfile", message, 0444)
-
+func Main(args []string) {
 	forksrvCtrl := os.NewFile(uintptr(FORKSRV_FD), "afl_ctrl")
 	forksrvStatus := os.NewFile(uintptr(FORKSRV_FD+1), "afl_status")
 
@@ -92,48 +128,38 @@ func main() {
 
 	nofork := os.Getenv("AFL_NO_FORKSRV") == "1"
 
-	aflArea := C.afl_setup()
-	if aflArea == nil {
-		panic("could not set up AFL shared memory")
-	}
-	fuzzMap := []byte((*[1 << 30]byte)(unsafe.Pointer(aflArea))[:])
-
-	var lastPos uint64
-	blockTrace := func(_ cpu.Cpu, addr uint64, size uint32) {
-		if lastPos == 0 {
-			lastPos = addr >> 1
-			return
-		}
-		loc := (addr >> 4) ^ (addr << 8)
-		loc &= MAP_SIZE - 1
-		fuzzMap[loc]++
-		lastPos = addr >> 1
-	}
 	c.SetupFlags = func() error {
 		forkAddr = c.Flags.Uint64("forkaddr", 0, "wait until this address to fork and begin fuzzing")
 		fuzzInterp = c.Flags.Bool("fuzzinterp", false, "controls whether fuzzing is delayed until program's main entry point")
 		return nil
 	}
-	addHook := func(u models.Usercorn) error {
-		_, err := u.HookAdd(cpu.HOOK_BLOCK, blockTrace, 1, 0)
-		return errors.Wrap(err, "u.HookAdd() failed")
-	}
 	c.RunUsercorn = func() error {
+		aflArea := C.afl_setup()
+		if aflArea == nil {
+			panic("could not set up AFL shared memory")
+		}
+
 		var err error
 		u := c.Usercorn
+		defer func() {
+			if r := recover(); r != nil {
+				u.Println("caught panic", r)
+				u.Println(string(debug.Stack()))
+			}
+		}()
 
-		if err := addHook(u); err != nil {
-			return err
+		aflState := C.afl_uc_hook(unsafe.Pointer(u.Backend().(uc.Unicorn).Handle()), aflArea, C.uint64_t(MAP_SIZE))
+		if aflState == nil {
+			panic("failed to setup hooks")
 		}
 		if nofork {
-			status := 0
 			err = u.Run()
 			if _, ok := err.(models.ExitStatus); ok {
 			} else if err != nil {
 				u.Printf("Usercorn err: %s\n", err)
-				status = 257
+				return models.ExitStatus(257)
 			}
-			os.Exit(status)
+			return err
 		}
 
 		// save cpu and memory state
@@ -150,8 +176,8 @@ func main() {
 		child := FakeProc{Argv: []string{"/bin/cat"}, Usercorn: u}
 		var aflMsg [4]byte
 		// afl forkserver loop
+		u.Println("starting forkserver")
 		for {
-			lastPos = 0
 			if _, err := forksrvCtrl.Read(aflMsg[:]); err != nil {
 				u.Printf("Failed to receive control signal from AFL: %s\n", err)
 				return errors.Wrapf(err, "Failed to receive control signal from AFL: %s", err)
@@ -175,11 +201,6 @@ func main() {
 				return errors.Wrap(err, "failed to send PID to AFL")
 			}
 
-			// Run() deletes all hooks, so we need to add back each time
-			if err := addHook(u); err != nil {
-				return err
-			}
-
 			status := 0
 			err = u.Run()
 			if _, ok := err.(models.ExitStatus); ok {
@@ -194,5 +215,7 @@ func main() {
 			}
 		}
 	}
-	os.Exit(c.Run(os.Args, os.Environ()))
+	os.Exit(c.Run(args, os.Environ()))
 }
+
+func init() { cmd.Register("fuzz", "fuzz acts as an AFL fork server", Main) }
