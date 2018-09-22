@@ -73,5 +73,7 @@ type Usercorn interface {
 	AddKernel(kernel interface{}, first bool)
 	Syscall(num int, name string, getArgs SysGetArgs) (uint64, error)
 
+	Inscount() uint64
+
 	Exit(err error)
 }
