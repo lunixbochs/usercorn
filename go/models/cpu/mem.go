@@ -78,7 +78,7 @@ func (m *Mem) MemWrite(addr uint64, p []byte) error {
 	return m.Sim.Write(addr, p, 0)
 }
 
-// Read while checking protections. This exists to support a CPU interpreter.
+// ReadProt reads while checking protections. This exists to support a CPU interpreter.
 func (m *Mem) ReadProt(addr, size uint64, prot int) ([]byte, error) {
 	p := make([]byte, size)
 	if err := m.Sim.Read(addr, p, prot); err != nil {
@@ -96,7 +96,7 @@ func (m *Mem) ReadProt(addr, size uint64, prot int) ([]byte, error) {
 	return p, nil
 }
 
-// Write while checking protections. This exists to support a CPU interpreter.
+// WriteProt writes while checking protections. This exists to support a CPU interpreter.
 // Write hooks trigger in WriteUint for now.
 func (m *Mem) WriteProt(addr uint64, p []byte, prot int) error {
 	return m.Sim.Write(addr, p, prot)
@@ -113,7 +113,7 @@ func (m *Mem) ReadUint(addr uint64, size, prot int) (uint64, error) {
 	return UnpackUint(m.order, size, p)
 }
 
-// write hook only triggers here, as we can't fill value in WriteProt
+// WriteUint writes hook only triggers here, as we can't fill value in WriteProt
 func (m *Mem) WriteUint(addr uint64, size, prot int, val uint64) error {
 	var buf [8]byte
 	if size > 8 {

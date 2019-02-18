@@ -62,7 +62,7 @@ func (p *Page) Contains(addr uint64) bool {
 	return addr >= p.Addr && addr < p.Addr+p.Size
 }
 
-// start = max(s1, s2), end = min(e1, e2), ok = end > start
+// Intersect starts = max(s1, s2), end = min(e1, e2), ok = end > start
 func (p *Page) Intersect(addr, size uint64) (uint64, uint64, bool) {
 	start := p.Addr
 	end := p.Addr + p.Size

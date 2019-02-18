@@ -348,7 +348,7 @@ func (u *Usercorn) MemRead(addr, size uint64) ([]byte, error) {
 	return p, err
 }
 
-// read without tracing, used by trace and repl
+// DirectRead reads without tracing, used by trace and repl
 func (u *Usercorn) DirectRead(addr, size uint64) ([]byte, error) {
 	return u.Task.MemRead(addr, size)
 }
@@ -966,7 +966,7 @@ func (u *Usercorn) RunAsm(addr uint64, asm string, setRegs map[int]uint64, regsC
 
 var breakRe = regexp.MustCompile(`^((?P<addr>0x[0-9a-fA-F]+|\d+)|(?P<sym>[\w:]+(?P<off>\+0x[0-9a-fA-F]+|\d+)?)|(?P<source>.+):(?P<line>\d+))(@(?P<file>.+))?$`)
 
-// adds a breakpoint to Usercorn instance
+// BreakAdd adds a breakpoint to Usercorn instance
 // see models.Breakpoint for desc syntax
 // future=true adds it to the list of breakpoints to update when new memory is mapped/registered
 func (u *Usercorn) BreakAdd(desc string, future bool, cb func(u models.Usercorn, addr uint64)) (*models.Breakpoint, error) {

@@ -34,7 +34,7 @@ type MemSim struct {
 	Mem Pages
 }
 
-// Checks whether the address range exists in the currently-mapped memory.
+// RangeValid checks whether the address range exists in the currently-mapped memory.
 // If prot > 0, ensures that each region has the entire protection mask provided.
 func (m *MemSim) RangeValid(addr, size uint64, prot int) (mapGood bool, protGood bool) {
 	_, first := m.Mem.bsearch(addr)
@@ -77,7 +77,7 @@ func (m *MemSim) Map(addr, size uint64, prot int, zero bool) *Page {
 	return page
 }
 
-// this is *exactly* unmap, but the "middle" pages of each split are re-protected
+// Prot is *exactly* unmap, but the "middle" pages of each split are re-protected
 func (m *MemSim) Prot(addr, size uint64, prot int) {
 	// truncate entries overlapping addr, size
 	tmp := make([]*Page, 0, len(m.Mem))

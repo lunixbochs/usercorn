@@ -197,7 +197,7 @@ func (t *Trace) Detach() {
 	t.regs = nil
 }
 
-// this gets weird, because I want to stream some things instruction-at-a-time
+// This gets weird, because I want to stream some things instruction-at-a-time
 // but also want all of the frame information for printing where possible
 // and on the middle ground, I want register information for an instruction
 // I guess everything between an OpStep/OpJmp goes to the next OpStep/Jmp?
@@ -231,7 +231,7 @@ func (t *Trace) Rewound() {
 	}
 }
 
-// canAdvance indicates whether this op can start a new keyframe
+// indicates whether this op can start a new keyframe
 // TODO: eventually allow alternating OpFrames with Syscalls, like on windows kernel->userspace callbacks?
 func (t *Trace) Append(op models.Op, canAdvance bool) {
 	ops := []models.Op{op}

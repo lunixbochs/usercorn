@@ -126,7 +126,7 @@ outer:
 	return nil
 }
 
-// removes all Unicorn hooks added by this breakpoint
+// Remove removes all Unicorn hooks added by this breakpoint
 func (b *Breakpoint) Remove() error {
 	for _, hook := range b.hooks {
 		b.u.HookDel(hook.hook)

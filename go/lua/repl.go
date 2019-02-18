@@ -22,7 +22,7 @@ type LuaRepl struct {
 
 // TODO: eventually support multiple usercorn instances in a repl
 
-// Return a new lua repl bound to a Usercorn instance.
+// NewRepl returns a new lua repl bound to a Usercorn instance.
 func NewRepl(u models.Usercorn, o io.Writer) (*LuaRepl, error) {
 	repl := &LuaRepl{
 		LState: lua.NewState(),
@@ -48,7 +48,7 @@ func (l *LuaRepl) SetOutput(w io.Writer) {
 	l.Writer = w
 }
 
-// Writes emulator state to lua globals.
+// EnvToLua writes emulator state to lua globals.
 func (L *LuaRepl) EnvToLua() {
 	u := L.u
 	vals, err := u.RegDump()

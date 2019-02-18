@@ -143,7 +143,7 @@ func (r *Replay) update(op models.Op) {
 	}
 }
 
-// Feed() is the entry point handling Op structs.
+// Feed is the entry point handling Op structs.
 // It calls update() and combines side-effects with instructions
 func (r *Replay) Feed(op models.Op) {
 	var ops []models.Op
