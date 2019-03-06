@@ -74,8 +74,8 @@ deps/lib/libunicorn.1.$(LIBEXT):
 
 deps/lib/libcapstone.3.$(LIBEXT):
 	cd deps/build && \
-	git clone https://github.com/aquynh/capstone.git && git --git-dir capstone pull; \
-	cd capstone && git clean -fdx && git reset --hard origin/master; \
+	git clone -b v3 https://github.com/aquynh/capstone.git && git --git-dir capstone pull; \
+	cd capstone && git clean -fdx && git checkout v3; \
 	mkdir build && cd build && cmake -DCAPSTONE_BUILD_STATIC=OFF -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=RELEASE .. && \
 	make -j2 PREFIX=$(DEST) install
 
