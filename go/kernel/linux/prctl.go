@@ -9,18 +9,16 @@ const (
 	PR_SET_DUMPABLE = 0x4
 )
 
-var IsDumpable uint64 = 1
-
 func (k *LinuxKernel) Prctl(code int, arg uint64) uint64 {
 	switch code {
 	case PR_SET_VMA:
 		//TODO: if there is ever an Android kernel, this is Android only
 		return 0
 	case PR_GET_DUMPABLE:
-		return IsDumpable
+		return k.IsDumpable
 	case PR_SET_DUMPABLE:
 	if arg == 0 || arg == 1 {
-		IsDumpable = arg
+		k.IsDumpable = arg
 		return 0
 	} else {
 		return UINT64_MAX

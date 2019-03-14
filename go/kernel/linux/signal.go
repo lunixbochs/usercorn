@@ -4,14 +4,6 @@ import (
 	"github.com/lunixbochs/usercorn/go/kernel/common"
 )
 
-type sigaltstack_t struct {
-	Stackpointer uint64
-	Size         int64
-	Flags        int64
-}
-
-var CurrentStack sigaltstack_t
-
 const (
 	SS_ONSTACK = 1
 	SS_DISABLE = 2
@@ -22,10 +14,10 @@ const (
 func (k *LinuxKernel) Sigaltstack(nss common.Buf, oss common.Obuf) uint64 {
 	//TODO: track the flags properly
 	if oss.Addr != 0 {
-		oss.Pack(&CurrentStack)
+		oss.Pack(&k.CurrentStack)
 	}
 	if nss.Addr != 0 {
-		if err := nss.Unpack(&CurrentStack); err != nil {
+		if err := nss.Unpack(&k.CurrentStack); err != nil {
 			return 1
 		}
 	}
