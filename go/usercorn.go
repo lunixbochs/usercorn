@@ -561,18 +561,21 @@ func (u *Usercorn) PrefixPath(path string, force bool) string {
 
 func (u *Usercorn) Brk(addr uint64) (uint64, error) {
 	// TODO: brk(0) behavior is linux specific
-	cur := u.brk
-	if addr > 0 && addr >= cur {
+	if addr > 0 && addr >= u.brk {
 		// take brk protections from last brk segment (not sure if this is right)
 		prot := cpu.PROT_READ | cpu.PROT_WRITE
-		if brk := u.memsim.Mem.Find(cur); brk != nil {
+		softBrk := u.brk
+		if brk := u.memsim.Mem.Find(u.brk); brk != nil {
 			prot = brk.Prot
-			u.brk = brk.Addr + brk.Size
+			softBrk = brk.Addr + brk.Size
 		}
-		size := addr - u.brk
-		if size > 0 {
-			_, err := u.Mmap(u.brk, size, prot, true, "brk", nil)
-			if err != nil {
+		if addr > softBrk {
+			size := addr - softBrk
+			// round brk allocations to 64k to reduce page count
+			if size < 0x10000 {
+				size = 0x10000
+			}
+			if _, err := u.Mmap(softBrk, size, prot, true, "brk", nil); err != nil {
 				return u.brk, err
 			}
 		}
