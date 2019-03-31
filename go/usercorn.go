@@ -814,7 +814,7 @@ func (u *Usercorn) Syscall(num int, name string, getArgs models.SysGetArgs) (uin
 }
 
 func (u *Usercorn) Inscount() uint64 {
-        return u.inscount
+	return u.inscount
 }
 
 func (u *Usercorn) Exit(err error) {
