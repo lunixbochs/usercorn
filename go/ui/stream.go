@@ -21,6 +21,7 @@ type StreamUI struct {
 	replay   *trace.Replay
 	config   *models.Config
 	regfmt   string
+	regsfmt  string
 	inscol   int
 	regcol   int
 	effects  []models.Op
@@ -49,6 +50,7 @@ func NewStreamUI(c *models.Config, r *trace.Replay) *StreamUI {
 		replay:   r,
 		config:   c,
 		regfmt:   fmt.Sprintf("%%%ds = %%#0%dx", longest, r.Arch.Bits/4),
+		regsfmt:  fmt.Sprintf("%%%ds = %%s", longest),
 		inscol:   60, // FIXME
 		regcol:   longest + 5 + r.Arch.Bits/4,
 		regnames: regnames,
@@ -219,14 +221,28 @@ func (s *StreamUI) insPrint(pc uint64, size uint8, effects []models.Op) {
 			}
 			reg := fmt.Sprintf(s.regfmt, name, o.Val)
 			regs = append(regs, reg)
+			_, sym := s.replay.Symbolicate(o.Val, true)
+			if sym != "" {
+				regs = append(regs, fmt.Sprintf(s.regsfmt, name, sym))
+			}
 		case *trace.OpSpReg:
 			s.Println("<unimplemented special register>")
 		case *trace.OpMemRead:
 			// TODO: hexdump -C
-			mem = append(mem, fmt.Sprintf("R %x", o.Addr))
+			_, sym := s.replay.Symbolicate(o.Addr, true)
+			if sym != "" {
+				mem = append(mem, fmt.Sprintf("R %x (%s)", o.Addr, sym))
+			} else {
+				mem = append(mem, fmt.Sprintf("R %x", o.Addr))
+			}
 		case *trace.OpMemWrite:
 			// TODO: hexdump -C
-			mem = append(mem, fmt.Sprintf("W %x", o.Addr))
+			_, sym := s.replay.Symbolicate(o.Addr, true)
+			if sym != "" {
+				mem = append(mem, fmt.Sprintf("W %x (%s)", o.Addr, sym))
+			} else {
+				mem = append(mem, fmt.Sprintf("W %x", o.Addr))
+			}
 		}
 	}
 	var reg, m string
