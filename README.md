@@ -28,6 +28,7 @@ Example Commands
     usercorn run -trace -to trace.uc bins/x86.linux.elf
     usercorn trace -pretty trace.uc
     usercorn run -repl bins/x86.linux.elf
+    usercorn run -ex dump_functions.lua bins/x86.linux.elf
 
 What.
 ----
@@ -37,7 +38,7 @@ What.
 - While recording full system state at every instruction.
 - to a serializable compact format capable of rewind and re-execution.
 - It's useful out of the box for debugging and dynamic analysis.
-- With an arch-neutral powerful lua-based scripting language and debugger.
+- With an arch-neutral powerful lua-based scripting language and debugger with [plenty of examples](https://github.com/Caesurus/usercorn_examples).
 - It's also easy to extend and use to build your own tools.
 
 Usercorn could be used to emulate 16-bit DOS, 32-bit and 64-bit ARM/MIPS/x86/SPARC binaries for Linux, Darwin, BSD, DECREE, and even operating systems like Redux.
