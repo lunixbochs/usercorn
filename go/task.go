@@ -123,7 +123,6 @@ func (t *Task) MemReserve(addr, size uint64, fixed bool) (*cpu.Page, error) {
 
 func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *cpu.FileDesc) (uint64, error) {
 	aligned, size := align(addr, size, true)
-
 	if file != nil {
 		file.Off += aligned - addr
 	}
@@ -131,12 +130,9 @@ func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *
 	if err != nil {
 		return 0, err
 	}
-
 	page.Desc = desc
 	page.File = file
 	page.Prot = prot
-
-	//fmt.Println(t.Mappings())
 
 	err = t.Cpu.MemMap(page.Addr, page.Size, prot)
 	if err == nil {
@@ -145,8 +141,6 @@ func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *
 		for _, v := range t.mapHooks {
 			v.Map(page.Addr, page.Size, prot, desc, file)
 		}
-	} else {
-		//fmt.Printf("Error from t.Cpu.MemMap %v\n", err)
 	}
 
 	return page.Addr, err
