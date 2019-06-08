@@ -32,7 +32,7 @@ ifeq "$(OS)" "Darwin"
 endif
 
 # figure out if we can download Go
-GOVERSION=1.10.1
+GOVERSION=1.10.8
 ifeq "$(ARCH)" "x86_64"
 	ifeq "$(OS)" "Darwin"
 		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).darwin-amd64.tar.gz"

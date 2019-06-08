@@ -28,6 +28,7 @@ const (
 	ELF_AT_PLATFORM
 	ELF_AT_HWCAP
 	ELF_AT_CLKTCK       = 17
+	ELF_AT_SECURE       = 23
 	ELF_AT_RANDOM       = 25
 	ELF_AT_SYSINFO      = 32
 	ELF_AT_SYSINFO_EHDR = 33
@@ -69,6 +70,7 @@ func setupElfAuxv(u models.Usercorn) ([]ElfAuxv, error) {
 		{ELF_AT_EGID, uint64(os.Getegid())},
 		{ELF_AT_PLATFORM, platformAddr},
 		{ELF_AT_CLKTCK, 100}, // 100hz, totally fake
+		{ELF_AT_SECURE, 0}, // TODO: (getuid() != geteuid() || getgid() != getegid())
 		{ELF_AT_RANDOM, randAddr},
 		{ELF_AT_NULL, 0},
 	}
@@ -87,7 +89,7 @@ func setupElfAuxv(u models.Usercorn) ([]ElfAuxv, error) {
 	}
 	if phdrOff > 0 {
 		auxv = append([]ElfAuxv{
-			{ELF_AT_PHDR, phdrOff},
+			{ELF_AT_PHDR, u.Base() + phdrOff},
 			{ELF_AT_PHENT, uint64(phdrEnt)},
 			{ELF_AT_PHNUM, uint64(phdrCount)},
 		}, auxv...)

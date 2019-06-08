@@ -50,6 +50,10 @@ func (k *LinuxKernel) SetTidAddress(tidptr co.Buf) uint64 {
 	return 0
 }
 
+func (k *LinuxKernel) Tgkill(tgid int, tid int, sig int) uint64 {
+	return 0
+}
+
 /*
 long get_robust_list(int pid, struct robust_list_head **head_ptr,
                      size_t *len_ptr);

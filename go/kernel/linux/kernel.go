@@ -10,12 +10,25 @@ const (
 	STACK_SIZE = 0x00800000
 )
 
+
+type sigaltstack_t struct {
+	Stackpointer uint64
+	Size         int64
+	Flags        int64
+}
+
 type LinuxKernel struct {
 	posix.PosixKernel
+	CurrentStack sigaltstack_t
+	IsDumpable uint64
 }
 
 func NewKernel() *LinuxKernel {
-	kernel := &LinuxKernel{*posix.NewKernel()}
+	kernel := &LinuxKernel{
+		*posix.NewKernel(),
+		sigaltstack_t{},
+		1,
+	}
 	registerUnpack(kernel)
 	kernel.Pack = Pack
 	return kernel
