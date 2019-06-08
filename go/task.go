@@ -2,8 +2,9 @@ package usercorn
 
 import (
 	"encoding/binary"
-	"github.com/pkg/errors"
 	"sort"
+
+	"github.com/pkg/errors"
 
 	"github.com/lunixbochs/usercorn/go/models"
 	"github.com/lunixbochs/usercorn/go/models/cpu"
@@ -78,13 +79,20 @@ func (t *Task) MemProt(addr, size uint64, prot int) error {
 }
 
 func (t *Task) MemUnmap(addr, size uint64) error {
+	var err error
 	addr, size = align(addr, size, true)
-	err := t.Cpu.MemUnmap(addr, size)
-	if err == nil {
-		for _, v := range t.mapHooks {
-			v.Unmap(addr, size)
+
+	pages := t.memsim.Mem.FindRange(addr, size)
+	for _, p := range pages {
+		err = t.Cpu.MemUnmap(p.Addr, p.Size)
+		if err == nil {
+			for _, v := range t.mapHooks {
+				v.Unmap(addr, size)
+			}
+			t.memsim.Unmap(addr, size)
+		} else {
+			return err
 		}
-		t.memsim.Unmap(addr, size)
 	}
 	return err
 }
@@ -115,6 +123,7 @@ func (t *Task) MemReserve(addr, size uint64, fixed bool) (*cpu.Page, error) {
 
 func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *cpu.FileDesc) (uint64, error) {
 	aligned, size := align(addr, size, true)
+
 	if file != nil {
 		file.Off += aligned - addr
 	}
@@ -122,9 +131,13 @@ func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *
 	if err != nil {
 		return 0, err
 	}
+
 	page.Desc = desc
 	page.File = file
 	page.Prot = prot
+
+	//fmt.Println(t.Mappings())
+
 	err = t.Cpu.MemMap(page.Addr, page.Size, prot)
 	if err == nil {
 		t.memsim.Mem = append(t.memsim.Mem, page)
@@ -132,7 +145,10 @@ func (t *Task) Mmap(addr, size uint64, prot int, fixed bool, desc string, file *
 		for _, v := range t.mapHooks {
 			v.Map(page.Addr, page.Size, prot, desc, file)
 		}
+	} else {
+		//fmt.Printf("Error from t.Cpu.MemMap %v\n", err)
 	}
+
 	return page.Addr, err
 }
 
