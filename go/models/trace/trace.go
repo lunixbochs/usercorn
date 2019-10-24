@@ -97,8 +97,11 @@ func (t *Trace) Attach() error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to read initial memory mapping at %#x", m.Addr)
 		}
-		data = bytes.Trim(data, "\x00")
-		mw := &OpMemWrite{Addr: m.Addr, Data: data}
+		data = bytes.TrimRight(data, "\x00")
+		old := uint64(len(data))
+		data = bytes.TrimLeft(data, "\x00")
+		offset := old - uint64(len(data))
+		mw := &OpMemWrite{Addr: m.Addr + uint64(offset), Data: data}
 		kf.Ops = append(kf.Ops, mw)
 	}
 	if t.tf != nil {
