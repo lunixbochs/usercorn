@@ -187,7 +187,7 @@ func (t *execTest) Setup(asm string) error {
 
 	size := (uint64(len(shellcode)) + 0xfff) &^ 0xfff
 	if err := u.MemMap(base, size, cpu.PROT_ALL); err != nil {
-		return errors.Wrapf(err, "u.MemMap(%#x, %#x) failed", base)
+		return errors.Wrapf(err, "u.MemMap(%#x, %#x) failed", base, size)
 	}
 	if err := u.MemWrite(base, shellcode); err != nil {
 		return errors.Wrapf(err, "u.MemWrite(%#x, [%d]byte) failed", base, size)
