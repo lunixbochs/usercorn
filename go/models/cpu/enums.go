@@ -30,9 +30,9 @@ const (
 	MEM_READ_UNMAPPED  = 19
 	MEM_WRITE_UNMAPPED = 20
 	MEM_FETCH_UNMAPPED = 21
-	MEM_WRITE_PROT     = 12
-	MEM_READ_PROT      = 13
-	MEM_FETCH_PROT     = 14
+	MEM_WRITE_PROT     = 22
+	MEM_READ_PROT      = 23
+	MEM_FETCH_PROT     = 24
 
 	MEM_PROT     = MEM_WRITE_PROT | MEM_READ_PROT | MEM_FETCH_PROT
 	MEM_UNMAPPED = MEM_READ_UNMAPPED | MEM_WRITE_UNMAPPED | MEM_FETCH_UNMAPPED
@@ -49,7 +49,7 @@ const (
 
 // these constants are used in a hook to specify the type of memory access
 const (
-	MEM_WRITE = 16
-	MEM_READ  = 17
+	MEM_READ  = 16
+	MEM_WRITE = 17
 	MEM_FETCH = 18
 )
