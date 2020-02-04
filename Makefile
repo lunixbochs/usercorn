@@ -72,7 +72,7 @@ deps/lib/libunicorn.1.$(LIBEXT):
 	cd unicorn && git clean -fdx && git reset --hard origin/master && \
 	make && make PREFIX=$(DEST) install
 
-deps/lib/libcapstone.3.$(LIBEXT):
+deps/lib/libcapstone.5.$(LIBEXT):
 	cd deps/build && \
 	git clone https://github.com/aquynh/capstone.git && git --git-dir capstone pull; \
 	cd capstone && git clean -fdx && git reset --hard origin/master; \
@@ -86,7 +86,7 @@ deps/lib/libkeystone.0.$(LIBEXT):
 	cmake -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLLVM_TARGETS_TO_BUILD="all" -G "Unix Makefiles" .. && \
 	make -j2 install
 
-deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.3.$(LIBEXT) deps/lib/libkeystone.0.$(LIBEXT) deps/$(GODIR)
+deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.5.$(LIBEXT) deps/lib/libkeystone.0.$(LIBEXT) deps/$(GODIR)
 
 # Go executable targets
 .gopath:
