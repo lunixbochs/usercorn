@@ -1,41 +1,38 @@
 package cpu
 
-import (
-	uc "github.com/unicorn-engine/unicorn/bindings/go/unicorn"
-)
-
 // base hook enums on Unicorn's for simplicity
+// https://github.com/unicorn-engine/unicorn/blob/master/bindings/go/unicorn/unicorn_const.go
 const (
 	// hook CPU interrupts
-	HOOK_INTR = uc.HOOK_INTR
+	HOOK_INTR = 1
 
 	// hook one instruction (cpu-specific)
-	HOOK_INSN = uc.HOOK_INSN
+	HOOK_INSN = 2
 
 	// hook each executed instruction
-	HOOK_CODE = uc.HOOK_CODE
+	HOOK_CODE = 4
 
 	// hook each executed basic block
-	HOOK_BLOCK = uc.HOOK_BLOCK
+	HOOK_BLOCK = 8
 
 	// hook (before) each memory read/write
-	HOOK_MEM_FETCH = uc.HOOK_MEM_FETCH
-	HOOK_MEM_READ  = uc.HOOK_MEM_READ
-	HOOK_MEM_WRITE = uc.HOOK_MEM_WRITE
+	HOOK_MEM_READ  = 1024
+	HOOK_MEM_WRITE = 2048
+	HOOK_MEM_FETCH = 4096
 	// HOOK_MEM_READ_AFTER = uc.HOOK_MEM_READ_AFTER
 
 	// hook all memory errors
-	HOOK_MEM_ERR = uc.HOOK_MEM_INVALID
+	HOOK_MEM_ERR = 1008
 )
 
 // these errors are used for HOOK_MEM_ERR
 const (
-	MEM_WRITE_UNMAPPED = uc.MEM_WRITE_UNMAPPED
-	MEM_READ_UNMAPPED  = uc.MEM_READ_UNMAPPED
-	MEM_FETCH_UNMAPPED = uc.MEM_FETCH_UNMAPPED
-	MEM_WRITE_PROT     = uc.MEM_WRITE_PROT
-	MEM_READ_PROT      = uc.MEM_READ_PROT
-	MEM_FETCH_PROT     = uc.MEM_FETCH_PROT
+	MEM_READ_UNMAPPED  = 19
+	MEM_WRITE_UNMAPPED = 20
+	MEM_FETCH_UNMAPPED = 21
+	MEM_WRITE_PROT     = 12
+	MEM_READ_PROT      = 13
+	MEM_FETCH_PROT     = 14
 
 	MEM_PROT     = MEM_WRITE_PROT | MEM_READ_PROT | MEM_FETCH_PROT
 	MEM_UNMAPPED = MEM_READ_UNMAPPED | MEM_WRITE_UNMAPPED | MEM_FETCH_UNMAPPED
@@ -43,16 +40,16 @@ const (
 
 // these constants are used for memory protections
 const (
-	PROT_NONE  = uc.PROT_NONE
-	PROT_READ  = uc.PROT_READ
-	PROT_WRITE = uc.PROT_WRITE
-	PROT_EXEC  = uc.PROT_EXEC
-	PROT_ALL   = uc.PROT_ALL
+	PROT_NONE  = 0
+	PROT_READ  = 1
+	PROT_WRITE = 2
+	PROT_EXEC  = 4
+	PROT_ALL   = 7
 )
 
 // these constants are used in a hook to specify the type of memory access
 const (
-	MEM_WRITE = uc.MEM_WRITE
-	MEM_READ  = uc.MEM_READ
-	MEM_FETCH = uc.MEM_FETCH
+	MEM_WRITE = 16
+	MEM_READ  = 17
+	MEM_FETCH = 18
 )
