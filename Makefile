@@ -32,7 +32,7 @@ ifeq "$(OS)" "Darwin"
 endif
 
 # figure out if we can download Go
-GOVERSION=1.10.8
+GOVERSION=1.13.7
 ifeq "$(ARCH)" "x86_64"
 	ifeq "$(OS)" "Darwin"
 		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).darwin-amd64.tar.gz"
@@ -108,7 +108,7 @@ ifneq ($(GOPATH),)
 else
 	export GOPATH := $(DEST)/gopath:$(shell pwd)/.gopath
 endif
-DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -v usercorn | grep '\.' | sort -u)
+DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -Ev 'usercorn|vendor' | grep '\.' | sort -u)
 PKGS=$(shell go list ./go/... | sort -u | rev | sed -e 's,og/.*$$,,' | rev | sed -e 's,^,github.com/lunixbochs/usercorn/go,')
 
 # TODO: more DRY?
