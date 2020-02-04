@@ -123,14 +123,14 @@ func Main(args []string) {
 	forksrvStatus := os.NewFile(uintptr(FORKSRV_FD+1), "afl_status")
 
 	c := cmd.NewUsercornCmd()
-	var forkAddr *uint64
-	var fuzzInterp *bool
+	// var forkAddr *uint64
+	// var fuzzInterp *bool
 
 	nofork := os.Getenv("AFL_NO_FORKSRV") == "1"
 
 	c.SetupFlags = func() error {
-		forkAddr = c.Flags.Uint64("forkaddr", 0, "wait until this address to fork and begin fuzzing")
-		fuzzInterp = c.Flags.Bool("fuzzinterp", false, "controls whether fuzzing is delayed until program's main entry point")
+		// forkAddr = c.Flags.Uint64("forkaddr", 0, "wait until this address to fork and begin fuzzing")
+		// fuzzInterp = c.Flags.Bool("fuzzinterp", false, "controls whether fuzzing is delayed until program's main entry point")
 		return nil
 	}
 	c.RunUsercorn = func() error {
