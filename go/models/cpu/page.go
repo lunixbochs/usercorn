@@ -175,10 +175,6 @@ func (p *Page) Split(addr, size uint64) (left, right *Page) {
 	return left, right
 }
 
-func (pg *Page) Write(addr uint64, p []byte) {
-	copy(pg.Data[addr-pg.Addr:], p)
-}
-
 type Pages []*Page
 
 func (p Pages) Len() int           { return len(p) }
