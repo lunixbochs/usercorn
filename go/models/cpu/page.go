@@ -29,6 +29,8 @@ type Page struct {
 	Prot int
 	Data []byte
 
+	Mirror uint64
+
 	Desc string
 	File *FileDesc
 }

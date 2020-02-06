@@ -165,3 +165,46 @@ func TestMemSim(t *testing.T) {
 	}
 	// TODO: test Prot() enforcement, and prot behavior for overlapping maps
 }
+
+func TestMemMirror(t *testing.T) {
+	m := &MemSim{}
+	m.Map(0x1000, 0x1000, 7, false)
+
+	if err := m.Write(0x1000, []byte{1, 2, 3}, 7); err != nil {
+		t.Error(err, "while writing initial map")
+	}
+	p3 := make([]byte, 3)
+	if err := m.Read(0x1000, p3, 7); err != nil {
+		t.Error(err, "while reading initial map")
+	}
+	if !bytes.Equal(p3, []byte{1, 2, 3}) {
+		t.Error("initial map read/write mismatch")
+	}
+	if err := m.Read(0x10000, p3, 7); err == nil {
+		t.Error("mirror region is readable before test")
+	}
+	m.Mirror(0x10000, 0x1000, 7, 0x1000)
+	if err := m.Read(0x10000, p3, 7); err != nil {
+		t.Error(err, "while reading mirror")
+	}
+	if !bytes.Equal(p3, []byte{1, 2, 3}) {
+		t.Error("map write -> mirror read mismatch")
+	}
+
+	if err := m.Write(0x10000, []byte{4, 5, 6}, 7); err != nil {
+		t.Error(err, "while writing mirror")
+	}
+	if err := m.Read(0x10000, p3, 7); err != nil {
+		t.Error(err, "while reading mirror")
+	}
+	if !bytes.Equal(p3, []byte{4, 5, 6}) {
+		t.Error("mirror write/read mismatch")
+	}
+	p3 = []byte{0, 0, 0}
+	if err := m.Read(0x1000, p3, 7); err != nil {
+		t.Error(err, "while reading map")
+	}
+	if !bytes.Equal(p3, []byte{4, 5, 6}) {
+		t.Error("mirror write/map read mismatch")
+	}
+}

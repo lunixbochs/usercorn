@@ -77,6 +77,20 @@ func (m *MemSim) Map(addr, size uint64, prot int, zero bool) *Page {
 	return page
 }
 
+// Maps <addr> - <addr>+<size> to redirect reads/writes to <mirrorAddr>
+// For example, m.Mirror(0xe000, 0x2000, 7, 0xc000)
+// Will redirect 0xe000, +0x2000 to point at 0xc000, +0x2000
+func (m *MemSim) Mirror(addr, size uint64, prot int, mirrorAddr uint64) *Page {
+	if gmem, _ := m.RangeValid(addr, size, 0); gmem {
+		m.Unmap(addr, size)
+	}
+	page := &Page{Addr: addr, Size: size, Prot: prot}
+	page.Mirror = mirrorAddr
+	m.Mem = append(m.Mem, page)
+	sort.Sort(m.Mem)
+	return page
+}
+
 // this is *exactly* unmap, but the "middle" pages of each split are re-protected
 func (m *MemSim) Prot(addr, size uint64, prot int) {
 	// truncate entries overlapping addr, size
@@ -148,9 +162,24 @@ func (m *MemSim) Read(addr uint64, p []byte, prot int) error {
 			if !mm.Contains(addr) {
 				break
 			}
+			// FIXME: mirrored memory is a bit of a hack, it can cause partial IO
+			// because we're looking up mirror _after_ the RangeValid() call
 			o := addr - mm.Addr
-			n := copy(p, mm.Data[o:])
-			addr, p = addr+uint64(n), p[n:]
+			if mm.Mirror == 0 {
+				n := copy(p, mm.Data[o:])
+				addr, p = addr+uint64(n), p[n:]
+			} else {
+				src := mm.Mirror + o
+				size := uint64(len(p))
+				if mm.Size < size {
+					size = mm.Size
+				}
+				if err := m.Read(src, p[:size], prot); err != nil {
+					return err
+				}
+				addr += size
+				p = p[size:]
+			}
 		}
 	}
 	return nil
@@ -170,9 +199,24 @@ func (m *MemSim) Write(addr uint64, p []byte, prot int) error {
 			if !mm.Contains(addr) {
 				break
 			}
+			// FIXME: mirrored memory is a bit of a hack, it can cause partial IO
+			// because we're looking up mirror _after_ the RangeValid() call
 			o := addr - mm.Addr
-			n := copy(mm.Data[o:], p)
-			addr, p = addr+uint64(n), p[n:]
+			if mm.Mirror == 0 {
+				n := copy(mm.Data[o:], p)
+				addr, p = addr+uint64(n), p[n:]
+			} else {
+				src := mm.Mirror + o
+				size := uint64(len(p))
+				if mm.Size < size {
+					size = mm.Size
+				}
+				if err := m.Write(src, p[:size], prot); err != nil {
+					return err
+				}
+				addr += size
+				p = p[size:]
+			}
 		}
 	}
 	return nil
