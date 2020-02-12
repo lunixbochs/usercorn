@@ -5,6 +5,7 @@ import (
 
 	_ "github.com/lunixbochs/usercorn/go/cmd/run"
 
+	_ "github.com/lunixbochs/usercorn/go/cmd/bpf"
 	_ "github.com/lunixbochs/usercorn/go/cmd/cfg"
 	_ "github.com/lunixbochs/usercorn/go/cmd/cgc"
 	_ "github.com/lunixbochs/usercorn/go/cmd/com"
