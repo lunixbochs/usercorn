@@ -68,20 +68,21 @@ deps/$(GODIR):
 
 deps/lib/libunicorn.1.$(LIBEXT):
 	cd deps/build && \
-	git clone https://github.com/unicorn-engine/unicorn.git && git --git-dir unicorn fetch; \
+	git clone https://github.com/unicorn-engine/unicorn.git; \
 	cd unicorn && git clean -fdx && git reset --hard origin/master && \
-	make && make PREFIX=$(DEST) install
+	mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=RELEASE .. && \
+	make -j2 install
 
 deps/lib/libcapstone.5.$(LIBEXT):
 	cd deps/build && \
-	git clone https://github.com/aquynh/capstone.git && git --git-dir capstone pull; \
+	git clone https://github.com/aquynh/capstone.git; \
 	cd capstone && git clean -fdx && git reset --hard origin/master; \
 	mkdir build && cd build && cmake -DCAPSTONE_BUILD_STATIC=OFF -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=RELEASE .. && \
-	make -j2 PREFIX=$(DEST) install
+	make -j2 install
 
 deps/lib/libkeystone.0.$(LIBEXT):
 	cd deps/build && \
-	git clone https://github.com/keystone-engine/keystone.git && git --git-dir keystone pull; \
+	git clone https://github.com/keystone-engine/keystone.git; \
 	cd keystone; git clean -fdx && git reset --hard origin/master; mkdir build && cd build && \
 	cmake -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLLVM_TARGETS_TO_BUILD="all" -G "Unix Makefiles" .. && \
 	make -j2 install
@@ -100,14 +101,6 @@ GOBUILD := go build
 PATH := '$(DEST)/$(GODIR)/bin:$(PATH)'
 SHELL := env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$(DEST)/lib DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH):$(DEST)/lib PATH=$(PATH) /bin/bash
 
-ifneq ($(wildcard $(DEST)/$(GODIR)/.),)
-	export GOROOT := $(DEST)/$(GODIR)
-endif
-ifneq ($(GOPATH),)
-	export GOPATH := $(GOPATH):$(shell pwd)/.gopath
-else
-	export GOPATH := $(DEST)/gopath:$(shell pwd)/.gopath
-endif
 DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -Ev 'usercorn|vendor' | grep '\.' | sort -u)
 PKGS=$(shell go list ./go/... | sort -u | rev | sed -e 's,og/.*$$,,' | rev | sed -e 's,^,github.com/lunixbochs/usercorn/go,')
 
