@@ -1018,5 +1018,19 @@ func (u *Usercorn) Symbolicate(addr uint64, includeSource bool) (*models.Symbol,
 }
 
 func (u *Usercorn) SymbolLookup(name string) *models.Symbol {
-	return u.debug.SymbolLookup(name)
+	for _, page := range u.Task.Mappings() {
+		if page.File != nil && page.File.Name != "" {
+			if df, _ := u.debug.File(page.File.Name); df != nil {
+				if sym, ok := df.SymbolMap[name]; ok {
+					return &models.Symbol{
+						Name: sym.Name,
+						Start: page.Addr + sym.Start,
+						End: page.Addr + sym.End,
+						Dynamic: sym.Dynamic}
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
