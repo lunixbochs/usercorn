@@ -83,6 +83,18 @@ func (k *PosixKernel) Mprotect(addr, size uint64, prot enum.MmapProt) uint64 {
 	return 0
 }
 
+func (k *PosixKernel) Mremap(old_addr, old_size, new_size uint64, flags int) uint64 {
+	// NOTE: this is a hack
+	addr, err := k.U.Mmap(0, new_size, 7, false, "mmap", nil)
+	if err != nil {
+		return UINT64_MAX // FIXME
+	}
+	tmp := make([]byte, old_size)
+	k.U.MemReadInto(tmp, old_addr)
+	k.U.MemWrite(addr, tmp)
+	return addr
+}
+
 func (k *PosixKernel) Brk(addr uint64) uint64 {
 	// TODO: return is Linux specific
 	ret, _ := k.U.Brk(addr)
