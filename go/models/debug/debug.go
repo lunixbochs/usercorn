@@ -119,3 +119,12 @@ func (d *Debug) Symbolicate(addr uint64, mem cpu.Pages, includeSource bool) (*mo
 	}
 	return &sym, name
 }
+
+func (d *Debug) SymbolLookup(name string) *models.Symbol {
+    for _, f := range d.files {
+        if sym, ok := f.SymbolMap[name]; ok {
+            return &sym
+        }
+    }
+    return nil
+}

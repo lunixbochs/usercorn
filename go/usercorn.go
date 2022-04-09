@@ -1016,3 +1016,7 @@ func (u *Usercorn) Breakpoints() []*models.Breakpoint {
 func (u *Usercorn) Symbolicate(addr uint64, includeSource bool) (*models.Symbol, string) {
 	return u.debug.Symbolicate(addr, u.Task.Mappings(), includeSource)
 }
+
+func (u *Usercorn) SymbolLookup(name string) *models.Symbol {
+	return u.debug.SymbolLookup(name)
+}
