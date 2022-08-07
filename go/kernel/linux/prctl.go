@@ -1,6 +1,10 @@
 package linux
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"syscall"
+)
 
 // TODO: put these somewhere. ghostrace maybe.
 const (
@@ -24,5 +28,6 @@ func (k *LinuxKernel) Prctl(code int, arg uint64) uint64 {
 			return UINT64_MAX
 		}
 	}
-	panic(fmt.Sprintf("unhandled prctl code: 0x%x", code))
+	fmt.Fprintf(os.Stderr, "WARNING: unsupported prctl option 0x%x\n", code)
+	return uint64(syscall.EINVAL)
 }
