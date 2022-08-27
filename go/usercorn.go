@@ -3,10 +3,6 @@ package usercorn
 import (
 	"bufio"
 	"fmt"
-	"github.com/lunixbochs/ghostrace/ghost/memio"
-	"github.com/lunixbochs/readline"
-	"github.com/lunixbochs/struc"
-	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,6 +10,11 @@ import (
 	rdebug "runtime/debug"
 	"strings"
 	"sync"
+
+	"github.com/lunixbochs/ghostrace/ghost/memio"
+	"github.com/lunixbochs/readline"
+	"github.com/lunixbochs/struc"
+	"github.com/pkg/errors"
 
 	"github.com/lunixbochs/usercorn/go/arch"
 	co "github.com/lunixbochs/usercorn/go/kernel/common"
