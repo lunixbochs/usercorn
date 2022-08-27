@@ -99,7 +99,7 @@ export CGO_LDFLAGS = -L$(DEST)/lib
 
 GOBUILD := go build
 PATH := '$(DEST)/$(GODIR)/bin:$(PATH)'
-SHELL := env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$(DEST)/lib DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH):$(DEST)/lib PATH=$(PATH) /bin/bash
+SHELL := env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$(DEST)/lib DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH):$(DEST)/lib PATH=$(PATH) /usr/bin/env bash
 
 DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -Ev 'usercorn|vendor' | grep '\.' | sort -u)
 PKGS=$(shell go list ./go/... | sort -u | rev | sed -e 's,og/.*$$,,' | rev | sed -e 's,^,github.com/lunixbochs/usercorn/go,')
