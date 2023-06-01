@@ -55,11 +55,6 @@ deps/lib/libkeystone.0.$(LIBEXT):
 
 deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.5.$(LIBEXT) deps/lib/libkeystone.0.$(LIBEXT)
 
-# Go executable targets
-.gopath:
-	mkdir -p .gopath/src/github.com/lunixbochs
-	ln -s ../../../.. .gopath/src/github.com/lunixbochs/usercorn
-
 export CGO_CFLAGS = -I$(DEST)/include
 export CGO_LDFLAGS = -L$(DEST)/lib
 
@@ -70,21 +65,21 @@ DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -Ev 'usercorn|vend
 PKGS=$(shell go list ./go/... | sort -u | rev | sed -e 's,og/.*$$,,' | rev | sed -e 's,^,github.com/lunixbochs/usercorn/go,')
 
 # TODO: more DRY?
-usercorn: .gopath
+usercorn:
 	rm -f usercorn
 	$(GOBUILD) -o usercorn ./go/cmd/main
 	$(FIXRPATH) usercorn
 
-get: .gopath
+get:
 	go get -u ${DEPS}
 
-test: .gopath
+test:
 	go test -v ./go/...
 
-cov: .gopath
+cov:
 	go get -u github.com/haya14busa/goverage
 	goverage -v -coverprofile=coverage.out ${PKGS}
 	go tool cover -html=coverage.out
 
-bench: .gopath
+bench:
 	go test -v -benchmem -bench=. ./go/...
