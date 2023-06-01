@@ -78,7 +78,7 @@ test:
 
 cov:
 	go get -u github.com/haya14busa/goverage
-	goverage -v -coverprofile=coverage.out ${PKGS}
+	go test -v -coverprofile=coverage.out ${PKGS}
 	go tool cover -html=coverage.out
 
 bench:
