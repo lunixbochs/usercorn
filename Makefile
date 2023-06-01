@@ -31,40 +31,6 @@ ifeq "$(OS)" "Darwin"
 		-change libkeystone.1.dylib @rpath/libkeystone.1.dylib
 endif
 
-# figure out if we can download Go
-GOVERSION=1.13.7
-ifeq "$(ARCH)" "x86_64"
-	ifeq "$(OS)" "Darwin"
-		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).darwin-amd64.tar.gz"
-	else ifeq "$(OS)" "Linux"
-		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).linux-amd64.tar.gz"
-	endif
-endif
-ifeq "$(ARCH)" "i686"
-	ifeq "$(OS)" "Linux"
-		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).linux-386.tar.gz"
-	endif
-endif
-ifneq (,$(filter $(ARCH),armv6l armv7l armv8l))
-	ifeq "$(OS)" "Linux"
-		GOURL = "https://storage.googleapis.com/golang/go$(GOVERSION).linux-armv6l.tar.gz"
-	endif
-endif
-
-ifeq ($(GOURL),)
-	GOMSG = "Go 1.6 or later is required. Visit https://golang.org/dl/ to download."
-else
-	GODIR = go-$(ARCH)-$(OS)
-endif
-
-deps/$(GODIR):
-	echo $(GOMSG)
-	[ -n $(GOURL) ] && \
-	mkdir -p deps/build deps/gopath && \
-	cd deps/build && \
-	curl -o go-dist.tar.gz "$(GOURL)" && \
-	cd .. && tar -xf build/go-dist.tar.gz && \
-	mv go $(GODIR)
 
 deps/lib/libunicorn.1.$(LIBEXT):
 	cd deps/build && \
@@ -87,7 +53,7 @@ deps/lib/libkeystone.0.$(LIBEXT):
 	cmake -DCMAKE_INSTALL_PREFIX=$(DEST) -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLLVM_TARGETS_TO_BUILD="all" -G "Unix Makefiles" .. && \
 	make -j2 install
 
-deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.5.$(LIBEXT) deps/lib/libkeystone.0.$(LIBEXT) deps/$(GODIR)
+deps: deps/lib/libunicorn.1.$(LIBEXT) deps/lib/libcapstone.5.$(LIBEXT) deps/lib/libkeystone.0.$(LIBEXT)
 
 # Go executable targets
 .gopath:
@@ -98,7 +64,6 @@ export CGO_CFLAGS = -I$(DEST)/include
 export CGO_LDFLAGS = -L$(DEST)/lib
 
 GOBUILD := go build
-PATH := '$(DEST)/$(GODIR)/bin:$(PATH)'
 SHELL := env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$(DEST)/lib DYLD_LIBRARY_PATH=$(DYLD_LIBRARY_PATH):$(DEST)/lib PATH=$(PATH) /bin/bash
 
 DEPS=$(shell go list -f '{{join .Deps "\n"}}' ./go/... | grep -Ev 'usercorn|vendor' | grep '\.' | sort -u)
